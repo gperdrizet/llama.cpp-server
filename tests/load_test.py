@@ -14,9 +14,9 @@ Environment:
     LLAMA_BASE_URL  Server base URL (default: http://localhost:8502)
 
 Examples:
-    LLAMA_API_KEY=your_key python tests/load_test.py
-    LLAMA_API_KEY=your_key python tests/load_test.py --levels 1 2 4 8 --requests 5
-    LLAMA_API_KEY=your_key python tests/load_test.py --url http://pyrite:8502 --stream
+    python tests/load_test.py
+    python tests/load_test.py --levels 1 2 4 8 --requests 5
+    python tests/load_test.py --url http://pyrite:8502 --stream
 '''
 
 import argparse
@@ -26,7 +26,15 @@ import os
 import statistics
 import sys
 import time
+from pathlib import Path
 from typing import Optional
+
+try:
+    from dotenv import load_dotenv
+
+except ImportError:
+    print('ERROR: python-dotenv is required.  Install it with:  pip install python-dotenv')
+    sys.exit(1)
 
 try:
     import aiohttp
@@ -34,6 +42,10 @@ try:
 except ImportError:
     print('ERROR: aiohttp is required.  Install it with:  pip install aiohttp')
     sys.exit(1)
+
+# Load .env from the repo root (one level above tests/)
+_ENV_PATH = Path(__file__).resolve().parent.parent / '.env'
+load_dotenv(_ENV_PATH)
 
 
 # ---------------------------------------------------------------------------

@@ -22,6 +22,7 @@ This repository documents and centralizes the configuration of the `llama.cpp` i
 - [Logs](#logs)
 - [Load test](#load-test)
 - [Dashboard](#dashboard)
+- [Performance](#performance)
 
 ---
 
@@ -388,3 +389,28 @@ Open the URL printed by Streamlit (default: `http://localhost:8501`).
 - **Latency plot**: interactive Plotly chart of mean ± SEM and p95 latency vs. concurrency level.
 - **Summary table**: per-concurrency mean, SEM, standard deviation, p95, and request count.
 - **Raw data expander**: scrollable view of every individual request row.
+
+---
+
+## Performance
+
+Results produced by `tests/load_test.py` against the active model (`gpt-oss-20b-mxfp4.gguf`) on the P100, with the server configured to various `--parallel` slot counts. Analysis notebooks and saved figures live in `notebooks/`.
+
+### Latency vs concurrency
+
+![Latency vs concurrency by slot count](notebooks/figures/latency_vs_concurrency.png)
+
+Each line is one slot configuration. At low concurrency all slot counts perform similarly. As concurrency rises, servers with more slots sustain lower latency because requests are served in parallel rather than queued behind one another.
+
+### Latency at concurrency = 8 vs slot count
+
+![Latency at concurrency 8 vs slot count](notebooks/figures/latency_vs_slots_c8.png)
+
+At a fixed concurrency of 8 simultaneous requests, increasing the slot count reduces both mean latency and p95 latency significantly. Beyond 4 slots the gains diminish as the GPU becomes the bottleneck rather than the queuing.
+
+### Context length per slot
+
+![Context length per slot](notebooks/figures/context_per_slot.png)
+
+The server's total context window (`-c 65536`, 64k tokens) is divided equally across all slots. More slots means less context available per individual request. For most short chat turns and one-shot completions 8–16k tokens is ample; workloads with long system prompts or multi-turn histories may require fewer slots to preserve context.
+

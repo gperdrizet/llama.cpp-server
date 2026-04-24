@@ -15,6 +15,7 @@ ExecStart=/opt/llama.cpp/build/bin/llama-server \
     -m /opt/models/gpt-oss-20b-mxfp4.gguf \
     --n-gpu-layers 999 \
     -c 65536 \
+    --parallel YOUR_SLOTS_HERE \
     --flash-attn on \
     --jinja \
     --host 0.0.0.0 \

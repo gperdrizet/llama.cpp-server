@@ -15,6 +15,7 @@ This repository documents and centralizes the configuration of the `llama.cpp` i
   - [Server flags explained](#server-flags-explained)
   - [Security hardening](#security-hardening)
   - [Restart policy](#restart-policy)
+- [Parallelism](#parallelism)
 - [Available models](#available-models)
 - [Service management](#service-management)
 - [API usage](#api-usage)
@@ -155,6 +156,7 @@ This drop-in was created separately (likely via `systemctl edit`) to allow chang
 | `-m` | `gpt-oss-20b-mxfp4.gguf` | Model file to load |
 | `--n-gpu-layers` | `999` | Offload all layers to GPU (effectively "full GPU inference") |
 | `-c` | `65536` | Context window size in tokens (64k) |
+| `--parallel` | `$LLAMA_SLOTS` | Number of parallel inference slots (see [Parallelism](#parallelism)) |
 | `--flash-attn on` | - | Enable Flash Attention for reduced VRAM usage and faster inference |
 | `--jinja` | - | Enable Jinja2 chat template processing (required for correct prompt formatting with most modern models) |
 | `--host` | `0.0.0.0` | Listen on all network interfaces |
@@ -187,6 +189,24 @@ The service runs as the unprivileged `llama` user/group, which has no login shel
 | `RestartSec=10` | 10 s | Wait 10 seconds before restarting |
 | `StartLimitInterval=300` | 300 s | Rolling window for the burst limit |
 | `StartLimitBurst=5` | 5 | If the service fails to start 5 times within 5 minutes, systemd stops retrying |
+
+---
+
+## Parallelism
+
+llama.cpp splits its KV cache into **slots** using the `--parallel` flag. Each slot handles one concurrent request; when all slots are busy, additional requests queue.
+
+The number of slots is configured via `LLAMA_SLOTS` in `.env` and substituted into the unit file by `deploy_service.sh`.
+
+**Tradeoffs:**
+
+| `LLAMA_SLOTS` | Slots | Tokens per slot (with `-c 65536`) | Behaviour |
+|---|---|---|---|
+| `1` | 1 | 65 536 | Full context per request; no concurrency — requests queue |
+| `4` | 4 | 16 384 | 4 simultaneous requests; 16k context each |
+| `8` | 8 | 8 192 | Higher throughput; short context limit per request |
+
+Start with `LLAMA_SLOTS=1` and use the load test to benchmark before increasing. Most short chat turns and one-shot completions fit comfortably within 16k tokens, making `LLAMA_SLOTS=4` a reasonable first step on the P100.
 
 ---
 
@@ -316,6 +336,7 @@ python tests/load_test.py --url http://pyrite:8502
 |---|---|---|
 | `--url` | `$LLAMA_BASE_URL` or `http://localhost:8502` | Server base URL |
 | `--api-key` | `$LLAMA_API_KEY` | Bearer token |
+| `--slots N` | `$LLAMA_SLOTS` or `1` | Parallel slots the server is configured with (recorded in CSV) |
 | `--levels N [N ...]` | `1 2 4 8` | Concurrency levels to test |
 | `--requests N` | `3` | Repetitions per level (for averaging) |
 | `--prompt TEXT` | one-sentence transformer question | Prompt sent to the model |
@@ -330,6 +351,7 @@ For each concurrency level the script prints min/mean/median/p95/max latency (an
 | Column | Description |
 |---|---|
 | `timestamp` | ISO 8601 run start time |
+| `slots` | Parallel slots the server was configured with |
 | `concurrency` | Concurrency level for this request |
 | `latency_s` | Total response time in seconds |
 | `ttft_s` | Time to first token in seconds (streaming only; `NaN` otherwise) |

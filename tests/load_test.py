@@ -70,6 +70,7 @@ async def main(cfg: argparse.Namespace) -> None:
     run_ts = datetime.now().isoformat(timespec='seconds')
 
     print(f'Target : {base_url}')
+    print(f'Slots  : {cfg.slots}')
     print(f'Prompt : {cfg.prompt!r}')
     print(f'Tokens : up to {cfg.max_tokens}')
     print(f'Stream : {cfg.stream}')
@@ -107,6 +108,7 @@ async def main(cfg: argparse.Namespace) -> None:
         for r in results:
             csv_rows.append({
                 'timestamp': run_ts,
+                'slots': cfg.slots,
                 'concurrency': concurrency,
                 'latency_s': round(r['latency'], 4) if r['latency'] is not None else 'NaN',
                 'ttft_s': round(r['ttft'], 4) if r['ttft'] is not None else 'NaN',
@@ -155,6 +157,7 @@ async def main(cfg: argparse.Namespace) -> None:
             writer = csv.DictWriter(
                 f, fieldnames=[
                     'timestamp',
+                    'slots',
                     'concurrency',
                     'latency_s',
                     'ttft_s',
@@ -233,6 +236,14 @@ def parse_args() -> argparse.Namespace:
         default=str(_default_output),
         metavar='FILE',
         help='Path to write raw results as CSV (default: tests/results/YYYYmmdd_HHMM.csv)'
+    )
+
+    parser.add_argument(
+        '--slots',
+        type=int,
+        default=int(os.environ.get('LLAMA_SLOTS', '1')),
+        metavar='N',
+        help='Number of parallel slots the server is configured with (default: $LLAMA_SLOTS or 1)'
     )
 
     parser.add_argument(

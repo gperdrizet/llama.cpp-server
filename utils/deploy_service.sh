@@ -55,10 +55,23 @@ if [[ "$LLAMA_API_KEY" == "your_api_key_here" ]]; then
     exit 1
 fi
 
+if [[ -z "${LLAMA_SLOTS:-}" ]]; then
+    echo "ERROR: LLAMA_SLOTS is not set in $ENV_FILE" >&2
+    exit 1
+fi
+
+if ! [[ "$LLAMA_SLOTS" =~ ^[1-9][0-9]*$ ]]; then
+    echo "ERROR: LLAMA_SLOTS must be a positive integer (got: '$LLAMA_SLOTS')" >&2
+    exit 1
+fi
+
 # ---------------------------------------------------------------------------
 # Substitute and deploy
 # ---------------------------------------------------------------------------
-RENDERED="$(sed "s/YOUR_API_KEY_HERE/${LLAMA_API_KEY}/" "$TEMPLATE")"
+RENDERED="$(sed \
+    -e "s/YOUR_API_KEY_HERE/${LLAMA_API_KEY}/" \
+    -e "s/YOUR_SLOTS_HERE/${LLAMA_SLOTS}/" \
+    "$TEMPLATE")"
 
 echo "Deploying $TEMPLATE → $DEST"
 echo "$RENDERED" | sudo tee "$DEST" > /dev/null

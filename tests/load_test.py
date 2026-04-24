@@ -228,14 +228,17 @@ def parse_args() -> argparse.Namespace:
     _default_output = (
         Path(__file__).resolve().parent
         / 'results'
-        / f'{datetime.now().strftime("%Y%m%d_%H%M")}.csv'
+        / f'load_test_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.csv'
     )
 
     parser.add_argument(
         '--output',
         default=str(_default_output),
         metavar='FILE',
-        help='Path to write raw results as CSV (default: tests/results/YYYYmmdd_HHMM.csv)'
+        help=(
+            'Path to write raw results as CSV (default: ' +
+            'tests/results/load_test_YYYY-mm-dd_HH-MM.csv)'
+        )
     )
 
     parser.add_argument(

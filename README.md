@@ -19,6 +19,8 @@ This repository documents and centralizes the configuration of the `llama.cpp` i
 - [Service management](#service-management)
 - [API usage](#api-usage)
 - [Logs](#logs)
+- [Load test](#load-test)
+- [Dashboard](#dashboard)
 
 ---
 
@@ -273,3 +275,97 @@ journalctl -u llamacpp.service -n 100 --no-pager -l
 # Filter by time range
 journalctl -u llamacpp.service --since "2026-04-24 00:00" --until "2026-04-24 12:00"
 ```
+
+---
+
+## Load test
+
+`tests/load_test.py` measures response latency as a function of the number of concurrent callers. For each concurrency level it fires a batch of requests simultaneously, waits for all to complete, repeats that batch a configurable number of times, then prints statistics.
+
+### Setup
+
+Install dependencies into the project virtual environment:
+
+```bash
+pip install -r requirements.txt
+```
+
+Copy `.env.template` to `.env` and fill in the real API key:
+
+```bash
+cp .env.template .env
+# edit .env and set LLAMA_API_KEY
+```
+
+### Usage
+
+```bash
+# Run with defaults (levels 1 2 4 8, 3 repetitions each, non-streaming)
+python tests/load_test.py
+
+# Custom levels and repetitions
+python tests/load_test.py --levels 1 2 4 8 16 --requests 5
+
+# Enable streaming (measures time-to-first-token in addition to total latency)
+python tests/load_test.py --stream
+
+# Target a remote host
+python tests/load_test.py --url http://pyrite:8502
+```
+
+### CLI options
+
+| Option | Default | Description |
+|---|---|---|
+| `--url` | `$LLAMA_BASE_URL` or `http://localhost:8502` | Server base URL |
+| `--api-key` | `$LLAMA_API_KEY` | Bearer token |
+| `--levels N [N ...]` | `1 2 4 8` | Concurrency levels to test |
+| `--requests N` | `3` | Repetitions per level (for averaging) |
+| `--prompt TEXT` | one-sentence transformer question | Prompt sent to the model |
+| `--max-tokens N` | `128` | Max completion tokens per request |
+| `--output FILE` | `tests/results/YYYYmmdd_HHMM.csv` | Path for raw results CSV |
+| `--stream` | off | Use streaming responses (enables TTFT measurement) |
+
+### Output
+
+For each concurrency level the script prints min/mean/median/p95/max latency (and TTFT when `--stream` is used). After all levels complete it writes a CSV to `tests/results/` with one row per individual request:
+
+| Column | Description |
+|---|---|
+| `timestamp` | ISO 8601 run start time |
+| `concurrency` | Concurrency level for this request |
+| `latency_s` | Total response time in seconds |
+| `ttft_s` | Time to first token in seconds (streaming only; `NaN` otherwise) |
+| `tokens` | Completion tokens returned |
+| `error` | Error message if the request failed; `NaN` otherwise |
+
+### Code layout
+
+Shared logic lives in `tests/helper_funcs/`:
+
+| Module | Contents |
+|---|---|
+| `helper_funcs/requests.py` | `chat_request()`: single HTTP request; `run_level()`: concurrent batch |
+| `helper_funcs/stats.py` | `percentile()`: arbitrary percentile; `print_stats()`: summary printer |
+
+---
+
+## Dashboard
+
+`dashboard/app.py` is a [Streamlit](https://streamlit.io) application that visualises load test CSV results.
+
+### Usage
+
+```bash
+streamlit run dashboard/app.py
+```
+
+Open the URL printed by Streamlit (default: `http://localhost:8501`).
+
+### Features
+
+- **File selector**: choose any CSV from `tests/results/` via a sidebar dropdown.
+- **Metadata strip**: run timestamp, total request count, and error count shown at the top.
+- **Latency plot**: interactive Plotly chart of mean ± SEM and p95 latency vs. concurrency level.
+- **Summary table**: per-concurrency mean, SEM, standard deviation, p95, and request count.
+- **Raw data expander**: scrollable view of every individual request row.

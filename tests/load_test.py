@@ -59,6 +59,7 @@ async def chat_request(
     stream: bool,
 ) -> dict:
     '''Send one chat completion request and return timing info.'''
+
     headers = {'Content-Type': 'application/json'}
 
     if api_key:
@@ -141,6 +142,7 @@ async def run_level(
     stream: bool,
 ) -> list[dict]:
     '''Fire `n_requests` requests concurrently and collect results.'''
+
     connector = aiohttp.TCPConnector(limit=concurrency + 4)
     timeout = aiohttp.ClientTimeout(total=300)
 
@@ -161,6 +163,8 @@ async def run_level(
 # ---------------------------------------------------------------------------
 
 def percentile(data: list[float], p: float) -> float:
+    '''Return the p-th percentile of data (0-100).'''
+
     data = sorted(data)
     idx = (len(data) - 1) * p / 100
     lo = int(idx)
@@ -174,6 +178,8 @@ def percentile(data: list[float], p: float) -> float:
 
 
 def print_stats(label: str, values: list[float], unit: str = 's') -> None:
+    '''Print min, mean, median, p95, and max for a list of float measurements.'''
+
     if not values:
         print(f'  {label}: no data')
         return
@@ -193,6 +199,8 @@ def print_stats(label: str, values: list[float], unit: str = 's') -> None:
 # ---------------------------------------------------------------------------
 
 async def main(args: argparse.Namespace) -> None:
+    '''Run the load test across all configured concurrency levels and print results.'''
+
     base_url = args.url.rstrip('/')
     api_key = args.api_key  # may be None if server has no --api-key
 
@@ -250,27 +258,35 @@ async def main(args: argparse.Namespace) -> None:
                 avg_tokens = statistics.mean(token_counts)
                 avg_latency = statistics.mean(latencies)
                 tps = avg_tokens / avg_latency if avg_latency > 0 else 0
-                print(f'  Avg tokens/response: {avg_tokens:.1f}   Throughput: {tps:.1f} tok/s (aggregate)')
+                print(
+                    f'  Avg tokens/response: {avg_tokens:.1f}   ' + 
+                    f'Throughput: {tps:.1f} tok/s (aggregate)'
+                )
 
     print(separator)
     print('Done.')
 
 
 def parse_args() -> argparse.Namespace:
+    '''Parse and return command-line arguments.'''
+
     parser = argparse.ArgumentParser(
         description='Measure llama.cpp server latency vs. concurrency.'
     )
+
     parser.add_argument(
         '--url',
         default=os.environ.get('LLAMA_BASE_URL', DEFAULT_URL),
         help=f'Server base URL (default: {DEFAULT_URL}, or $LLAMA_BASE_URL)',
     )
+
     parser.add_argument(
         '--api-key',
         default=os.environ.get('LLAMA_API_KEY'),
         dest='api_key',
         help='API key (default: $LLAMA_API_KEY)',
     )
+
     parser.add_argument(
         '--levels',
         nargs='+',
@@ -279,6 +295,7 @@ def parse_args() -> argparse.Namespace:
         metavar='N',
         help=f'Concurrency levels to test (default: {DEFAULT_LEVELS})',
     )
+
     parser.add_argument(
         '--requests',
         type=int,
@@ -286,11 +303,13 @@ def parse_args() -> argparse.Namespace:
         metavar='N',
         help=f'Number of simultaneous requests per level (default: {DEFAULT_REQUESTS_PER_LEVEL})',
     )
+
     parser.add_argument(
         '--prompt',
         default=DEFAULT_PROMPT,
         help='Prompt to send to the model',
     )
+
     parser.add_argument(
         '--max-tokens',
         type=int,
@@ -298,14 +317,17 @@ def parse_args() -> argparse.Namespace:
         dest='max_tokens',
         help=f'Max completion tokens per request (default: {DEFAULT_MAX_TOKENS})',
     )
+
     parser.add_argument(
         '--stream',
         action='store_true',
         help='Use streaming responses (enables TTFT measurement)',
     )
+
     return parser.parse_args()
 
 
 if __name__ == "__main__":
+
     args = parse_args()
     asyncio.run(main(args))

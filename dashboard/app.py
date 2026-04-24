@@ -20,7 +20,7 @@ import streamlit as st
 st.set_page_config(
     page_title='llama.cpp load test results',
     page_icon=':llama:',
-    layout='centered',
+    layout='wide',
 )
 
 st.title('llama.cpp load test results')
@@ -181,7 +181,7 @@ with tab_load:
                         x_col='concurrency',
                         x_label='Concurrency (simultaneous requests)',
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
 
                 with col_table:
                     display = _stats_table(stats, 'concurrency', 'Concurrency')
@@ -190,11 +190,11 @@ with tab_load:
                             '{:.3f}',
                             subset=['Mean (s)', 'SEM (s)', 'Std dev (s)', 'p95 (s)'],
                         ),
-                        use_container_width=True,
+                        width='stretch',
                     )
 
                 with st.expander('Raw data'):
-                    st.dataframe(df, use_container_width=True)
+                    st.dataframe(df, width='stretch')
 
 
 # ---------------------------------------------------------------------------
@@ -257,7 +257,7 @@ with tab_ctx:
                         x_col='prompt_tokens',
                         x_label='Input tokens',
                     )
-                    st.plotly_chart(ctx_fig, use_container_width=True)
+                    st.plotly_chart(ctx_fig, width='stretch')
 
                 with col_table:
                     ctx_display = _stats_table(ctx_stats, 'prompt_tokens', 'Input tokens')
@@ -266,8 +266,8 @@ with tab_ctx:
                             '{:.3f}',
                             subset=['Mean (s)', 'SEM (s)', 'Std dev (s)', 'p95 (s)'],
                         ),
-                        use_container_width=True,
+                        width='stretch',
                     )
 
                 with st.expander('Raw data'):
-                    st.dataframe(ctx_df, use_container_width=True)
+                    st.dataframe(ctx_df, width='stretch')

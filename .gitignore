@@ -1,18 +1,9 @@
-# Environment — contains real API key, never commit
+# Environment - contains real API key, never commit
 .env
 
 # Python
 __pycache__/
-*.py[cod]
-*.egg-info/
 .venv/
-venv/
-dist/
-build/
-
-# Test artifacts
-tests/results/
-*.log
 
 # Editor / OS
 .vscode/

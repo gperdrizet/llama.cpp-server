@@ -1,8 +1,30 @@
 # llama.cpp server: `pyrite`
 
-This repository documents and centralizes the configuration of the `llama.cpp` inference server running on **pyrite** as a systemd service. The server was originally set up as a bootcamp demonstration but now serves multiple projects.
+This repository documents and centralizes the configuration of the `llama.cpp` inference server running on **pyrite** as a systemd service. The server was originally set up as a bootcamp demonstration but now serves as a public inference endpoint for students and supports multiple personal projects.
 
----
+
+## API usage
+
+The server exposes an OpenAI-compatible API. Set the `Authorization` header with the API key from the unit file.
+
+```bash
+# Chat completion
+curl http://localhost:8502/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <api-key>" \
+  -d '{
+    "model": "gpt-oss-20b-mxfp4",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+
+# Health check
+curl http://localhost:8502/health
+```
+
+When configuring clients (LangChain, LlamaIndex, OpenWebUI, etc.), set:
+- **Base URL**: `http://<pyrite-ip>:8502/v1`
+- **API Key**: value from the unit file
+
 
 ## Table of contents
 
@@ -21,10 +43,10 @@ This repository documents and centralizes the configuration of the `llama.cpp` i
 - [API usage](#api-usage)
 - [Logs](#logs)
 - [Load test](#load-test)
+- [Context length test](#context-length-test)
 - [Dashboard](#dashboard)
 - [Performance](#performance)
 
----
 
 ## System overview
 
@@ -40,7 +62,6 @@ This repository documents and centralizes the configuration of the `llama.cpp` i
 
 The server exposes an **OpenAI-compatible REST API** (`/v1/chat/completions`, `/v1/completions`, `/v1/embeddings`, etc.) as well as a Prometheus **metrics endpoint** at `/metrics`.
 
----
 
 ## Hardware
 
@@ -53,7 +74,6 @@ Two NVIDIA GPUs are present on the system:
 
 The service pins to GPU 0 (the P100) via the `CUDA_VISIBLE_DEVICES=0` environment variable set in the systemd override. The P100's 16 GiB VRAM comfortably fits the active model (12 GiB) fully on-device.
 
----
 
 ## Installation layout
 
@@ -77,7 +97,6 @@ The service pins to GPU 0 (the P100) via the `CUDA_VISIBLE_DEVICES=0` environmen
 
 The binary was built from source with CMake in **Release** mode with CUDA support (`GGML_CUDA=ON`), CUDA flash attention (`GGML_CUDA_FA=ON`), and CUDA graphs (`GGML_CUDA_GRAPHS=ON`).
 
----
 
 ## Systemd service
 
@@ -137,6 +156,7 @@ WantedBy=multi-user.target
 
 > **Note:** The `--api-key` value is stored directly in the unit file. See the live file at `/etc/systemd/system/llamacpp.service` for the actual value. Do not commit the real key to version control.
 
+
 ### Override file
 
 `/etc/systemd/system/llamacpp.service.d/override.conf`
@@ -148,7 +168,6 @@ Environment=CUDA_VISIBLE_DEVICES=0
 
 This drop-in was created separately (likely via `systemctl edit`) to allow changing the active GPU without touching the main unit file. The same variable also appears in the base unit; the override takes precedence if they differ.
 
----
 
 ### Server flags explained
 
@@ -167,6 +186,7 @@ This drop-in was created separately (likely via `systemctl edit`) to allow chang
 | `--log-timestamps` | - | Prefix log lines with timestamps |
 | `--log-prefix` | - | Prefix log lines with the source component name |
 
+
 ### Security hardening
 
 The unit applies several systemd sandboxing directives:
@@ -182,6 +202,7 @@ The unit applies several systemd sandboxing directives:
 
 The service runs as the unprivileged `llama` user/group, which has no login shell and owns only `/opt/models`.
 
+
 ### Restart policy
 
 | Setting | Value | Meaning |
@@ -191,7 +212,7 @@ The service runs as the unprivileged `llama` user/group, which has no login shel
 | `StartLimitInterval=300` | 300 s | Rolling window for the burst limit |
 | `StartLimitBurst=5` | 5 | If the service fails to start 5 times within 5 minutes, systemd stops retrying |
 
----
+
 
 ## Parallelism
 
@@ -209,7 +230,7 @@ The number of slots is configured via `LLAMA_SLOTS` in `.env` and substituted in
 
 Start with `LLAMA_SLOTS=1` and use the load test to benchmark before increasing. Most short chat turns and one-shot completions fit comfortably within 16k tokens, making `LLAMA_SLOTS=4` a reasonable first step on the P100.
 
----
+
 
 ## Available models
 
@@ -222,7 +243,7 @@ All models live in `/opt/models/`. The service must be restarted to switch model
 | `Qwen2.5-32B-Instruct-Q3_K_M.gguf` | 15 GiB | Chat | Fits on P100 with Q3 quant. |
 | `Qwen2.5-32B-Instruct-Q4_K_M.gguf` | 19 GiB | Chat | Exceeds P100 VRAM alone; would require CPU offload or both GPUs. |
 
----
+
 
 ## Service management
 
@@ -250,31 +271,7 @@ sudo systemctl edit --full llamacpp.service
 sudo systemctl edit llamacpp.service
 ```
 
----
 
-## API usage
-
-The server exposes an OpenAI-compatible API. Set the `Authorization` header with the API key from the unit file.
-
-```bash
-# Chat completion
-curl http://localhost:8502/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <api-key>" \
-  -d '{
-    "model": "gpt-oss-20b-mxfp4",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'
-
-# Health check
-curl http://localhost:8502/health
-```
-
-When configuring clients (LangChain, LlamaIndex, OpenWebUI, etc.), set:
-- **Base URL**: `http://<pyrite-ip>:8502/v1`
-- **API Key**: value from the unit file
-
----
 
 ## Logs
 
@@ -294,11 +291,12 @@ journalctl -u llamacpp.service -n 100 --no-pager -l
 journalctl -u llamacpp.service --since "2026-04-24 00:00" --until "2026-04-24 12:00"
 ```
 
----
+
 
 ## Load test
 
 `tests/load_test.py` measures response latency as a function of the number of concurrent callers. For each concurrency level it fires a batch of requests simultaneously, waits for all to complete, repeats that batch a configurable number of times, then prints statistics.
+
 
 ### Setup
 
@@ -314,6 +312,7 @@ Copy `.env.template` to `.env` and fill in the real API key:
 cp .env.template .env
 # edit .env and set LLAMA_API_KEY
 ```
+
 
 ### Usage
 
@@ -331,6 +330,7 @@ python tests/load_test.py --stream
 python tests/load_test.py --url http://pyrite:8502
 ```
 
+
 ### CLI options
 
 | Option | Default | Description |
@@ -344,6 +344,7 @@ python tests/load_test.py --url http://pyrite:8502
 | `--max-tokens N` | `128` | Max completion tokens per request |
 | `--output FILE` | `tests/results/YYYYmmdd_HHMM.csv` | Path for raw results CSV |
 | `--stream` | off | Use streaming responses (enables TTFT measurement) |
+
 
 ### Output
 
@@ -359,6 +360,7 @@ For each concurrency level the script prints min/mean/median/p95/max latency (an
 | `tokens` | Completion tokens returned |
 | `error` | Error message if the request failed; `NaN` otherwise |
 
+
 ### Code layout
 
 Shared logic lives in `tests/helper_funcs/`:
@@ -368,11 +370,66 @@ Shared logic lives in `tests/helper_funcs/`:
 | `helper_funcs/requests.py` | `chat_request()`: single HTTP request; `run_level()`: concurrent batch |
 | `helper_funcs/stats.py` | `percentile()`: arbitrary percentile; `print_stats()`: summary printer |
 
----
+
+
+## Context length test
+
+`tests/context_length_test.py` measures how response latency scales with input prompt length. For each target token count it constructs a prompt of approximately that size using the server's `/tokenize` endpoint to verify the actual count, fires a configurable number of concurrent requests, repeats for several replicates, then prints statistics.
+
+
+### Usage
+
+```bash
+# Run with defaults (targets 128 256 512 1024 2048 4096 8192, concurrency 4, 5 replicates)
+python tests/context_length_test.py
+
+# Custom targets and replicates
+python tests/context_length_test.py --targets 256 1024 4096 --replicates 10
+
+# Enable streaming (measures time-to-first-token in addition to total latency)
+python tests/context_length_test.py --stream
+```
+
+
+### CLI options
+
+| Option | Default | Description |
+|---|---|---|
+| `--url` | `$LLAMA_BASE_URL` or `http://localhost:8502` | Server base URL |
+| `--api-key` | `$LLAMA_API_KEY` | Bearer token |
+| `--slots N` | `$LLAMA_SLOTS` or `1` | Parallel slots the server is configured with (recorded in CSV) |
+| `--targets N [N ...]` | `128 256 512 1024 2048 4096 8192` | Target prompt token counts |
+| `--concurrency N` | `4` | Simultaneous requests per replicate |
+| `--replicates N` | `5` | Repetitions per target length (for averaging) |
+| `--max-tokens N` | `64` | Max completion tokens per request |
+| `--output FILE` | `tests/results/context_test_YYYY-MM-DD_HH-MM.csv` | Path for raw results CSV |
+| `--stream` | off | Use streaming responses (enables TTFT measurement) |
+
+
+### Output
+
+For each target token count the script prints min/mean/median/p95/max latency. After all targets complete it writes a CSV to `tests/results/` with one row per individual request:
+
+| Column | Description |
+|---|---|
+| `timestamp` | ISO 8601 run start time |
+| `slots` | Parallel slots the server was configured with |
+| `target_tokens` | Requested prompt token count |
+| `prompt_tokens` | Actual token count measured by the server |
+| `concurrency` | Simultaneous requests per replicate |
+| `latency_s` | Total response time in seconds |
+| `ttft_s` | Time to first token in seconds (streaming only; `NaN` otherwise) |
+| `output_tokens` | Completion tokens returned |
+| `error` | Error message if the request failed; `NaN` otherwise |
+
+
 
 ## Dashboard
 
 `dashboard/app.py` is a [Streamlit](https://streamlit.io) application that visualizes load test CSV results.
+
+![Dashboard screenshot](dashboard/screen_shot.png)
+
 
 ### Usage
 
@@ -382,6 +439,7 @@ streamlit run dashboard/app.py
 
 Open the URL printed by Streamlit (default: `http://localhost:8501`).
 
+
 ### Features
 
 - **File selector**: choose any CSV from `tests/results/` via a sidebar dropdown.
@@ -390,11 +448,12 @@ Open the URL printed by Streamlit (default: `http://localhost:8501`).
 - **Summary table**: per-concurrency mean, SEM, standard deviation, p95, and request count.
 - **Raw data expander**: scrollable view of every individual request row.
 
----
+
 
 ## Performance
 
 Results produced by `tests/load_test.py` against the active model (`gpt-oss-20b-mxfp4.gguf`) on the P100, with the server configured to various `--parallel` slot counts. Analysis notebooks and saved figures live in `notebooks/`.
+
 
 ### Latency vs concurrency
 
@@ -402,17 +461,20 @@ Results produced by `tests/load_test.py` against the active model (`gpt-oss-20b-
 
 Each line is one slot configuration. At low concurrency all slot counts perform similarly. As concurrency rises, servers with more slots sustain lower latency because requests are served in parallel rather than queued behind one another.
 
+
 ### Latency at concurrency = 8 vs slot count
 
 ![Latency at concurrency 8 vs slot count](notebooks/figures/latency_vs_slots_c8.png)
 
 At a fixed concurrency of 8 simultaneous requests, increasing the slot count reduces both mean latency and p95 latency significantly. Beyond 4 slots the gains diminish as the GPU becomes the bottleneck rather than the queuing.
 
+
 ### Context length per slot
 
 ![Context length per slot](notebooks/figures/context_per_slot.png)
 
 The server's total context window (`-c 65536`, 64k tokens) is divided equally across all slots. More slots means less context available per individual request. For most short chat turns and one-shot completions 8–16k tokens is ample; workloads with long system prompts or multi-turn histories may require fewer slots to preserve context.
+
 
 ### Latency vs input context length
 

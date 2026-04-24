@@ -71,6 +71,7 @@ stats = (
         mean='mean',
         count='count',
         std='std',
+        p95=lambda x: x.quantile(0.95),
     )
     .reset_index()
 )
@@ -87,9 +88,16 @@ total = len(df)
 n_errors = df['error'].notna().sum()
 
 col1, col2, col3 = st.columns(3)
-col1.metric('Run timestamp', run_ts)
-col2.metric('Total requests', total)
-col3.metric('Errors', n_errors)
+def _small_metric(col, label: str, value) -> None:
+    col.markdown(
+        f'<p style="margin:0;font-size:0.8rem;color:grey">{label}</p>'
+        f'<p style="margin:0;font-size:1rem;font-weight:600">{value}</p>',
+        unsafe_allow_html=True,
+    )
+
+_small_metric(col1, 'Run timestamp', run_ts)
+_small_metric(col2, 'Total requests', total)
+_small_metric(col3, 'Errors', n_errors)
 
 st.divider()
 
@@ -108,7 +116,16 @@ fig.add_trace(go.Scatter(
     mode='lines+markers',
     line=dict(dash='dash', width=1.5),
     marker=dict(size=8),
-    name='Mean ± SEM',
+    name='Mean \u00b1 SEM',
+))
+
+fig.add_trace(go.Scatter(
+    x=stats['concurrency'],
+    y=stats['p95'],
+    mode='lines+markers',
+    line=dict(dash='dash', width=1.5),
+    marker=dict(size=8, symbol='diamond'),
+    name='p95',
 ))
 
 fig.update_layout(
@@ -119,7 +136,7 @@ fig.update_layout(
     margin=dict(l=40, r=20, t=20, b=40),
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width='stretch')
 
 # ---------------------------------------------------------------------------
 # Raw stats table
@@ -132,15 +149,18 @@ display = stats.rename(columns={
     'mean': 'Mean (s)',
     'sem': 'SEM (s)',
     'std': 'Std dev (s)',
+    'p95': 'p95 (s)',
     'count': 'Requests',
 }).set_index('Concurrency')
 
-st.dataframe(display.style.format('{:.3f}', subset=['Mean (s)', 'SEM (s)', 'Std dev (s)']),
-             use_container_width=True)
+st.dataframe(
+    display.style.format('{:.3f}', subset=['Mean (s)', 'SEM (s)', 'Std dev (s)', 'p95 (s)']),
+    width='stretch',
+)
 
 # ---------------------------------------------------------------------------
 # Raw data expander
 # ---------------------------------------------------------------------------
 
 with st.expander('Raw data'):
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width='stretch')

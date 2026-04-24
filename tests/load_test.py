@@ -49,7 +49,7 @@ load_dotenv(_ENV_PATH)
 # Default configuration
 # ---------------------------------------------------------------------------
 DEFAULT_URL = 'http://localhost:8502'
-DEFAULT_LEVELS = [1, 2, 4, 8]
+DEFAULT_LEVELS = [1, 2, 4, 8, 16, 32]
 DEFAULT_REQUESTS_PER_LEVEL = 3  # repetitions per concurrency level (for averaging)
 DEFAULT_PROMPT = 'In one sentence, explain what a transformer neural network is.'
 DEFAULT_MAX_TOKENS = 128

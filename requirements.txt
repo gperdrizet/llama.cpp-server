@@ -1,4 +1,5 @@
 aiohttp
+ipykernel
 pandas
 plotly
 python-dotenv

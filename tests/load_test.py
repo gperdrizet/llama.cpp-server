@@ -21,11 +21,13 @@ Examples:
 
 import argparse
 import asyncio
+import csv
 import json
 import os
 import statistics
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -53,7 +55,7 @@ load_dotenv(_ENV_PATH)
 # ---------------------------------------------------------------------------
 DEFAULT_URL = 'http://localhost:8502'
 DEFAULT_LEVELS = [1, 2, 4, 8]
-DEFAULT_REQUESTS_PER_LEVEL = 4  # concurrent requests fired simultaneously
+DEFAULT_REQUESTS_PER_LEVEL = 3  # repetitions per concurrency level (for averaging)
 DEFAULT_PROMPT = 'In one sentence, explain what a transformer neural network is.'
 DEFAULT_MAX_TOKENS = 128
 
@@ -146,28 +148,38 @@ async def chat_request(
 
 async def run_level(
     concurrency: int,
-    n_requests: int,
+    n_reps: int,
     base_url: str,
     api_key: Optional[str],
     prompt: str,
     max_tokens: int,
     stream: bool,
 ) -> list[dict]:
-    '''Fire `n_requests` requests concurrently and collect results.'''
+    '''
+    Fire `concurrency` simultaneous requests, repeated `n_reps` times.
+
+    Each repetition sends exactly `concurrency` requests at the same instant,
+    waits for all to complete, then starts the next repetition. This ensures
+    the concurrency level accurately reflects the number of parallel callers.
+    '''
 
     connector = aiohttp.TCPConnector(limit=concurrency + 4)
     timeout = aiohttp.ClientTimeout(total=300)
+    all_results = []
 
     async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
 
-        tasks = [
-            chat_request(session, base_url, api_key, prompt, max_tokens, stream)
-            for _ in range(n_requests)
-        ]
+        for _ in range(n_reps):
 
-        results = await asyncio.gather(*tasks)
+            tasks = [
+                chat_request(session, base_url, api_key, prompt, max_tokens, stream)
+                for _ in range(concurrency)
+            ]
 
-    return list(results)
+            results = await asyncio.gather(*tasks)
+            all_results.extend(results)
+
+    return all_results
 
 
 # ---------------------------------------------------------------------------
@@ -216,12 +228,16 @@ async def main(args: argparse.Namespace) -> None:
     base_url = args.url.rstrip('/')
     api_key = args.api_key  # may be None if server has no --api-key
 
+    # All raw rows accumulated here for CSV output
+    csv_rows: list[dict] = []
+    run_ts = datetime.now().isoformat(timespec='seconds')
+
     print(f'Target : {base_url}')
     print(f'Prompt : {args.prompt!r}')
     print(f'Tokens : up to {args.max_tokens}')
     print(f'Stream : {args.stream}')
     print(f'Levels : {args.levels}')
-    print(f'Requests per level: {args.requests}')
+    print(f'Repetitions per level: {args.requests}')
     print()
 
     separator = '─' * 72
@@ -229,13 +245,15 @@ async def main(args: argparse.Namespace) -> None:
     for concurrency in args.levels:
 
         print(separator)
-        print(f'Concurrency = {concurrency}  ({args.requests} requests fired simultaneously)')
+        print(
+            f'Concurrency = {concurrency}  ({concurrency} simultaneous ' +
+            f'requests x {args.requests} repetitions)')
 
         t_wall_start = time.perf_counter()
 
         results = await run_level(
             concurrency=concurrency,
-            n_requests=args.requests,
+            n_reps=args.requests,
             base_url=base_url,
             api_key=api_key,
             prompt=args.prompt,
@@ -246,8 +264,20 @@ async def main(args: argparse.Namespace) -> None:
         wall_time = time.perf_counter() - t_wall_start
         errors = [r for r in results if r['error']]
         successes = [r for r in results if not r['error']]
+        total = concurrency * args.requests
 
-        print(f'  Success: {len(successes)}/{args.requests}   Wall time: {wall_time:.2f}s')
+        # Accumulate raw rows for CSV
+        for r in results:
+            csv_rows.append({
+                'timestamp': run_ts,
+                'concurrency': concurrency,
+                'latency_s': round(r['latency'], 4) if r['latency'] is not None else 'NaN',
+                'ttft_s': round(r['ttft'], 4) if r['ttft'] is not None else 'NaN',
+                'tokens': r['tokens'],
+                'error': r['error'] if r['error'] else 'NaN',
+            })
+
+        print(f'  Success: {len(successes)}/{total}   Wall time: {wall_time:.2f}s')
 
         if errors:
             for e in errors:
@@ -277,6 +307,28 @@ async def main(args: argparse.Namespace) -> None:
 
     print(separator)
     print('Done.')
+
+    # Write CSV
+    if args.output:
+
+        out_path = Path(args.output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with out_path.open('w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(
+                f, fieldnames=[
+                    'timestamp',
+                    'concurrency',
+                    'latency_s',
+                    'ttft_s',
+                    'tokens',
+                    'error'
+                ]
+            )
+            writer.writeheader()
+            writer.writerows(csv_rows)
+
+        print(f'Results saved to {out_path}')
 
 
 def parse_args() -> argparse.Namespace:
@@ -313,7 +365,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=DEFAULT_REQUESTS_PER_LEVEL,
         metavar='N',
-        help=f'Number of simultaneous requests per level (default: {DEFAULT_REQUESTS_PER_LEVEL})',
+        help=f'Repetitions per concurrency level, for averaging (default: {DEFAULT_REQUESTS_PER_LEVEL})',
     )
 
     parser.add_argument(
@@ -328,6 +380,19 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_MAX_TOKENS,
         dest='max_tokens',
         help=f'Max completion tokens per request (default: {DEFAULT_MAX_TOKENS})',
+    )
+
+    _default_output = (
+        Path(__file__).resolve().parent
+        / 'results'
+        / f'{datetime.now().strftime("%Y%m%d_%H%M")}.csv'
+    )
+
+    parser.add_argument(
+        '--output',
+        default=str(_default_output),
+        metavar='FILE',
+        help=f'Path to write raw results as CSV (default: tests/results/YYYYmmdd_HHMM.csv)',
     )
 
     parser.add_argument(

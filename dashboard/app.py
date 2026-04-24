@@ -8,6 +8,7 @@ Usage:
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -62,8 +63,6 @@ if successes.empty:
 # ---------------------------------------------------------------------------
 # Summary stats per concurrency level
 # ---------------------------------------------------------------------------
-
-import numpy as np
 
 stats = (
     successes

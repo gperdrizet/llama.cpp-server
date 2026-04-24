@@ -96,7 +96,11 @@ async def chat_request(
 
             if resp.status != 200:
                 body = await resp.text()
-                return {'error': f'HTTP {resp.status}: {body}', 'latency': None, 'ttft': None, 'tokens': 0}
+
+                return {
+                    'error': f'HTTP {resp.status}: {body}',
+                    'latency': None, 'ttft': None, 'tokens': 0
+                }
 
             if stream:
 

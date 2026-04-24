@@ -114,7 +114,7 @@ async def get_token_count(
             if resp.status == 200:
                 data = await resp.json()
                 return len(data.get('tokens', []))
-    except Exception:
+    except (aiohttp.ClientError, asyncio.TimeoutError):
         pass
 
     # Fallback: character-count estimate

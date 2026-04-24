@@ -152,41 +152,41 @@ with tab_load:
 
         else:
 
-            successes = df[df['error'].isna()].copy()
+            load_successes = df[df['error'].isna()].copy()
 
-            if successes.empty:
+            if load_successes.empty:
                 st.error('No successful requests found in this file.')
 
             else:
 
-                stats = _summarize(successes, 'concurrency')
+                load_stats = _summarize(load_successes, 'concurrency')
 
                 # Metadata
                 run_ts = df['timestamp'].iloc[0] if 'timestamp' in df.columns else 'unknown'
-                col1, col2, col3 = st.columns(3)
-                _small_metric(col1, 'Run timestamp', run_ts)
-                _small_metric(col2, 'Total requests', len(df))
-                _small_metric(col3, 'Errors', df['error'].notna().sum())
+                load_col1, load_col2, load_col3 = st.columns(3)
+                _small_metric(load_col1, 'Run timestamp', run_ts)
+                _small_metric(load_col2, 'Total requests', len(df))
+                _small_metric(load_col3, 'Errors', df['error'].notna().sum())
 
                 st.divider()
 
                 # Plot and summary table side by side
                 st.subheader('Latency vs. concurrency')
 
-                col_plot, col_table = st.columns([3, 2])
+                load_col_plot, load_col_table = st.columns([3, 2])
 
-                with col_plot:
-                    fig = _latency_figure(
-                        stats,
+                with load_col_plot:
+                    load_fig = _latency_figure(
+                        load_stats,
                         x_col='concurrency',
                         x_label='Concurrency (simultaneous requests)',
                     )
-                    st.plotly_chart(fig, width='stretch')
+                    st.plotly_chart(load_fig, width='stretch')
 
-                with col_table:
-                    display = _stats_table(stats, 'concurrency', 'Concurrency')
+                with load_col_table:
+                    load_display = _stats_table(load_stats, 'concurrency', 'Concurrency')
                     st.dataframe(
-                        display.style.format(
+                        load_display.style.format(
                             '{:.3f}',
                             subset=['Mean (s)', 'SEM (s)', 'Std dev (s)', 'p95 (s)'],
                         ),
@@ -238,20 +238,20 @@ with tab_ctx:
                 # Metadata
                 ctx_run_ts = ctx_df['timestamp'].iloc[0] if 'timestamp' in ctx_df.columns else 'unknown'
                 ctx_concurrency = ctx_df['concurrency'].iloc[0] if 'concurrency' in ctx_df.columns else '?'
-                col1, col2, col3, col4 = st.columns(4)
-                _small_metric(col1, 'Run timestamp', ctx_run_ts)
-                _small_metric(col2, 'Total requests', len(ctx_df))
-                _small_metric(col3, 'Errors', ctx_df['error'].notna().sum())
-                _small_metric(col4, 'Concurrency', ctx_concurrency)
+                ctx_col1, ctx_col2, ctx_col3, ctx_col4 = st.columns(4)
+                _small_metric(ctx_col1, 'Run timestamp', ctx_run_ts)
+                _small_metric(ctx_col2, 'Total requests', len(ctx_df))
+                _small_metric(ctx_col3, 'Errors', ctx_df['error'].notna().sum())
+                _small_metric(ctx_col4, 'Concurrency', ctx_concurrency)
 
                 st.divider()
 
                 # Plot and summary table side by side
                 st.subheader('Latency vs. input context length')
 
-                col_plot, col_table = st.columns([3, 2])
+                ctx_col_plot, ctx_col_table = st.columns([3, 2])
 
-                with col_plot:
+                with ctx_col_plot:
                     ctx_fig = _latency_figure(
                         ctx_stats,
                         x_col='prompt_tokens',
@@ -259,7 +259,7 @@ with tab_ctx:
                     )
                     st.plotly_chart(ctx_fig, width='stretch')
 
-                with col_table:
+                with ctx_col_table:
                     ctx_display = _stats_table(ctx_stats, 'prompt_tokens', 'Input tokens')
                     st.dataframe(
                         ctx_display.style.format(

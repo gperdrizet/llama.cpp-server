@@ -203,7 +203,7 @@ The number of slots is configured via `LLAMA_SLOTS` in `.env` and substituted in
 
 | `LLAMA_SLOTS` | Slots | Tokens per slot (with `-c 65536`) | Behaviour |
 |---|---|---|---|
-| `1` | 1 | 65 536 | Full context per request; no concurrency — requests queue |
+| `1` | 1 | 65 536 | Full context per request; no concurrency, requests queue |
 | `4` | 4 | 16 384 | 4 simultaneous requests; 16k context each |
 | `8` | 8 | 8 192 | Higher throughput; short context limit per request |
 

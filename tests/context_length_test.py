@@ -116,6 +116,7 @@ async def get_token_count(
                 return len(data.get('tokens', []))
     except Exception:
         pass
+
     # Fallback: character-count estimate
     return int(len(text) / _CHARS_PER_TOKEN)
 

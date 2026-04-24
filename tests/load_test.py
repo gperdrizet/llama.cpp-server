@@ -226,49 +226,49 @@ def print_stats(label: str, values: list[float], unit: str = 's') -> None:
 # Main
 # ---------------------------------------------------------------------------
 
-async def main(args: argparse.Namespace) -> None:
+async def main(cfg: argparse.Namespace) -> None:
     '''Run the load test across all configured concurrency levels and print results.'''
 
-    base_url = args.url.rstrip('/')
-    api_key = args.api_key  # may be None if server has no --api-key
+    base_url = cfg.url.rstrip('/')
+    api_key = cfg.api_key  # may be None if server has no --api-key
 
     # All raw rows accumulated here for CSV output
     csv_rows: list[dict] = []
     run_ts = datetime.now().isoformat(timespec='seconds')
 
     print(f'Target : {base_url}')
-    print(f'Prompt : {args.prompt!r}')
-    print(f'Tokens : up to {args.max_tokens}')
-    print(f'Stream : {args.stream}')
-    print(f'Levels : {args.levels}')
-    print(f'Repetitions per level: {args.requests}')
+    print(f'Prompt : {cfg.prompt!r}')
+    print(f'Tokens : up to {cfg.max_tokens}')
+    print(f'Stream : {cfg.stream}')
+    print(f'Levels : {cfg.levels}')
+    print(f'Repetitions per level: {cfg.requests}')
     print()
 
     separator = '─' * 72
 
-    for concurrency in args.levels:
+    for concurrency in cfg.levels:
 
         print(separator)
         print(
             f'Concurrency = {concurrency}  ({concurrency} simultaneous ' +
-            f'requests x {args.requests} repetitions)')
+            f'requests x {cfg.requests} repetitions)')
 
         t_wall_start = time.perf_counter()
 
         results = await run_level(
             concurrency=concurrency,
-            n_reps=args.requests,
+            n_reps=cfg.requests,
             base_url=base_url,
             api_key=api_key,
-            prompt=args.prompt,
-            max_tokens=args.max_tokens,
-            stream=args.stream,
+            prompt=cfg.prompt,
+            max_tokens=cfg.max_tokens,
+            stream=cfg.stream,
         )
 
         wall_time = time.perf_counter() - t_wall_start
         errors = [r for r in results if r['error']]
         successes = [r for r in results if not r['error']]
-        total = concurrency * args.requests
+        total = concurrency * cfg.requests
 
         # Accumulate raw rows for CSV
         for r in results:
@@ -292,7 +292,7 @@ async def main(args: argparse.Namespace) -> None:
             latencies = [r['latency'] for r in successes]
             print_stats('Latency (total)', latencies)
 
-            if args.stream:
+            if cfg.stream:
                 ttfts = [r['ttft'] for r in successes if r['ttft'] is not None]
 
                 if ttfts:
@@ -305,7 +305,7 @@ async def main(args: argparse.Namespace) -> None:
                 avg_latency = statistics.mean(latencies)
                 tps = avg_tokens / avg_latency if avg_latency > 0 else 0
                 print(
-                    f'  Avg tokens/response: {avg_tokens:.1f}   ' + 
+                    f'  Avg tokens/response: {avg_tokens:.1f}   ' +
                     f'Throughput: {tps:.1f} tok/s (aggregate)'
                 )
 
@@ -313,9 +313,9 @@ async def main(args: argparse.Namespace) -> None:
     print('Done.')
 
     # Write CSV
-    if args.output:
+    if cfg.output:
 
-        out_path = Path(args.output)
+        out_path = Path(cfg.output)
         out_path.parent.mkdir(parents=True, exist_ok=True)
 
         with out_path.open('w', newline='', encoding='utf-8') as f:
@@ -361,7 +361,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=DEFAULT_LEVELS,
         metavar='N',
-        help=f'Concurrency levels to test (default: {DEFAULT_LEVELS})',
+        help=f'Concurrency levels to test (default: {DEFAULT_LEVELS})'
     )
 
     parser.add_argument(
@@ -369,13 +369,16 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=DEFAULT_REQUESTS_PER_LEVEL,
         metavar='N',
-        help=f'Repetitions per concurrency level, for averaging (default: {DEFAULT_REQUESTS_PER_LEVEL})',
+        help=(
+            'Repetitions per concurrency level, for averaging ' +
+            f'(default: {DEFAULT_REQUESTS_PER_LEVEL})'
+        )
     )
 
     parser.add_argument(
         '--prompt',
         default=DEFAULT_PROMPT,
-        help='Prompt to send to the model',
+        help='Prompt to send to the model'
     )
 
     parser.add_argument(
@@ -383,7 +386,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=DEFAULT_MAX_TOKENS,
         dest='max_tokens',
-        help=f'Max completion tokens per request (default: {DEFAULT_MAX_TOKENS})',
+        help=f'Max completion tokens per request (default: {DEFAULT_MAX_TOKENS})'
     )
 
     _default_output = (
@@ -396,13 +399,13 @@ def parse_args() -> argparse.Namespace:
         '--output',
         default=str(_default_output),
         metavar='FILE',
-        help=f'Path to write raw results as CSV (default: tests/results/YYYYmmdd_HHMM.csv)',
+        help='Path to write raw results as CSV (default: tests/results/YYYYmmdd_HHMM.csv)'
     )
 
     parser.add_argument(
         '--stream',
         action='store_true',
-        help='Use streaming responses (enables TTFT measurement)',
+        help='Use streaming responses (enables TTFT measurement)'
     )
 
     return parser.parse_args()

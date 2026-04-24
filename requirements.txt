@@ -1,2 +1,5 @@
 aiohttp
+pandas
+plotly
 python-dotenv
+streamlit

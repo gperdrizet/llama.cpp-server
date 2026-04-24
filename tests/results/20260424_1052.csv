@@ -1,0 +1,130 @@
+timestamp,concurrency,latency_s,ttft_s,tokens,error
+2026-04-24T10:52:33,1,2.6002,NaN,128,NaN
+2026-04-24T10:52:33,1,2.1201,NaN,128,NaN
+2026-04-24T10:52:33,1,2.1138,NaN,128,NaN
+2026-04-24T10:52:33,2,3.3505,NaN,128,NaN
+2026-04-24T10:52:33,2,3.3036,NaN,125,NaN
+2026-04-24T10:52:33,2,3.4221,NaN,128,NaN
+2026-04-24T10:52:33,2,3.0607,NaN,104,NaN
+2026-04-24T10:52:33,2,2.3036,NaN,88,NaN
+2026-04-24T10:52:33,2,2.6639,NaN,111,NaN
+2026-04-24T10:52:33,4,6.2255,NaN,128,NaN
+2026-04-24T10:52:33,4,5.719,NaN,109,NaN
+2026-04-24T10:52:33,4,5.8787,NaN,113,NaN
+2026-04-24T10:52:33,4,6.204,NaN,128,NaN
+2026-04-24T10:52:33,4,5.1624,NaN,123,NaN
+2026-04-24T10:52:33,4,5.2385,NaN,128,NaN
+2026-04-24T10:52:33,4,4.5513,NaN,99,NaN
+2026-04-24T10:52:33,4,4.7406,NaN,105,NaN
+2026-04-24T10:52:33,4,5.641,NaN,128,NaN
+2026-04-24T10:52:33,4,5.4422,NaN,120,NaN
+2026-04-24T10:52:33,4,5.6466,NaN,128,NaN
+2026-04-24T10:52:33,4,5.4745,NaN,121,NaN
+2026-04-24T10:52:33,8,5.8713,NaN,128,NaN
+2026-04-24T10:52:33,8,NaN,NaN,0,"HTTP 429: <html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+"
+2026-04-24T10:52:33,8,5.8399,NaN,127,NaN
+2026-04-24T10:52:33,8,5.8756,NaN,128,NaN
+2026-04-24T10:52:33,8,NaN,NaN,0,"HTTP 429: <html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+"
+2026-04-24T10:52:33,8,NaN,NaN,0,"HTTP 429: <html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+"
+2026-04-24T10:52:33,8,NaN,NaN,0,"HTTP 429: <html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+"
+2026-04-24T10:52:33,8,5.8753,NaN,128,NaN
+2026-04-24T10:52:33,8,4.5825,NaN,99,NaN
+2026-04-24T10:52:33,8,NaN,NaN,0,"HTTP 429: <html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+"
+2026-04-24T10:52:33,8,5.4505,NaN,128,NaN
+2026-04-24T10:52:33,8,NaN,NaN,0,"HTTP 429: <html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+"
+2026-04-24T10:52:33,8,NaN,NaN,0,"HTTP 429: <html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+"
+2026-04-24T10:52:33,8,5.2808,NaN,121,NaN
+2026-04-24T10:52:33,8,NaN,NaN,0,"HTTP 429: <html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+"
+2026-04-24T10:52:33,8,5.4443,NaN,128,NaN
+2026-04-24T10:52:33,8,5.524,NaN,128,NaN
+2026-04-24T10:52:33,8,NaN,NaN,0,"HTTP 429: <html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+"
+2026-04-24T10:52:33,8,NaN,NaN,0,"HTTP 429: <html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+"
+2026-04-24T10:52:33,8,5.2307,NaN,115,NaN
+2026-04-24T10:52:33,8,5.2926,NaN,117,NaN
+2026-04-24T10:52:33,8,5.4565,NaN,124,NaN
+2026-04-24T10:52:33,8,NaN,NaN,0,"HTTP 429: <html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+"
+2026-04-24T10:52:33,8,NaN,NaN,0,"HTTP 429: <html>
+<head><title>429 Too Many Requests</title></head>
+<body>
+<center><h1>429 Too Many Requests</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+"

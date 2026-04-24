@@ -1,5 +1,7 @@
 aiohttp
 ipykernel
+matplotlib
+nbformat
 pandas
 plotly
 python-dotenv

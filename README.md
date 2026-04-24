@@ -414,3 +414,9 @@ At a fixed concurrency of 8 simultaneous requests, increasing the slot count red
 
 The server's total context window (`-c 65536`, 64k tokens) is divided equally across all slots. More slots means less context available per individual request. For most short chat turns and one-shot completions 8–16k tokens is ample; workloads with long system prompts or multi-turn histories may require fewer slots to preserve context.
 
+### Latency vs input context length
+
+![Latency vs input context length](notebooks/figures/latency_vs_context_length.png)
+
+Measured by `tests/context_length_test.py` at fixed concurrency. Both mean and p95 latency increase with prompt length as the model must process more tokens during the prefill phase before generating any output.
+

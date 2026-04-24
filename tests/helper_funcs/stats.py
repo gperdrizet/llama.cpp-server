@@ -1,3 +1,10 @@
+'''
+stats.py: Statistics helpers for the llama.cpp load tester.
+
+Provides percentile() for computing arbitrary percentiles and
+print_stats() for printing a summary of a latency sample.
+'''
+
 import statistics
 
 

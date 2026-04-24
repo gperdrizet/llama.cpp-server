@@ -1,9 +1,22 @@
+'''
+requests.py: HTTP request helpers for the llama.cpp load tester.
+
+Provides chat_request() for sending a single chat completion request
+and run_level() for firing a batch of concurrent requests.
+'''
+
+import sys
 import asyncio
 import json
 import time
 from typing import Optional
 
-import aiohttp
+try:
+    import aiohttp
+
+except ImportError:
+    print('ERROR: aiohttp is required.  Install it with:  pip install aiohttp')
+    sys.exit(1)
 
 
 async def chat_request(

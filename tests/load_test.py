@@ -29,6 +29,10 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from helper_funcs.requests import run_level
+from helper_funcs.stats import print_stats
+
+
 try:
     from dotenv import load_dotenv
 
@@ -36,19 +40,9 @@ except ImportError:
     print('ERROR: python-dotenv is required.  Install it with:  pip install python-dotenv')
     sys.exit(1)
 
-try:
-    import aiohttp
-
-except ImportError:
-    print('ERROR: aiohttp is required.  Install it with:  pip install aiohttp')
-    sys.exit(1)
-
 # Load .env from the repo root (one level above tests/)
 _ENV_PATH = Path(__file__).resolve().parent.parent / '.env'
 load_dotenv(_ENV_PATH)
-
-from helper_funcs.requests import chat_request, run_level
-from helper_funcs.stats import percentile, print_stats
 
 
 # ---------------------------------------------------------------------------

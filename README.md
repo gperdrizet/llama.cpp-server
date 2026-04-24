@@ -201,7 +201,7 @@ The number of slots is configured via `LLAMA_SLOTS` in `.env` and substituted in
 
 **Tradeoffs:**
 
-| `LLAMA_SLOTS` | Slots | Tokens per slot (with `-c 65536`) | Behaviour |
+| `LLAMA_SLOTS` | Slots | Tokens per slot (with `-c 65536`) | behavior |
 |---|---|---|---|
 | `1` | 1 | 65 536 | Full context per request; no concurrency, requests queue |
 | `4` | 4 | 16 384 | 4 simultaneous requests; 16k context each |
@@ -372,7 +372,7 @@ Shared logic lives in `tests/helper_funcs/`:
 
 ## Dashboard
 
-`dashboard/app.py` is a [Streamlit](https://streamlit.io) application that visualises load test CSV results.
+`dashboard/app.py` is a [Streamlit](https://streamlit.io) application that visualizes load test CSV results.
 
 ### Usage
 

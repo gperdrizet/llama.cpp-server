@@ -56,16 +56,16 @@ The service pins to GPU 0 (the P100) via the `CUDA_VISIBLE_DEVICES=0` environmen
 ## Installation layout
 
 ```
-/opt/llama.cpp/          # llama.cpp source + build tree (read-only to service)
+/opt/llama.cpp/                      # llama.cpp source + build tree (read-only to service)
 └── build/
     └── bin/
-        └── llama-server # the inference server binary
+        └── llama-server             # the inference server binary
 
-/opt/models/             # model storage (read-write to service)
-├── gpt-oss-20b-mxfp4.gguf          (12 GiB) ← currently active
-├── mxbai-embed-large-v1-f16.gguf   (639 MiB)
-├── Qwen2.5-32B-Instruct-Q3_K_M.gguf (15 GiB)
-└── Qwen2.5-32B-Instruct-Q4_K_M.gguf (19 GiB)
+/opt/models/                         # model storage (read-write to service)
+├── gpt-oss-20b-mxfp4.gguf           # (12 GiB) ← currently active
+├── mxbai-embed-large-v1-f16.gguf    # (639 MiB)
+├── Qwen2.5-32B-Instruct-Q3_K_M.gguf # (15 GiB)
+└── Qwen2.5-32B-Instruct-Q4_K_M.gguf # (19 GiB)
 
 /etc/systemd/system/
 ├── llamacpp.service                 # main unit file
@@ -244,9 +244,6 @@ curl http://localhost:8502/v1/chat/completions \
     "model": "gpt-oss-20b-mxfp4",
     "messages": [{"role": "user", "content": "Hello!"}]
   }'
-
-# Prometheus metrics (no auth required)
-curl http://localhost:8502/metrics
 
 # Health check
 curl http://localhost:8502/health

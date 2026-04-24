@@ -1,0 +1,47 @@
+[Unit]
+Description=llama.cpp inference server
+Documentation=https://github.com/ggml-org/llama.cpp
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=llama
+Environment=CUDA_VISIBLE_DEVICES=0
+Group=llama
+WorkingDirectory=/opt/llama.cpp
+
+ExecStart=/opt/llama.cpp/build/bin/llama-server \
+    -m /opt/models/gpt-oss-20b-mxfp4.gguf \
+    --n-gpu-layers 999 \
+    -c 65536 \
+    --flash-attn on \
+    --jinja \
+    --host 0.0.0.0 \
+    --port 8502 \
+    --api-key YOUR_API_KEY_HERE \
+    --metrics \
+    --log-timestamps \
+    --log-prefix
+
+# Restart policy
+Restart=on-failure
+RestartSec=10
+StartLimitInterval=300
+StartLimitBurst=5
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/models
+ReadOnlyPaths=/opt/llama.cpp
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=llama-server
+
+[Install]
+WantedBy=multi-user.target

@@ -3,6 +3,28 @@
 This repository documents and centralizes the configuration of the `llama.cpp` inference server running on **pyrite** as a systemd service. The server was originally set up as a bootcamp demonstration but now serves as a public inference endpoint for students and supports multiple personal projects.
 
 
+## Table of contents
+
+- [API usage](#api-usage)
+- [System overview](#system-overview)
+- [Hardware](#hardware)
+- [Installation layout](#installation-layout)
+- [Systemd service](#systemd-service)
+  - [Unit file](#unit-file)
+  - [Override file](#override-file)
+  - [Server flags explained](#server-flags-explained)
+  - [Security hardening](#security-hardening)
+  - [Restart policy](#restart-policy)
+- [Parallelism](#parallelism)
+- [Available models](#available-models)
+- [Service management](#service-management)
+- [Logs](#logs)
+- [Load test](#load-test)
+- [Context length test](#context-length-test)
+- [Dashboard](#dashboard)
+- [Performance](#performance)
+
+
 ## API usage
 
 The server exposes an OpenAI-compatible API. Set the `Authorization` header with the API key from the unit file.
@@ -24,28 +46,6 @@ curl http://localhost:8502/health
 When configuring clients (LangChain, LlamaIndex, OpenWebUI, etc.), set:
 - **Base URL**: `http://<pyrite-ip>:8502/v1`
 - **API Key**: value from the unit file
-
-
-## Table of contents
-
-- [System overview](#system-overview)
-- [Hardware](#hardware)
-- [Installation layout](#installation-layout)
-- [Systemd service](#systemd-service)
-  - [Unit file](#unit-file)
-  - [Override file](#override-file)
-  - [Server flags explained](#server-flags-explained)
-  - [Security hardening](#security-hardening)
-  - [Restart policy](#restart-policy)
-- [Parallelism](#parallelism)
-- [Available models](#available-models)
-- [Service management](#service-management)
-- [API usage](#api-usage)
-- [Logs](#logs)
-- [Load test](#load-test)
-- [Context length test](#context-length-test)
-- [Dashboard](#dashboard)
-- [Performance](#performance)
 
 
 ## System overview

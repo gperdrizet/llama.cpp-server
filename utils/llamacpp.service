@@ -1,8 +1,8 @@
 [Unit]
 Description=llama.cpp inference server
 Documentation=https://github.com/ggml-org/llama.cpp
-After=network-online.target
-Wants=network-online.target
+After=network-online.target nvidia-persistenced.service
+Wants=network-online.target nvidia-persistenced.service
 
 [Service]
 Type=simple

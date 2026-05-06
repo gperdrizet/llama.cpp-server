@@ -177,7 +177,7 @@ This drop-in was created separately (likely via `systemctl edit`) to allow chang
 | `--n-gpu-layers` | `999` | Offload all layers to GPU (effectively "full GPU inference") |
 | `-c` | `65536` | Context window size in tokens (64k) |
 | `--parallel` | `$LLAMA_SLOTS` | Number of parallel inference slots (see [Parallelism](#parallelism)) |
-| `--flash-attn on` | - | Enable Flash Attention for reduced VRAM usage and faster inference |
+| `--flash-attn on` | `on` | Enable Flash Attention for reduced VRAM usage and faster inference |
 | `--jinja` | - | Enable Jinja2 chat template processing (required for correct prompt formatting with most modern models) |
 | `--host` | `0.0.0.0` | Listen on all network interfaces |
 | `--port` | `8502` | TCP port |
@@ -205,12 +205,12 @@ The service runs as the unprivileged `llama` user/group, which has no login shel
 
 ### Restart policy
 
-| Setting | Value | Meaning |
-|---|---|---|
-| `Restart=on-failure` | - | Restart automatically if the process exits with a non-zero code or is killed by a signal |
-| `RestartSec=10` | 10 s | Wait 10 seconds before restarting |
-| `StartLimitInterval=300` | 300 s | Rolling window for the burst limit |
-| `StartLimitBurst=5` | 5 | If the service fails to start 5 times within 5 minutes, systemd stops retrying |
+| Setting | Meaning |
+|---|---|
+| `Restart=on-failure` | Restart automatically if the process exits with a non-zero code or is killed by a signal |
+| `RestartSec=10` | Wait 10 seconds before restarting |
+| `StartLimitInterval=300` | Rolling window for the burst limit |
+| `StartLimitBurst=5` | If the service fails to start 5 times within 5 minutes, systemd stops retrying |
 
 
 
@@ -240,9 +240,18 @@ All models live in `/opt/models/`. The service must be restarted to switch model
 |---|---|---|---|
 | `gpt-oss-20b-mxfp4.gguf` | 12 GiB | Chat | **Currently active.** Microsoft MXFP4 quantization. Fits entirely on P100 (16 GiB). |
 | `mxbai-embed-large-v1-f16.gguf` | 639 MiB | Embedding | mixedbread-ai embedding model, FP16. Not currently served. |
-| `Qwen2.5-32B-Instruct-Q3_K_M.gguf` | 15 GiB | Chat | Fits on P100 with Q3 quant. |
+| `Qwen2.5-32B-Instruct-Q3_K_M.gguf` | 15 GiB | Chat | **Does not fit on P100.** Weights (14,872 MiB) leave insufficient room for the KV cache at `-c 65536` (~1,500 MiB needed). Tested 2026-05-06 — OOM at context allocation. Would require `-c ≤ 8192` to fit within 16 GiB. |
 | `Qwen2.5-32B-Instruct-Q4_K_M.gguf` | 19 GiB | Chat | Exceeds P100 VRAM alone; would require CPU offload or both GPUs. |
 
+Models not yet downloaded but worth trying (all estimated to fit on P100):
+
+| Filename | Est. Size | Type | Notes |
+|---|---|---|---|
+| `Mistral-Small-3.1-24B-Instruct-Q4_K_M.gguf` | ~14 GiB | Chat | Strong reasoning; 128k native context window (cap to 8k–16k for VRAM headroom). |
+| `Phi-4-Q8_0.gguf` | ~15 GiB | Chat | Microsoft Phi-4 (14B); punches above weight on reasoning and code. Q5_K_M (~10 GiB) also an option. |
+| `gemma-3-27b-it-Q3_K_M.gguf` | ~11 GiB | Chat | Google Gemma 3 27B; highest parameter count that fits comfortably. Q4_K_M (~14 GiB) also fits. |
+| `Qwen2.5-14B-Instruct-Q8_0.gguf` | ~14 GiB | Chat | Same family as the 32B but properly fits at full Q8 precision. |
+| `DeepSeek-R1-Distill-Qwen-14B-Q8_0.gguf` | ~14 GiB | Chat | Reasoning-focused distill of DeepSeek-R1; good for structured/multi-step tasks. |
 
 
 ## Service management

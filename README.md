@@ -1,4 +1,4 @@
-# llama.cpp server: `pyrite`
+# llama.cpp inference server
 
 [![llama.cpp](https://img.shields.io/badge/llama.cpp-inference-6B7280?logo=meta&logoColor=white)](https://github.com/ggml-org/llama.cpp)
 [![CUDA](https://img.shields.io/badge/CUDA-P100%2016GB-76B900?logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-toolkit)
@@ -6,7 +6,7 @@
 [![OpenAI compatible](https://img.shields.io/badge/API-OpenAI%20compatible-412991?logo=openai&logoColor=white)](https://platform.openai.com/docs/api-reference)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-This repository documents and centralizes the configuration of the `llama.cpp` inference server running on **pyrite** as a systemd service. The server was originally set up as a bootcamp demonstration but now serves as a public inference endpoint for students and supports multiple personal projects.
+This repository documents and centralizes the configuration of a `llama.cpp` inference server running as a systemd service on a dedicated model server. The server exposes an OpenAI-compatible API and supports multiple concurrent projects.
 
 > **API gateway**: [gperdrizet/model-gateway](https://github.com/gperdrizet/model-gateway) — authentication, token metering, billing, and admin panel for this server
 
@@ -52,7 +52,7 @@ curl http://localhost:8502/health
 ```
 
 When configuring clients (LangChain, LlamaIndex, OpenWebUI, etc.), set:
-- **Base URL**: `http://<pyrite-ip>:8502/v1`
+- **Base URL**: `http://<model-server-ip>:8502/v1`
 - **API Key**: value from the unit file
 
 
@@ -60,11 +60,10 @@ When configuring clients (LangChain, LlamaIndex, OpenWebUI, etc.), set:
 
 | Property       | Value                          |
 |----------------|-------------------------------|
-| Hostname       | `pyrite`                      |
-| Kernel         | 6.8.0-110-generic             |
-| NVIDIA Driver  | 580.126.20                    |
+| Kernel         | 6.8.x-generic                 |
+| NVIDIA Driver  | 580.x                         |
 | Service unit   | `llamacpp.service`            |
-| Service user   | `llama` (uid=995, gid=984)    |
+| Service user   | `llama`                       |
 | Listening port | `8502`                        |
 | API base URL   | `http://0.0.0.0:8502`        |
 
@@ -248,7 +247,7 @@ All models live in `/opt/models/`. The service must be restarted to switch model
 |---|---|---|---|
 | `gpt-oss-20b-mxfp4.gguf` | 12 GiB | Chat | **Currently active.** Microsoft MXFP4 quantization. Fits entirely on P100 (16 GiB). |
 | `mxbai-embed-large-v1-f16.gguf` | 639 MiB | Embedding | mixedbread-ai embedding model, FP16. Not currently served. |
-| `Qwen2.5-32B-Instruct-Q3_K_M.gguf` | 15 GiB | Chat | **Does not fit on P100.** Weights (14,872 MiB) leave insufficient room for the KV cache at `-c 65536` (~1,500 MiB needed). Tested 2026-05-06 — OOM at context allocation. Would require `-c ≤ 8192` to fit within 16 GiB. |
+| `Qwen2.5-32B-Instruct-Q3_K_M.gguf` | 15 GiB | Chat | **Does not fit on P100.** Weights (14,872 MiB) leave insufficient room for the KV cache at `-c 65536`. Tested — OOM at context allocation. Would require `-c ≤ 8192` to fit within 16 GiB. |
 | `Qwen2.5-32B-Instruct-Q4_K_M.gguf` | 19 GiB | Chat | Exceeds P100 VRAM alone; would require CPU offload or both GPUs. |
 
 Models not yet downloaded but worth trying (all estimated to fit on P100):
@@ -344,7 +343,7 @@ python tests/load_test.py --levels 1 2 4 8 16 --requests 5
 python tests/load_test.py --stream
 
 # Target a remote host
-python tests/load_test.py --url http://pyrite:8502
+python tests/load_test.py --url http://<model-server-ip>:8502
 ```
 
 

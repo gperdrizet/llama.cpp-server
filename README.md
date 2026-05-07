@@ -8,7 +8,7 @@
 
 This repository documents and centralizes the configuration of a `llama.cpp` inference server running as a systemd service on a dedicated model server. The server exposes an OpenAI-compatible API and supports multiple concurrent projects.
 
-> **API gateway**: [gperdrizet/model-gateway](https://github.com/gperdrizet/model-gateway) — authentication, token metering, billing, and admin panel for this server
+> **API gateway**: [gperdrizet/model-gateway](https://github.com/gperdrizet/model-gateway), providing authentication, token metering, billing, and an admin panel
 
 
 ## Table of contents
@@ -247,7 +247,7 @@ All models live in `/opt/models/`. The service must be restarted to switch model
 |---|---|---|---|
 | `gpt-oss-20b-mxfp4.gguf` | 12 GiB | Chat | **Currently active.** Microsoft MXFP4 quantization. Fits entirely on P100 (16 GiB). |
 | `mxbai-embed-large-v1-f16.gguf` | 639 MiB | Embedding | mixedbread-ai embedding model, FP16. Not currently served. |
-| `Qwen2.5-32B-Instruct-Q3_K_M.gguf` | 15 GiB | Chat | **Does not fit on P100.** Weights (14,872 MiB) leave insufficient room for the KV cache at `-c 65536`. Tested — OOM at context allocation. Would require `-c ≤ 8192` to fit within 16 GiB. |
+| `Qwen2.5-32B-Instruct-Q3_K_M.gguf` | 15 GiB | Chat | **Does not fit on P100.** Weights (14,872 MiB) leave insufficient room for the KV cache at `-c 65536`. Tested; OOM at context allocation. Would require `-c ≤ 8192` to fit within 16 GiB. |
 | `Qwen2.5-32B-Instruct-Q4_K_M.gguf` | 19 GiB | Chat | Exceeds P100 VRAM alone; would require CPU offload or both GPUs. |
 
 Models not yet downloaded but worth trying (all estimated to fit on P100):

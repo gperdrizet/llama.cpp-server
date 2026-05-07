@@ -1,6 +1,14 @@
 # llama.cpp server: `pyrite`
 
+[![llama.cpp](https://img.shields.io/badge/llama.cpp-inference-6B7280?logo=meta&logoColor=white)](https://github.com/ggml-org/llama.cpp)
+[![CUDA](https://img.shields.io/badge/CUDA-P100%2016GB-76B900?logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-toolkit)
+[![Python](https://img.shields.io/badge/python-3.12-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![OpenAI compatible](https://img.shields.io/badge/API-OpenAI%20compatible-412991?logo=openai&logoColor=white)](https://platform.openai.com/docs/api-reference)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 This repository documents and centralizes the configuration of the `llama.cpp` inference server running on **pyrite** as a systemd service. The server was originally set up as a bootcamp demonstration but now serves as a public inference endpoint for students and supports multiple personal projects.
+
+> **API gateway**: [gperdrizet/model-gateway](https://github.com/gperdrizet/model-gateway) — authentication, token metering, billing, and admin panel for this server
 
 
 ## Table of contents

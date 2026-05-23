@@ -11,6 +11,7 @@ Environment=CUDA_VISIBLE_DEVICES=0
 Group=llama
 WorkingDirectory=/opt/llama.cpp
 
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
 ExecStart=/opt/llama.cpp/build/bin/llama-server \
     -m /opt/models/gpt-oss-20b-mxfp4.gguf \
     --n-gpu-layers 999 \

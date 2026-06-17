@@ -241,7 +241,6 @@ journalctl -u llamacpp.service -n 100 --no-pager -l
 journalctl -u llamacpp.service --since "2026-04-24 00:00" --until "2026-04-24 12:00"
 ```
 
-
 ## Testing
 
 ### Load test
@@ -335,5 +334,3 @@ streamlit run dashboard/app.py
 ```
 
 Open the URL printed by Streamlit (default: `http://localhost:8501`). The sidebar lets you select any CSV from `tests/results/`. Charts show mean ± SEM and p95 latency vs. concurrency level.
-
-

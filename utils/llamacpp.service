@@ -15,7 +15,7 @@ ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1
 ExecStart=/opt/llama.cpp/build/bin/llama-server \
     -m /opt/models/gpt-oss-20b-mxfp4.gguf \
     --n-gpu-layers 999 \
-    -c 65536 \
+    --ctx-size 131072 \
     --parallel YOUR_SLOTS_HERE \
     --flash-attn on \
     --jinja \
@@ -25,7 +25,7 @@ ExecStart=/opt/llama.cpp/build/bin/llama-server \
     --metrics \
     --log-timestamps \
     --log-prefix \
-    --cache-ram 0
+    --cache-ram -1
 
 # Restart policy
 Restart=on-failure

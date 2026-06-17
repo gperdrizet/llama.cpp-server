@@ -24,7 +24,8 @@ ExecStart=/opt/llama.cpp/build/bin/llama-server \
     --api-key YOUR_API_KEY_HERE \
     --metrics \
     --log-timestamps \
-    --log-prefix
+    --log-prefix \
+    --cache-ram 0
 
 # Restart policy
 Restart=on-failure

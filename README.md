@@ -6,9 +6,9 @@
 [![OpenAI compatible](https://img.shields.io/badge/API-OpenAI%20compatible-412991?logo=openai&logoColor=white)](https://platform.openai.com/docs/api-reference)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-This repository documents and centralizes the configuration of a `llama.cpp` inference server running as a systemd service on a dedicated model server. The server exposes an OpenAI-compatible API and supports multiple concurrent projects.
+This repository documents and centralizes the configuration of a `llama.cpp` inference server running as a systemd service on a dedicated model server. The server exposes a local OpenAI-compatible API and supports multiple concurrent projects.
 
-> **API gateway**: [gperdrizet/model-gateway](https://github.com/gperdrizet/model-gateway), providing authentication, token metering, billing, and an admin panel
+> **Public API gateway**: [promptlyapi.com](https://promptlyapi.com/register), providing authentication, token metering, billing, and an admin panel for indie devs and hobbyists on a budget - 100k free tokens for new registrations.
 
 
 ## Table of contents
@@ -57,21 +57,119 @@ When configuring clients (LangChain, LlamaIndex, OpenWebUI, etc.), set:
 - **API Key**: value from the unit file (internal) or a gateway-issued key (external)
 
 
-## Hardware
+## Deployment
 
-| Device | Model                  | VRAM   | Role                            |
-|--------|------------------------|--------|---------------------------------|
-| `0`    | Tesla P100-PCIE-16GB   | 16 GiB | Active inference GPU (selected via `CUDA_VISIBLE_DEVICES=0`) |
-| `1`    | GeForce GTX 1070       | 8 GiB  | Available; not currently used by the service |
+### Prerequisites
 
-The service pins to GPU 0 (the P100) via `CUDA_VISIBLE_DEVICES=0`. The P100's 16 GiB VRAM comfortably fits the active model (12 GiB) fully on-device. The system has 24 CPU threads and 251 GiB RAM.
+The service runs as the `llama` system user. Create it once before deploying:
 
-The binary was built from source with CMake in **Release** mode with CUDA support (`GGML_CUDA=ON`), CUDA flash attention (`GGML_CUDA_FA=ON`), and CUDA graphs (`GGML_CUDA_GRAPHS=ON`).
+```bash
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin llama
+```
+
+### Deploy
+
+The unit file template lives in `utils/llamacpp.service` - that is the source of truth. Deploy it with:
+
+```bash
+# Copy and fill in the env file
+cp .env.template .env
+
+# Deploy and immediately restart the service
+bash utils/deploy_service.sh --restart
+```
+
+`deploy_service.sh` substitutes `SUB_API_KEY_HERE`, etc from `.env`, copies the result to `/etc/systemd/system/llamacpp.service`, and runs `systemctl daemon-reload`.
+
+> **Note:** `.env` contains the real API key - do not commit it. It is listed in `.gitignore`.
+
+Model files are not included in this repository. Download them separately with `huggingface-cli` or `wget`.
+
+## Systemd service
+
+The unit file template is `utils/llamacpp.service` - that is the source of truth. The deployed copy is at `/etc/systemd/system/llamacpp.service`. See [Deployment](#deployment) for how to build and apply it.
+
+
+### Service management
+
+```bash
+# Status
+systemctl status llamacpp.service
+
+# Start / stop / restart
+sudo systemctl start llamacpp.service
+sudo systemctl stop llamacpp.service
+sudo systemctl restart llamacpp.service
+
+# Apply unit file changes
+sudo systemctl daemon-reload && sudo systemctl restart llamacpp.service
+
+# Enable / disable autostart on boot
+sudo systemctl enable llamacpp.service
+sudo systemctl disable llamacpp.service
+```
+
+### Logs
+
+All log output goes to the systemd journal tagged with `llama-server`:
+
+```bash
+# Follow live logs
+journalctl -u llamacpp.service -f
+
+# Show logs since last system boot
+journalctl -u llamacpp.service -b
+
+# Show last 100 lines (full, not ellipsized)
+journalctl -u llamacpp.service -n 100 --no-pager -l
+
+# Filter by time range
+journalctl -u llamacpp.service --since "2026-04-24 00:00" --until "2026-04-24 12:00"
+```
+
+### Restart policy
+
+By default, the service will restart on failure with the following settings.
+
+| Setting | Value | Meaning |
+|---|---|---|
+| `Restart` | `on-failure` | Restart if the process exits non-zero or is killed by a signal |
+| `RestartSec` | `10` | Wait 10 seconds before restarting |
+| `StartLimitInterval` | `300` | Rolling window for the burst limit |
+| `StartLimitBurst` | `5` | Stop retrying after 5 failures within 5 minutes |
+
+**CUDA probe:** Before starting, the service polls `nvidia-smi -L` for up to 30 seconds to confirm the GPU is available. This guards against `nvidia-persistenced` race conditions on boot. If the GPU isn't ready, the service fails immediately rather than silently falling back to CPU inference.
+
+### Security hardening
+
+The service runs as the unprivileged `llama` user/group and several flags are set in the unit file to protect the host system.
+
+| Directive | Effect |
+|---|---|
+| `NoNewPrivileges=true` | Prevents privilege escalation via setuid/setgid |
+| `PrivateTmp=true` | Isolated `/tmp` namespace |
+| `ProtectSystem=strict` | Filesystem mounted read-only except listed paths |
+| `ProtectHome=true` | `/home`, `/root`, `/run/user` invisible to the process |
+| `ReadOnlyPaths=/opt/llama.cpp /opt/models` | Both the install tree and model directory are read-only (model files are memory-mapped for reading only) |
 
 
 ## Performance
 
-Results produced by `tests/load_test.py` against the active model (`gpt-oss-20b-mxfp4.gguf`) on the P100, with the server configured to various `--parallel` slot counts. Analysis notebooks and saved figures live in `notebooks/`.
+Results produced by `tests/load_test.py` against the active model (`gpt-oss-20b-mxfp4.gguf`) on a NVIDIA P100 16GB GPU, with the server configured to various `--parallel` slot counts. Analysis notebooks and saved figures live in `notebooks/`.
+
+### Parallelism
+
+llama.cpp splits its KV cache into **slots** using the `--parallel` flag. Each slot handles one concurrent request; when all slots are busy, additional requests queue.
+
+The number of slots is configured via `LLAMA_SLOTS` in `.env` and substituted into the unit file by `deploy_service.sh`.
+
+| `LLAMA_SLOTS` | Slots | Tokens per slot (with `-c 65536`) | Behavior |
+|---|---|---|---|
+| `1` | 1 | 65 536 | Full context per request; no concurrency, requests queue |
+| `4` | 4 | 16 384 | 4 simultaneous requests; 16k context each |
+| `8` | 8 | 8 192 | Higher throughput; short context limit per request |
+
+Start with `LLAMA_SLOTS=1` and use the load test to benchmark before increasing. Most short chat turns and one-shot completions fit comfortably within 16k tokens, making `LLAMA_SLOTS=4` a reasonable first step on the P100.
 
 
 ### Latency vs concurrency
@@ -92,7 +190,7 @@ At a fixed concurrency of 8 simultaneous requests, increasing the slot count red
 
 ![Context length per slot](notebooks/figures/context_per_slot.png)
 
-The server's total context window (`-c 65536`, 64k tokens) is divided equally across all slots. More slots means less context available per individual request. For most short chat turns and one-shot completions 8–16k tokens is ample; workloads with long system prompts or multi-turn histories may require fewer slots to preserve context.
+The server's total context window (`-c 131072`, 100k tokens for `gpt-oss-20b) is divided equally across all slots. More slots means less context available per individual request. For most short chat turns and one-shot completions 8–16k tokens is ample; workloads with long system prompts or multi-turn histories may require fewer slots to preserve context.
 
 
 ### Latency vs input context length
@@ -101,145 +199,6 @@ The server's total context window (`-c 65536`, 64k tokens) is divided equally ac
 
 Measured by `tests/context_length_test.py` at fixed concurrency. Both mean and p95 latency increase with prompt length as the model must process more tokens during the prefill phase before generating any output.
 
-
-## Available models
-
-All models live in `/opt/models/`. The service must be restarted to switch models (update `-m` in `utils/llamacpp.service` and redeploy).
-
-| Filename | Size | Type | Status | Notes |
-|---|---|---|---|---|
-| `gpt-oss-20b-mxfp4.gguf` | 12 GiB | Chat | **Active** | Microsoft MXFP4 quantization. Fits entirely on P100. |
-| `mxbai-embed-large-v1-f16.gguf` | 639 MiB | Embedding | On disk | mixedbread-ai embedding model, FP16. Not currently served. |
-| `Qwen2.5-32B-Instruct-Q3_K_M.gguf` | 15 GiB | Chat | On disk | **Does not fit on P100.** Weights leave insufficient room for KV cache at `-c 65536`. Tested; OOM at context allocation. Requires `-c ≤ 8192`. |
-| `Qwen2.5-32B-Instruct-Q4_K_M.gguf` | 19 GiB | Chat | On disk | Exceeds P100 VRAM; requires CPU offload or both GPUs. |
-| `Mistral-Small-3.1-24B-Instruct-Q4_K_M.gguf` | ~14 GiB | Chat | Not downloaded | Strong reasoning; 128k native context window (cap to 8k–16k for VRAM headroom). |
-| `Phi-4-Q8_0.gguf` | ~15 GiB | Chat | Not downloaded | Microsoft Phi-4 (14B); strong on reasoning and code. Q5_K_M (~10 GiB) also an option. |
-| `gemma-3-27b-it-Q3_K_M.gguf` | ~11 GiB | Chat | Not downloaded | Google Gemma 3 27B; highest parameter count that fits comfortably. Q4_K_M (~14 GiB) also fits. |
-| `Qwen2.5-14B-Instruct-Q8_0.gguf` | ~14 GiB | Chat | Not downloaded | Same family as the 32B but properly fits at full Q8 precision. |
-| `DeepSeek-R1-Distill-Qwen-14B-Q8_0.gguf` | ~14 GiB | Chat | Not downloaded | Reasoning-focused distill of DeepSeek-R1; good for structured/multi-step tasks. |
-
-
-## Deployment
-
-The unit file template lives in `utils/llamacpp.service` — that is the source of truth. Deploy it with:
-
-```bash
-# Copy and fill in the env file
-cp .env.template .env
-# edit .env: set LLAMA_API_KEY and LLAMA_SLOTS
-
-# Deploy the unit file (runs daemon-reload)
-bash utils/deploy_service.sh
-
-# Deploy and immediately restart the service
-bash utils/deploy_service.sh --restart
-```
-
-`deploy_service.sh` substitutes `YOUR_API_KEY_HERE` and `YOUR_SLOTS_HERE` from `.env`, copies the result to `/etc/systemd/system/llamacpp.service`, and runs `systemctl daemon-reload`.
-
-> **Note:** `.env` contains the real API key — do not commit it. It is listed in `.gitignore`.
-
-Model files are not included in this repository. Download them separately with `huggingface-cli` or `wget` into `/opt/models/`.
-
-### File layout
-
-```
-/opt/llama.cpp/                      # llama.cpp source + build tree (read-only to service)
-└── build/
-    └── bin/
-        └── llama-server             # the inference server binary
-
-/opt/models/                         # model storage (read-write to service)
-├── gpt-oss-20b-mxfp4.gguf           # (12 GiB) ← currently active
-├── mxbai-embed-large-v1-f16.gguf    # (639 MiB)
-├── Qwen2.5-32B-Instruct-Q3_K_M.gguf # (15 GiB)
-└── Qwen2.5-32B-Instruct-Q4_K_M.gguf # (19 GiB)
-
-/etc/systemd/system/
-├── llamacpp.service                 # deployed unit file (generated by deploy_service.sh)
-└── llamacpp.service.d/
-    └── override.conf                # drop-in: sets CUDA_VISIBLE_DEVICES
-```
-
-
-## Parallelism
-
-llama.cpp splits its KV cache into **slots** using the `--parallel` flag. Each slot handles one concurrent request; when all slots are busy, additional requests queue.
-
-The number of slots is configured via `LLAMA_SLOTS` in `.env` and substituted into the unit file by `deploy_service.sh`.
-
-| `LLAMA_SLOTS` | Slots | Tokens per slot (with `-c 65536`) | Behavior |
-|---|---|---|---|
-| `1` | 1 | 65 536 | Full context per request; no concurrency, requests queue |
-| `4` | 4 | 16 384 | 4 simultaneous requests; 16k context each |
-| `8` | 8 | 8 192 | Higher throughput; short context limit per request |
-
-Start with `LLAMA_SLOTS=1` and use the load test to benchmark before increasing. Most short chat turns and one-shot completions fit comfortably within 16k tokens, making `LLAMA_SLOTS=4` a reasonable first step on the P100.
-
-
-## Systemd service
-
-The unit file template is `utils/llamacpp.service` — that is the source of truth. The deployed copy is at `/etc/systemd/system/llamacpp.service`. See [Deployment](#deployment) for how to build and apply it.
-
-**CUDA probe:** Before starting, the service polls `nvidia-smi -L` for up to 30 seconds to confirm the GPU is available. This guards against `nvidia-persistenced` race conditions on boot — if the GPU isn't ready, the service fails immediately rather than silently falling back to CPU inference.
-
-**Security hardening:**
-
-| Directive | Effect |
-|---|---|
-| `NoNewPrivileges=true` | Prevents privilege escalation via setuid/setgid |
-| `PrivateTmp=true` | Isolated `/tmp` namespace |
-| `ProtectSystem=strict` | Filesystem mounted read-only except listed paths |
-| `ProtectHome=true` | `/home`, `/root`, `/run/user` invisible to the process |
-| `ReadWritePaths=/opt/models` | Allows cache writes to the model directory |
-| `ReadOnlyPaths=/opt/llama.cpp` | Marks the install tree read-only |
-
-The service runs as the unprivileged `llama` user/group.
-
-**Restart policy:**
-
-| Setting | Value | Meaning |
-|---|---|---|
-| `Restart` | `on-failure` | Restart if the process exits non-zero or is killed by a signal |
-| `RestartSec` | `10` | Wait 10 seconds before restarting |
-| `StartLimitInterval` | `300` | Rolling window for the burst limit |
-| `StartLimitBurst` | `5` | Stop retrying after 5 failures within 5 minutes |
-
-
-## Service management and logs
-
-```bash
-# Status
-systemctl status llamacpp.service
-
-# Start / stop / restart
-sudo systemctl start llamacpp.service
-sudo systemctl stop llamacpp.service
-sudo systemctl restart llamacpp.service
-
-# Apply unit file changes
-sudo systemctl daemon-reload && sudo systemctl restart llamacpp.service
-
-# Enable / disable autostart on boot
-sudo systemctl enable llamacpp.service
-sudo systemctl disable llamacpp.service
-```
-
-**Logs** — all output goes to the systemd journal tagged with `llama-server`:
-
-```bash
-# Follow live logs
-journalctl -u llamacpp.service -f
-
-# Show logs since last boot
-journalctl -u llamacpp.service -b
-
-# Show last 100 lines (full, not ellipsized)
-journalctl -u llamacpp.service -n 100 --no-pager -l
-
-# Filter by time range
-journalctl -u llamacpp.service --since "2026-04-24 00:00" --until "2026-04-24 12:00"
-```
 
 ## Testing
 
@@ -266,19 +225,17 @@ python tests/load_test.py --levels 1 2 4 8 16 --requests 5
 # Enable streaming (measures time-to-first-token in addition to total latency)
 python tests/load_test.py --stream
 
-# Target a specific host (bypass nginx rate limits when testing locally)
+# Target a specific host
 python tests/load_test.py --url http://localhost:8502
 ```
-
-> **Note:** `.env` sets `LLAMA_BASE_URL=https://model.perdrizet.org`, which routes through nginx (12 req/min limit). Use `--url http://localhost:8502` to bypass it when running load tests on the server itself.
 
 **CLI options:**
 
 | Option | Default | Description |
 |---|---|---|
-| `--url` | `$LLAMA_BASE_URL` or `http://localhost:8502` | Server base URL |
-| `--api-key` | `$LLAMA_API_KEY` | Bearer token |
-| `--slots N` | `$LLAMA_SLOTS` or `1` | Parallel slots the server is configured with (recorded in CSV) |
+| `--url` | `$BASE_URL` | Server base URL |
+| `--api-key` | `$API_KEY` | Bearer token |
+| `--slots N` | `$SLOTS` or `1` | Parallel slots the server is configured with (recorded in CSV) |
 | `--levels N [N ...]` | `1 2 4 8` | Concurrency levels to test |
 | `--requests N` | `3` | Repetitions per level (for averaging) |
 | `--prompt TEXT` | one-sentence transformer question | Prompt sent to the model |
@@ -310,9 +267,9 @@ python tests/context_length_test.py --stream
 
 | Option | Default | Description |
 |---|---|---|
-| `--url` | `$LLAMA_BASE_URL` or `http://localhost:8502` | Server base URL |
-| `--api-key` | `$LLAMA_API_KEY` | Bearer token |
-| `--slots N` | `$LLAMA_SLOTS` or `1` | Parallel slots the server is configured with (recorded in CSV) |
+| `--url` | `$BASE_URL` | Server base URL |
+| `--api-key` | `$API_KEY` | Bearer token |
+| `--slots N` | `$SLOTS` or `1` | Parallel slots the server is configured with (recorded in CSV) |
 | `--targets N [N ...]` | `128 256 512 1024 2048 4096 8192` | Target prompt token counts |
 | `--concurrency N` | `4` | Simultaneous requests per replicate |
 | `--replicates N` | `5` | Repetitions per target length (for averaging) |

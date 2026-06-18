@@ -14,13 +14,10 @@ This repository documents and centralizes the configuration of a `llama.cpp` inf
 ## Table of contents
 
 - [API usage](#api-usage)
+- [Deployment](#deployment)
+- [Systemd service](#systemd-service)
 - [Hardware](#hardware)
 - [Performance](#performance)
-- [Available models](#available-models)
-- [Deployment](#deployment)
-- [Parallelism](#parallelism)
-- [Systemd service](#systemd-service)
-- [Service management and logs](#service-management-and-logs)
 - [Testing](#testing)
 - [Dashboard](#dashboard)
 

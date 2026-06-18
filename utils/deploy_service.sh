@@ -2,7 +2,7 @@
 # utils/deploy_service.sh
 #
 # Deploys utils/llamacpp.service to /etc/systemd/system/llamacpp.service,
-# substituting LLAMA_API_KEY from .env into the --api-key argument.
+# under llama user, substituting values from .env into the service file.
 #
 # Usage:
 #   ./utils/deploy_service.sh [--restart]
@@ -45,23 +45,111 @@ set +o allexport
 # ---------------------------------------------------------------------------
 # Validate
 # ---------------------------------------------------------------------------
-if [[ -z "${LLAMA_API_KEY:-}" ]]; then
-    echo "ERROR: LLAMA_API_KEY is not set in $ENV_FILE" >&2
+
+# Check API key presence and validity
+if [[ -z "${API_KEY:-}" ]]; then
+    echo "ERROR: API_KEY is not set in $ENV_FILE" >&2
     exit 1
 fi
 
-if [[ "$LLAMA_API_KEY" == "your_api_key_here" ]]; then
-    echo "ERROR: LLAMA_API_KEY still has the placeholder value. Edit $ENV_FILE first." >&2
+if [[ "$API_KEY" == "your_api_key_here" ]]; then
+    echo "ERROR: API_KEY still has the placeholder value. Edit $ENV_FILE first." >&2
     exit 1
 fi
 
-if [[ -z "${LLAMA_SLOTS:-}" ]]; then
-    echo "ERROR: LLAMA_SLOTS is not set in $ENV_FILE" >&2
+# Check llama.cpp path presence and validity
+if [[ -z "${LLAMA_PATH:-}" ]]; then
+    echo "ERROR: LLAMA_PATH is not set in $ENV_FILE" >&2
     exit 1
 fi
 
-if ! [[ "$LLAMA_SLOTS" =~ ^[1-9][0-9]*$ ]]; then
-    echo "ERROR: LLAMA_SLOTS must be a positive integer (got: '$LLAMA_SLOTS')" >&2
+if [[ "$LLAMA_PATH" == "your_llama_path_here" ]]; then
+    echo "ERROR: LLAMA_PATH still has the placeholder value. Edit $ENV_FILE first." >&2
+    exit 1
+fi
+
+# Check model directory path presence and validity
+if [[ -z "${MODEL_DIR:-}" ]]; then
+    echo "ERROR: MODEL_DIR is not set in $ENV_FILE" >&2
+    exit 1
+fi
+
+if [[ "$MODEL_DIR" == "your_model_dir_here" ]]; then
+    echo "ERROR: MODEL_DIR still has the placeholder value. Edit $ENV_FILE first." >&2
+    exit 1
+fi
+
+# Check model file name presence and validity
+if [[ -z "${MODEL:-}" ]]; then
+    echo "ERROR: MODEL is not set in $ENV_FILE" >&2
+    exit 1
+fi
+
+if [[ "$MODEL" == "model_file_here.gguf" ]]; then
+    echo "ERROR: MODEL still has the placeholder value. Edit $ENV_FILE first." >&2
+    exit 1
+fi
+
+# Check CUDA device presence
+if [[ -z "${CUDA_DEVICE:-}" ]]; then
+    echo "ERROR: CUDA_DEVICE is not set in $ENV_FILE" >&2
+    exit 1
+fi
+
+# Check model context size presence and validity
+if [[ -z "${CTX_SIZE:-}" ]]; then
+    echo "ERROR: CTX_SIZE is not set in $ENV_FILE" >&2
+    exit 1
+fi
+
+if [[ "$CTX_SIZE" == "model_max_context_here" ]]; then
+    echo "ERROR: CTX_SIZE still has the placeholder value. Edit $ENV_FILE first." >&2
+    exit 1
+fi
+
+if ! [[ "$CTX_SIZE" =~ ^[1-9][0-9]*$ ]]; then
+    echo "ERROR: CTX_SIZE must be a positive integer (got: '$CTX_SIZE')" >&2
+    exit 1
+fi
+
+# Check GPU layers presence and validity
+if [[ -z "${GPU_LAYERS:-}" ]]; then
+    echo "ERROR: GPU_LAYERS is not set in $ENV_FILE" >&2
+    exit 1
+fi
+
+if ! [[ "$GPU_LAYERS" =~ ^-?[0-9]+$ ]]; then
+    echo "ERROR: GPU_LAYERS must be an integer (got: '$GPU_LAYERS')" >&2
+    exit 1
+fi
+
+# Check slots presence and validity
+if [[ -z "${SLOTS:-}" ]]; then
+    echo "ERROR: SLOTS is not set in $ENV_FILE" >&2
+    exit 1
+fi
+
+if ! [[ "$SLOTS" =~ ^[1-9][0-9]*$ ]]; then
+    echo "ERROR: SLOTS must be a positive integer (got: '$SLOTS')" >&2
+    exit 1
+fi
+
+# Check prompt cache size presence and validity
+if [[ -z "${PROMPT_CACHE_SIZE:-}" ]]; then
+    echo "ERROR: PROMPT_CACHE_SIZE is not set in $ENV_FILE" >&2
+    exit 1
+fi
+
+if ! [[ "$PROMPT_CACHE_SIZE" =~ ^-?[0-9]+$ ]]; then
+    echo "ERROR: PROMPT_CACHE_SIZE must be an integer (got: '$PROMPT_CACHE_SIZE')" >&2
+    exit 1
+fi
+
+# Check that the 'llama' system user exists
+if ! id -u llama &>/dev/null; then
+    echo "ERROR: System user 'llama' does not exist." >&2
+    echo "       Create it first with:" >&2
+    echo "         sudo useradd --system --no-create-home --shell /usr/sbin/nologin llama" >&2
     exit 1
 fi
 
@@ -69,8 +157,15 @@ fi
 # Substitute and deploy
 # ---------------------------------------------------------------------------
 RENDERED="$(sed \
-    -e "s/YOUR_API_KEY_HERE/${LLAMA_API_KEY}/" \
-    -e "s/YOUR_SLOTS_HERE/${LLAMA_SLOTS}/" \
+    -e "s/SUB_API_KEY_HERE/${API_KEY}/" \
+    -e "s|SUB_LLAMA_PATH_HERE|${LLAMA_PATH}|g" \
+    -e "s|SUB_MODEL_DIR_HERE|${MODEL_DIR}|g" \
+    -e "s/SUB_MODEL_FILE_HERE/${MODEL}/" \
+    -e "s/SUB_CUDA_DEVICE_HERE/${CUDA_DEVICE}/" \
+    -e "s/SUB_CTX_SIZE_HERE/${CTX_SIZE}/" \
+    -e "s/SUB_GPU_LAYERS_HERE/${GPU_LAYERS}/" \
+    -e "s/SUB_SLOTS_HERE/${SLOTS}/" \
+    -e "s/SUB_PROMPT_CACHE_SIZE_HERE/${PROMPT_CACHE_SIZE}/" \
     "$TEMPLATE")"
 
 echo "Deploying $TEMPLATE → $DEST"

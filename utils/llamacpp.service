@@ -7,25 +7,25 @@ Wants=network-online.target nvidia-persistenced.service
 [Service]
 Type=simple
 User=llama
-Environment=CUDA_VISIBLE_DEVICES=0
+Environment=CUDA_VISIBLE_DEVICES=SUB_CUDA_DEVICE_HERE
 Group=llama
-WorkingDirectory=/opt/llama.cpp
+WorkingDirectory=SUB_LLAMA_PATH_HERE
 
 ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
-ExecStart=/opt/llama.cpp/build/bin/llama-server \
-    -m /opt/models/gpt-oss-20b-mxfp4.gguf \
-    --n-gpu-layers 999 \
-    --ctx-size 131072 \
-    --parallel YOUR_SLOTS_HERE \
+ExecStart=SUB_LLAMA_PATH_HERE/build/bin/llama-server \
+    -m SUB_MODEL_DIR_HERE/SUB_MODEL_HERE \
+    --n-gpu-layers SUB_GPU_LAYERS_HERE \
+    --ctx-size SUB_CTX_SIZE_HERE \
+    --parallel SUB_SLOTS_HERE \
     --flash-attn on \
     --jinja \
     --host 0.0.0.0 \
     --port 8502 \
-    --api-key YOUR_API_KEY_HERE \
+    --api-key SUB_API_KEY_HERE \
     --metrics \
     --log-timestamps \
     --log-prefix \
-    --cache-ram -1
+    --cache-ram SUB_PROMPT_CACHE_SIZE_HERE
 
 # Restart policy
 Restart=on-failure
@@ -38,8 +38,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/models
-ReadOnlyPaths=/opt/llama.cpp
+ReadOnlyPaths=SUB_LLAMA_PATH_HERE SUB_MODEL_DIR_HERE
 
 # Logging
 StandardOutput=journal

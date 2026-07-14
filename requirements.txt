@@ -1,5 +1,6 @@
 aiohttp
 huggingface-hub
+pyyaml
 ipykernel
 matplotlib
 nbformat

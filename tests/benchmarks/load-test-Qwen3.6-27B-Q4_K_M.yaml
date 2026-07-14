@@ -1,0 +1,61 @@
+# load-test suite for multi-GPU deployment benchmarking.
+#
+# Uses the same YAML strategy as load-test.yaml, but targets 2-GPU cases.
+# Each case updates .env, redeploys via utils/deploy_service.sh --restart,
+# then writes:
+#   tests/results/YYYY-MM-DD_<case-label>_slotsN/load_test.csv
+
+global:
+  deploy: true
+  deploy_restart: true
+  url: http://localhost:8502
+  requests: 3
+  levels: [1, 2, 4, 8]
+  max_tokens: 128
+  stream: false
+
+cases:
+  - label: 16384
+    model: Qwen3.6-27B-Q4_K_M.gguf
+    cuda_device: "1,2"
+    tensor_split: "1,1"
+    gpu_layers: -1
+    ctx_size: 16384
+    slots: 1
+    prompt_cache_size: 16384
+
+  - label: 32768
+    model: Qwen3.6-27B-Q4_K_M.gguf
+    cuda_device: "1,2"
+    tensor_split: "1,1"
+    gpu_layers: -1
+    ctx_size: 32768
+    slots: 1
+    prompt_cache_size: 32768
+
+  - label: 65536
+    model: Qwen3.6-27B-Q4_K_M.gguf
+    cuda_device: "1,2"
+    tensor_split: "1,1"
+    gpu_layers: -1
+    ctx_size: 65536
+    slots: 1
+    prompt_cache_size: 65536
+
+  - label: 131072
+    model: Qwen3.6-27B-Q4_K_M.gguf
+    cuda_device: "1,2"
+    tensor_split: "1,1"
+    gpu_layers: -1
+    ctx_size: 131072
+    slots: 1
+    prompt_cache_size: 131072
+
+  - label: 262144
+    model: Qwen3.6-27B-Q4_K_M.gguf
+    cuda_device: "1,2"
+    tensor_split: "1,1"
+    gpu_layers: -1
+    ctx_size: 262144
+    slots: 1
+    prompt_cache_size: 262144

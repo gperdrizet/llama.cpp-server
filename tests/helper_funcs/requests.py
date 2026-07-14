@@ -97,8 +97,9 @@ async def chat_request(
         latency = time.perf_counter() - t_start
         return {'latency': latency, 'ttft': ttft, 'tokens': total_tokens, 'error': None}
 
-    except aiohttp.ClientError as exc:
-        return {'error': str(exc), 'latency': None, 'ttft': None, 'tokens': 0}
+    except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+        error_msg = str(exc).strip() or exc.__class__.__name__
+        return {'error': error_msg, 'latency': None, 'ttft': None, 'tokens': 0}
 
 
 async def run_level(
@@ -124,14 +125,34 @@ async def run_level(
 
     async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
 
-        for _ in range(n_reps):
+        for rep_idx in range(n_reps):
 
+            batch_start = time.perf_counter()
             tasks = [
                 chat_request(session, base_url, api_key, prompt, max_tokens, stream)
                 for _ in range(concurrency)
             ]
 
             results = await asyncio.gather(*tasks)
+            batch_wall_s = time.perf_counter() - batch_start
+
+            success_results = [
+                r for r in results
+                if not r['error'] and r['latency'] is not None
+            ]
+            batch_tokens = sum(r['tokens'] for r in success_results if r['tokens'])
+            batch_success_count = len(success_results)
+            batch_aggregate_tps = (
+                batch_tokens / batch_wall_s if batch_wall_s > 0 else 0.0
+            )
+
+            for result in results:
+                result['replicate_id'] = rep_idx
+                result['batch_wall_s'] = batch_wall_s
+                result['batch_tokens'] = batch_tokens
+                result['batch_success_count'] = batch_success_count
+                result['batch_aggregate_tps'] = batch_aggregate_tps
+
             all_results.extend(results)
 
     return all_results

@@ -16,10 +16,10 @@ This repository documents and centralizes the configuration of a `llama.cpp` inf
 - [API usage](#api-usage)
 - [Deployment](#deployment)
 - [Systemd service](#systemd-service)
-- [Hardware](#hardware)
-- [Performance](#performance)
 - [Testing](#testing)
-- [Dashboard](#dashboard)
+  - [Llama-bench suite](#llama-bench-suite-automated-primary)
+  - [Load test](#load-test)
+  - [Analysis notebook](#analysis-notebook)
 
 
 ## API usage
@@ -66,7 +66,7 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin llama
 
 ### Deploy
 
-The unit file template lives in `utils/llamacpp.service` - that is the source of truth. Deploy it with:
+The unit file template lives in `utils/llamacpp.service`. Deploy it with:
 
 ```bash
 # Copy and fill in the env file
@@ -81,10 +81,6 @@ bash utils/deploy_service.sh --restart
 > **Note:** `.env` contains the real API key - do not commit it. It is listed in `.gitignore`.
 
 Model files are not included in this repository. Download them separately with `huggingface-cli` or `wget`.
-
-## Systemd service
-
-The unit file template is `utils/llamacpp.service` - that is the source of truth. The deployed copy is at `/etc/systemd/system/llamacpp.service`. See [Deployment](#deployment) for how to build and apply it.
 
 
 ### Service management
@@ -150,141 +146,142 @@ The service runs as the unprivileged `llama` user/group and several flags are se
 | `ReadOnlyPaths=/opt/llama.cpp /opt/models` | Both the install tree and model directory are read-only (model files are memory-mapped for reading only) |
 
 
-## Performance
-
-Results produced by `tests/load_test.py` against the active model (`gpt-oss-20b-mxfp4.gguf`) on a NVIDIA P100 16GB GPU, with the server configured to various `--parallel` slot counts. Analysis notebooks and saved figures live in `notebooks/`.
-
-### Parallelism
-
-llama.cpp splits its KV cache into **slots** using the `--parallel` flag. Each slot handles one concurrent request; when all slots are busy, additional requests queue.
-
-The number of slots is configured via `LLAMA_SLOTS` in `.env` and substituted into the unit file by `deploy_service.sh`.
-
-| `LLAMA_SLOTS` | Slots | Tokens per slot (with `-c 65536`) | Behavior |
-|---|---|---|---|
-| `1` | 1 | 65 536 | Full context per request; no concurrency, requests queue |
-| `4` | 4 | 16 384 | 4 simultaneous requests; 16k context each |
-| `8` | 8 | 8 192 | Higher throughput; short context limit per request |
-
-Start with `LLAMA_SLOTS=1` and use the load test to benchmark before increasing. Most short chat turns and one-shot completions fit comfortably within 16k tokens, making `LLAMA_SLOTS=4` a reasonable first step on the P100.
-
-
-### Latency vs concurrency
-
-![Latency vs concurrency by slot count](notebooks/figures/latency_vs_concurrency.png)
-
-Each line is one slot configuration. At low concurrency all slot counts perform similarly. As concurrency rises, servers with more slots sustain lower latency because requests are served in parallel rather than queued behind one another.
-
-
-### Latency at concurrency = 8 vs slot count
-
-![Latency at concurrency 8 vs slot count](notebooks/figures/latency_vs_slots_c8.png)
-
-At a fixed concurrency of 8 simultaneous requests, increasing the slot count reduces both mean latency and p95 latency significantly. Beyond 4 slots the gains diminish as the GPU becomes the bottleneck rather than the queuing.
-
-
-### Context length per slot
-
-![Context length per slot](notebooks/figures/context_per_slot.png)
-
-The server's total context window (`-c 131072`, 100k tokens for `gpt-oss-20b) is divided equally across all slots. More slots means less context available per individual request. For most short chat turns and one-shot completions 8–16k tokens is ample; workloads with long system prompts or multi-turn histories may require fewer slots to preserve context.
-
-
-### Latency vs input context length
-
-![Latency vs input context length](notebooks/figures/latency_vs_context_length.png)
-
-Measured by `tests/context_length_test.py` at fixed concurrency. Both mean and p95 latency increase with prompt length as the model must process more tokens during the prefill phase before generating any output.
-
-
 ## Testing
+
+### Llama-bench suite (automated, primary)
+
+`tests/run_llama_bench.py` is the primary benchmark workflow. It runs official [`llama-bench`](https://github.com/ggml-org/llama.cpp/blob/master/tools/llama-bench/README.md) test utility from `llama.cpp` directly for reproducible model/hardware comparisons (prefill and decode throughput) and writes combined CSV output under `tests/results/llama_bench/`. Benchmark run parameters are specified via a YAML configuration file. 
+
+```bash
+# Full unattended run (background, log to file)
+nohup .venv/bin/python tests/run_llama_bench.py tests/benchmarks/llama-bench.yaml \
+    > tests/results/llama_bench_$(date +%Y-%m-%d).log 2>&1 &
+
+# Dry run print all llama-bench commands without executing
+.venv/bin/python tests/run_llama_bench.py tests/benchmarks/llama-bench.yaml --dry-run
+
+# Follow progress
+tail -f tests/results/llama_bench_*.log
+```
+
+**Config format** (`tests/benchmarks/llama-bench.yaml`):
+
+```yaml
+global:
+  repetitions: 7
+
+cases:
+  - label: gpt-oss-20b_1card
+    model: gpt-oss-20b-mxfp4.gguf
+    cuda_visible_devices: "1"
+    split_mode: none
+    main_gpu: 0
+    n_gpu_layers: -1
+    flash_attn: on
+    workloads:
+      - label: pp128
+        n_prompt: 128
+        n_gen: 0
+      - label: pp512
+        n_prompt: 512
+        n_gen: 0
+      - label: pp2048
+        n_prompt: 2048
+        n_gen: 0
+      - label: tg128
+        n_prompt: 0
+        n_gen: 128
+      - label: tg512
+        n_prompt: 0
+        n_gen: 512
+
+  - label: gpt-oss-20b_2card_split
+    model: gpt-oss-20b-mxfp4.gguf
+    cuda_visible_devices: "1,2"
+    split_mode: layer
+    tensor_split: "1/1"
+    main_gpu: 0
+    n_gpu_layers: -1
+    flash_attn: on
+    workloads:
+      - label: pp128
+        n_prompt: 128
+        n_gen: 0
+      - label: pp512
+        n_prompt: 512
+        n_gen: 0
+      - label: pp2048
+        n_prompt: 2048
+        n_gen: 0
+      - label: tg128
+        n_prompt: 0
+        n_gen: 128
+      - label: tg512
+        n_prompt: 0
+        n_gen: 512
+```
+
+Each row in the combined output CSV is enriched with suite metadata (`case_label`, `workload_label`, GPU split settings, etc.) for notebook comparison.
+
+### Analysis notebook
+
+Use `notebooks/llama_bench_results.ipynb` to analyze and compare benchmark runs from `tests/results/llama_bench/`.
+
 
 ### Load test
 
-`tests/load_test.py` measures response latency as a function of the number of concurrent callers. For each concurrency level it fires a batch of requests simultaneously, waits for all to complete, repeats that batch a configurable number of times, then prints statistics.
+`tests/load_test.py` supports both one-off runs and YAML-defined benchmark suites.
 
-**Setup:**
-
-```bash
-pip install -r requirements.txt
-cp .env.template .env   # edit and set LLAMA_API_KEY
-```
-
-**Usage:**
+Single run mode measures end-to-end response latency against the running `llamacpp.service` as a function of concurrent callers. Unlike llama-bench (which bypasses the server binary), this exercises the full HTTP stack and is useful for tuning `--parallel` slot count.
 
 ```bash
-# Run with defaults (levels 1 2 4 8, 3 repetitions each, non-streaming)
-python tests/load_test.py
+# Run with defaults (concurrency levels 1 2 4 8 16 32, 3 repetitions each)
+.venv/bin/python tests/load_test.py
 
-# Custom levels and repetitions
-python tests/load_test.py --levels 1 2 4 8 16 --requests 5
+# Custom concurrency levels and repetitions
+.venv/bin/python tests/load_test.py --levels 1 2 4 8 --requests 5
 
-# Enable streaming (measures time-to-first-token in addition to total latency)
-python tests/load_test.py --stream
-
-# Target a specific host
-python tests/load_test.py --url http://localhost:8502
+# Enable streaming (also measures time-to-first-token)
+.venv/bin/python tests/load_test.py --stream
 ```
 
-**CLI options:**
+#### Suite mode (YAML, recommended)
+
+Use `--suite-config` to run a sequence of load-test experiments defined in YAML (same strategy as llama-bench).
+
+```bash
+# Run the default suite
+.venv/bin/python tests/load_test.py --suite-config tests/benchmarks/load-test.yaml
+
+# Preview actions without redeploying or sending requests
+.venv/bin/python tests/load_test.py --suite-config tests/benchmarks/load-test.yaml --dry-run
+```
+
+In suite mode, each case can set model/deployment settings (`model`, `slots`, `ctx_size`, `gpu_layers`, `cuda_device`, `tensor_split`, `prompt_cache_size`) and test settings (`levels`, `requests`, `max_tokens`, `stream`, `url`).
+
+For each case the runner:
+1. Updates `.env` with case-specific server settings.
+2. Calls `utils/deploy_service.sh --restart`.
+3. Runs the load test.
+4. Writes results to `tests/results/YYYY-MM-DD_<case-label>_slotsN/load_test.csv`.
+
+The `.env` file is restored to its original contents when the suite finishes.
+
+> **Note:** If `.env` points to a public URL behind nginx rate limits, set per-case `url: http://localhost:8502` for on-server benchmarking.
+
+**Key options:**
 
 | Option | Default | Description |
 |---|---|---|
-| `--url` | `$BASE_URL` | Server base URL |
-| `--api-key` | `$API_KEY` | Bearer token |
-| `--slots N` | `$SLOTS` or `1` | Parallel slots the server is configured with (recorded in CSV) |
-| `--levels N [N ...]` | `1 2 4 8` | Concurrency levels to test |
-| `--requests N` | `3` | Repetitions per level (for averaging) |
-| `--prompt TEXT` | one-sentence transformer question | Prompt sent to the model |
-| `--max-tokens N` | `128` | Max completion tokens per request |
-| `--output FILE` | `tests/results/YYYYmmdd_HHMM.csv` | Path for raw results CSV |
-| `--stream` | off | Use streaming responses (enables TTFT measurement) |
+| `--suite-config FILE` | _(none)_ | Run YAML-defined suite with automated redeploy between cases |
+| `--url` | `$BASE_URL` or `$LLAMA_BASE_URL` or `http://localhost:8502` | Server base URL |
+| `--api-key` | `$API_KEY` or `$LLAMA_API_KEY` | Bearer token |
+| `--levels N [N ...]` | `1 2 4 8 16 32` | Concurrency levels to test |
+| `--requests N` | `3` | Repetitions per level |
+| `--slots N` | `$SLOTS` or `$LLAMA_SLOTS` or `1` | Slot count recorded in CSV |
+| `--stream` | off | Streaming mode (enables TTFT measurement) |
+| `--model-label` | _(empty)_ | Model identifier recorded in CSV |
+| `--ctx-size N` | _(none)_ | Context size recorded in CSV |
+| `--output FILE` | `tests/results/load_test_YYYY-mm-dd_HH-MM.csv` | Output path (single-run mode) |
 
-Results are written to `tests/results/` as CSV with one row per request (timestamp, slots, concurrency, latency_s, ttft_s, tokens, error).
-
-
-### Context length test
-
-`tests/context_length_test.py` measures how response latency scales with input prompt length. For each target token count it constructs a prompt of approximately that size, verifies the actual count via `/tokenize`, fires concurrent requests, and repeats for several replicates.
-
-**Usage:**
-
-```bash
-# Run with defaults (targets 128 256 512 1024 2048 4096 8192, concurrency 4, 5 replicates)
-python tests/context_length_test.py
-
-# Custom targets and replicates
-python tests/context_length_test.py --targets 256 1024 4096 --replicates 10
-
-# Enable streaming
-python tests/context_length_test.py --stream
-```
-
-**CLI options:**
-
-| Option | Default | Description |
-|---|---|---|
-| `--url` | `$BASE_URL` | Server base URL |
-| `--api-key` | `$API_KEY` | Bearer token |
-| `--slots N` | `$SLOTS` or `1` | Parallel slots the server is configured with (recorded in CSV) |
-| `--targets N [N ...]` | `128 256 512 1024 2048 4096 8192` | Target prompt token counts |
-| `--concurrency N` | `4` | Simultaneous requests per replicate |
-| `--replicates N` | `5` | Repetitions per target length (for averaging) |
-| `--max-tokens N` | `64` | Max completion tokens per request |
-| `--output FILE` | `tests/results/context_test_YYYY-MM-DD_HH-MM.csv` | Path for raw results CSV |
-| `--stream` | off | Use streaming responses (enables TTFT measurement) |
-
-Results are written to `tests/results/` as CSV (timestamp, slots, target_tokens, prompt_tokens, concurrency, latency_s, ttft_s, output_tokens, error).
-
-
-## Dashboard
-
-`dashboard/app.py` is a [Streamlit](https://streamlit.io) application that visualizes load test CSV results.
-
-![Dashboard screenshot](dashboard/screen_shot.png)
-
-```bash
-streamlit run dashboard/app.py
-```
-
-Open the URL printed by Streamlit (default: `http://localhost:8501`). The sidebar lets you select any CSV from `tests/results/`. Charts show mean ± SEM and p95 latency vs. concurrency level.
+Use `notebooks/load_test_results.ipynb` to analyze suite outputs across configurations.

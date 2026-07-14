@@ -7,6 +7,7 @@ Wants=network-online.target nvidia-persistenced.service
 [Service]
 Type=simple
 User=llama
+Environment=CUDA_DEVICE_ORDER=PCI_BUS_ID
 Environment=CUDA_VISIBLE_DEVICES=SUB_CUDA_DEVICE_HERE
 Group=llama
 WorkingDirectory=SUB_LLAMA_PATH_HERE
@@ -15,6 +16,7 @@ ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1
 ExecStart=SUB_LLAMA_PATH_HERE/build/bin/llama-server \
     -m SUB_MODEL_DIR_HERE/SUB_MODEL_FILE_HERE \
     --n-gpu-layers SUB_GPU_LAYERS_HERE \
+    --tensor-split SUB_TENSOR_SPLIT_HERE \
     --ctx-size SUB_CTX_SIZE_HERE \
     --parallel SUB_SLOTS_HERE \
     --flash-attn on \

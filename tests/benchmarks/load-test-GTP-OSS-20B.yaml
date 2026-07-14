@@ -1,0 +1,84 @@
+# load-test suite for end-to-end server benchmarking.
+#
+# The runner updates .env per case, calls utils/deploy_service.sh --restart,
+# then executes tests/load_test.py and writes results to:
+#   tests/results/YYYY-MM-DD_<case-label>_slotsN/load_test.csv
+
+global:
+  deploy: true
+  deploy_restart: true
+  url: http://localhost:8502
+  requests: 3
+  levels: [1, 2, 4, 8, 16, 32]
+  max_tokens: 128
+  stream: false
+
+cases:
+  - label: gpt-oss-20b_slots1
+    model: gpt-oss-20b-mxfp4.gguf
+    cuda_device: "0"
+    gpu_layers: -1
+    ctx_size: 131072
+    slots: 1
+    prompt_cache_size: 131072
+
+  - label: gpt-oss-20b_slots2
+    model: gpt-oss-20b-mxfp4.gguf
+    cuda_device: "0"
+    gpu_layers: -1
+    ctx_size: 131072
+    slots: 2
+    prompt_cache_size: 131072
+
+  - label: gpt-oss-20b_slots4
+    model: gpt-oss-20b-mxfp4.gguf
+    cuda_device: "0"
+    gpu_layers: -1
+    ctx_size: 131072
+    slots: 4
+    prompt_cache_size: 131072
+
+  - label: gpt-oss-20b_slots8
+    model: gpt-oss-20b-mxfp4.gguf
+    cuda_device: "0"
+    gpu_layers: -1
+    ctx_size: 131072
+    slots: 8
+    prompt_cache_size: 131072
+
+  - label: gpt-oss-20b_2GPU_slots1
+    model: gpt-oss-20b-mxfp4.gguf
+    cuda_device: "0,1"
+    tensor_split: "1,1"
+    gpu_layers: -1
+    ctx_size: 131072
+    slots: 1
+    prompt_cache_size: 131072
+
+  - label: gpt-oss-20b_2GPU_slots2
+    model: gpt-oss-20b-mxfp4.gguf
+    cuda_device: "0,1"
+    tensor_split: "1,1"
+    gpu_layers: -1
+    ctx_size: 131072
+    slots: 2
+    prompt_cache_size: 131072
+
+  - label: gpt-oss-20b_2GPU_slots4
+    model: gpt-oss-20b-mxfp4.gguf
+    cuda_device: "0,1"
+    tensor_split: "1,1"
+    gpu_layers: -1
+    ctx_size: 131072
+    slots: 4
+    prompt_cache_size: 131072
+
+  - label: gpt-oss-20b_2GPU_slots8
+    model: gpt-oss-20b-mxfp4.gguf
+    cuda_device: "0,1"
+    tensor_split: "1,1"
+    gpu_layers: -1
+    ctx_size: 131072
+    slots: 8
+    prompt_cache_size: 131072
+

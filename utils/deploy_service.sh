@@ -145,6 +145,13 @@ if ! [[ "$PROMPT_CACHE_SIZE" =~ ^-?[0-9]+$ ]]; then
     exit 1
 fi
 
+# Tensor split is optional (empty = single GPU). If set, must be comma-separated numbers.
+TENSOR_SPLIT="${TENSOR_SPLIT:-}"
+if [[ -n "$TENSOR_SPLIT" ]] && ! [[ "$TENSOR_SPLIT" =~ ^[0-9]+(\.[0-9]+)?(,[0-9]+(\.[0-9]+)?)+$ ]]; then
+    echo "ERROR: TENSOR_SPLIT must be empty or comma-separated numbers e.g. '1,1' (got: '$TENSOR_SPLIT')" >&2
+    exit 1
+fi
+
 # Check that the 'llama' system user exists
 if ! id -u llama &>/dev/null; then
     echo "ERROR: System user 'llama' does not exist." >&2
@@ -166,7 +173,13 @@ RENDERED="$(sed \
     -e "s/SUB_GPU_LAYERS_HERE/${GPU_LAYERS}/" \
     -e "s/SUB_SLOTS_HERE/${SLOTS}/" \
     -e "s/SUB_PROMPT_CACHE_SIZE_HERE/${PROMPT_CACHE_SIZE}/" \
+    -e "s/SUB_TENSOR_SPLIT_HERE/${TENSOR_SPLIT}/" \
     "$TEMPLATE")"
+
+# Strip --tensor-split line if no value was configured
+if [[ -z "$TENSOR_SPLIT" ]]; then
+    RENDERED="$(echo "$RENDERED" | sed '/--tensor-split/d')"
+fi
 
 echo "Deploying $TEMPLATE → $DEST"
 echo "$RENDERED" | sudo tee "$DEST" > /dev/null

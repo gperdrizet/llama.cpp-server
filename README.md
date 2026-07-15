@@ -17,7 +17,8 @@ This repository documents and centralizes the configuration of a `llama.cpp` inf
 - [Deployment](#deployment)
 - [Systemd service](#systemd-service)
 - [Testing](#testing)
-  - [Llama-bench suite](#llama-bench-suite-automated-primary)
+  - [Max context size](#max-context-size)
+  - [Results](#results)
   - [Load test](#load-test)
   - [Analysis notebook](#analysis-notebook)
 
@@ -148,91 +149,72 @@ The service runs as the unprivileged `llama` user/group and several flags are se
 
 ## Testing
 
-### Llama-bench suite (automated, primary)
+### Max context size
 
-`tests/run_llama_bench.py` is the primary benchmark workflow. It runs official [`llama-bench`](https://github.com/ggml-org/llama.cpp/blob/master/tools/llama-bench/README.md) test utility from `llama.cpp` directly for reproducible model/hardware comparisons (prefill and decode throughput) and writes combined CSV output under `tests/results/llama_bench/`. Benchmark run parameters are specified via a YAML configuration file. 
+The maximum context size that will fit within the avalible GPU memory is determined with `tests/run_fit_context_size.py`.
+
+The runner has two phases:
+1. **Coarse scan** over a standard context list (`4096` to `262144`).
+2. **Refinement scan** after first OOM:
+   - fit a linear model (`peak_vram_total_mib` vs `ctx_size`) from successful runs
+   - predict the memory-limit context
+    - probe around that estimate for a tighter boundary.
+
+It does the max context determination three times, once for each KV-cache quantization level (`q4_0`, `q8_0`, `f16`) and aggregates all results into the same CSV/log/summary/plot artifacts.
+
+- `context_fit.csv`: one row per attempted context (`ok`, `failed_oom`, or `failed`)
+- `context_fit.log`: full command, stdout, stderr, and VRAM summary per run
+- `context_fit_summary.json`: compact run summary (boundary estimates and regression details)
+- `context_fit_plot.png`: matplotlib plot combining all KV-cache runs on one chart with color-separated series
+
 
 ```bash
-# Full unattended run (background, log to file)
-nohup .venv/bin/python tests/run_llama_bench.py tests/benchmarks/llama-bench.yaml \
-    > tests/results/llama_bench_$(date +%Y-%m-%d).log 2>&1 &
-
-# Dry run print all llama-bench commands without executing
-.venv/bin/python tests/run_llama_bench.py tests/benchmarks/llama-bench.yaml --dry-run
-
-# Follow progress
-tail -f tests/results/llama_bench_*.log
+# Example: run context-fit on two P100 GPUs
+.venv/bin/python tests/run_fit_context_size.py \
+  --model /opt/models/Qwen3.6-27B-Q4_K_M.gguf \
+  --gpus 1,2 \
+  --tensor-split 1,1 \
+  --split-mode layer
 ```
 
-**Config format** (`tests/benchmarks/llama-bench.yaml`):
+**Useful options**:
 
-```yaml
-global:
-  repetitions: 7
+| Option | Purpose |
+|---|---|
+| `--model` | Model path (absolute or filename under `/opt/models`) |
+| `--gpus` | Physical GPU indexes for `CUDA_VISIBLE_DEVICES` |
+| `--tensor-split` | Tensor split ratio for multi-GPU runs |
+| `--memory-cap-mib` | Explicit regression target memory cap |
+| `--memory-headroom-mib` | VRAM safety margin when auto-computing memory cap |
+| `--refine-step` | Granularity for refinement probe contexts |
+| `--kv-cache-types` | Comma-separated KV cache types to run (default: `q4_0,q8_0,f16`) |
+| `--results-dir` / `--run-name` | Output location and run label |
+| `--service-name` / `--no-manage-service` | Service lifecycle control around benchmark runs |
 
-cases:
-  - label: gpt-oss-20b_1card
-    model: gpt-oss-20b-mxfp4.gguf
-    cuda_visible_devices: "1"
-    split_mode: none
-    main_gpu: 0
-    n_gpu_layers: -1
-    flash_attn: on
-    workloads:
-      - label: pp128
-        n_prompt: 128
-        n_gen: 0
-      - label: pp512
-        n_prompt: 512
-        n_gen: 0
-      - label: pp2048
-        n_prompt: 2048
-        n_gen: 0
-      - label: tg128
-        n_prompt: 0
-        n_gen: 128
-      - label: tg512
-        n_prompt: 0
-        n_gen: 512
+### Results
 
-  - label: gpt-oss-20b_2card_split
-    model: gpt-oss-20b-mxfp4.gguf
-    cuda_visible_devices: "1,2"
-    split_mode: layer
-    tensor_split: "1/1"
-    main_gpu: 0
-    n_gpu_layers: -1
-    flash_attn: on
-    workloads:
-      - label: pp128
-        n_prompt: 128
-        n_gen: 0
-      - label: pp512
-        n_prompt: 512
-        n_gen: 0
-      - label: pp2048
-        n_prompt: 2048
-        n_gen: 0
-      - label: tg128
-        n_prompt: 0
-        n_gen: 128
-      - label: tg512
-        n_prompt: 0
-        n_gen: 512
-```
+The table below uses the completed context-fit runs for the Qwen Q3 and Q4 quants on GPUs `1,2` with `split-mode layer` and `tensor-split 1/1`. The throughput columns are taken from the max-context benchmark rows (`ctx=262144`) in the run logs.
 
-Each row in the combined output CSV is enriched with suite metadata (`case_label`, `workload_label`, GPU split settings, etc.) for notebook comparison.
+| Model | Model quant | KV quant | GPU config | Max context | Peak VRAM @ max context (GiB) | PP rate @ max ctx | TG rate @ max ctx |
+|---|---|---|---|---:|---:|---:|---:|
+| Qwen3.6-27B | Q3_K_S | f16 | `1,2` / layer / 1/1 | 262144 | 29.7 | 38.9 | 5.35 |
+| Qwen3.6-27B | Q3_K_S | q8  | `1,2` / layer / 1/1 | 262144 | 25.7 | 39.0 | 3.83 |
+| Qwen3.6-27B | Q3_K_S | q4  | `1,2` / layer / 1/1 | 262144 | 21.6 | 38.8 | 3.96 |
+| Qwen3.6-27B | Q4_K_M | f16 | `1,2` / layer / 1/1 | 262144 | 30.8 | 36.5 | 0.88 |
+| Qwen3.6-27B | Q4_K_M | q8  | `1,2` / layer / 1/1 | 262144 | 29.5 | 38.8 | 4.17 |
+| Qwen3.6-27B | Q4_K_M | q4  | `1,2` / layer / 1/1 | 262144 | 25.4 | 38.7 | 4.32 |
+
 
 ### Analysis notebook
 
-Use `notebooks/llama_bench_results.ipynb` to analyze and compare benchmark runs from `tests/results/llama_bench/`.
+Use `notebooks/llama_bench_results.ipynb` to analyze and compare the context-fit benchmark outputs in `tests/results/context_fit/`.
 
 
 ### Load test
 
 `tests/load_test.py` supports both one-off runs and YAML-defined benchmark suites.
 
-Single run mode measures end-to-end response latency against the running `llamacpp.service` as a function of concurrent callers. Unlike llama-bench (which bypasses the server binary), this exercises the full HTTP stack and is useful for tuning `--parallel` slot count.
+Single run mode measures end-to-end response latency against the running `llamacpp.service` as a function of concurrent callers. Unlike the standalone benchmark runner, which bypasses the server binary, this exercises the full HTTP stack and is useful for tuning `--parallel` slot count.
 
 ```bash
 # Run with defaults (concurrency levels 1 2 4 8 16 32, 3 repetitions each)
@@ -247,7 +229,7 @@ Single run mode measures end-to-end response latency against the running `llamac
 
 #### Suite mode (YAML, recommended)
 
-Use `--suite-config` to run a sequence of load-test experiments defined in YAML (same strategy as llama-bench).
+Use `--suite-config` to run a sequence of load-test experiments defined in YAML.
 
 ```bash
 # Run the default suite

@@ -1,0 +1,8 @@
+model,max_context
+gemma-4-31B-it-Q4_K_M.gguf,262144
+Qwen3.6-27B-Q3_K_S.gguf,262144
+Qwen3.6-27B-Q4_K_M.gguf,262144
+Qwen3.6-27B-Q5_K_M.gguf,262144
+Qwen3.6-27B-Q6_K.gguf,262144
+Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf,262144
+Qwen3-Coder-Next-UD-IQ1_M.gguf,262144

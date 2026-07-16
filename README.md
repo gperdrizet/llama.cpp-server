@@ -197,17 +197,12 @@ The table below uses the completed context-fit runs for the Qwen Q3 and Q4 quant
 
 | Model | Model quant | KV quant | GPU config | Max context | Peak VRAM @ max context (GiB) | PP rate @ max ctx | TG rate @ max ctx |
 |---|---|---|---|---:|---:|---:|---:|
-| Qwen3.6-27B | Q3_K_S | f16 | `1,2` / layer / 1/1 | 262144 | 29.7 | 38.9 | 5.35 |
-| Qwen3.6-27B | Q3_K_S | q8  | `1,2` / layer / 1/1 | 262144 | 25.7 | 39.0 | 3.83 |
-| Qwen3.6-27B | Q3_K_S | q4  | `1,2` / layer / 1/1 | 262144 | 21.6 | 38.8 | 3.96 |
-| Qwen3.6-27B | Q4_K_M | f16 | `1,2` / layer / 1/1 | 262144 | 30.8 | 36.5 | 0.88 |
-| Qwen3.6-27B | Q4_K_M | q8  | `1,2` / layer / 1/1 | 262144 | 29.5 | 38.8 | 4.17 |
-| Qwen3.6-27B | Q4_K_M | q4  | `1,2` / layer / 1/1 | 262144 | 25.4 | 38.7 | 4.32 |
-
-
-### Analysis notebook
-
-Use `notebooks/llama_bench_results.ipynb` to analyze and compare the context-fit benchmark outputs in `tests/results/context_fit/`.
+| Qwen3.6-27B | Q3_K_S | f16 | `1,2` / layer / 1/1 | 256k | 29.7 | 38.9 | 5.35 |
+| Qwen3.6-27B | Q3_K_S | q8  | `1,2` / layer / 1/1 | 256k | 25.7 | 39.0 | 3.83 |
+| Qwen3.6-27B | Q3_K_S | q4  | `1,2` / layer / 1/1 | 256k | 21.6 | 38.8 | 3.96 |
+| Qwen3.6-27B | Q4_K_M | f16 | `1,2` / layer / 1/1 | 256k | 30.8 | 36.5 | 0.88 |
+| Qwen3.6-27B | Q4_K_M | q8  | `1,2` / layer / 1/1 | 256k | 29.5 | 38.8 | 4.17 |
+| Qwen3.6-27B | Q4_K_M | q4  | `1,2` / layer / 1/1 | 256k | 25.4 | 38.7 | 4.32 |
 
 
 ### Load test

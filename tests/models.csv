@@ -1,0 +1,15 @@
+model,max_context
+gemma-4-31B-it-Q4_K_M.gguf,262144
+GLM-4.7-Flash-Q4_K_M.gguf,200000
+GLM-4.7-Flash-REAP-23B-A3B-Q4_K_M.gguf,202752
+GLM-4.7-Flash-REAP-23B-A3B-UD-Q6_K_XL.gguf,202752
+Kimi-Dev-72B-UD-IQ1_M.gguf,131072
+Llama-3.1-8B-Instruct-BF16.gguf,131072
+Llama-3.3-70B-Instruct-UD-IQ1_M.gguf,131072
+Mistral-Nemo-Instruct-2407.Q8_0.gguf,131072
+Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf,131072
+Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf,131072
+Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf,262144
+Qwen3-Coder-Next-UD-IQ1_M.gguf,262144
+Qwen3.6-27B-Q4_K_M.gguf,262144
+Qwen3.6-27B-Q6_K.gguf,262144

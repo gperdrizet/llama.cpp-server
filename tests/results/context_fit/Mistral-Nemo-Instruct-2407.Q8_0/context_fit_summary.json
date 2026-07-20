@@ -1,0 +1,120 @@
+{
+  "timestamp": "2026-07-19T14:52:55",
+  "model": "Mistral-Nemo-Instruct-2407.Q8_0.gguf",
+  "gpu_devices": "1,2",
+  "context_sizes": [
+    16384,
+    32768,
+    65536,
+    131072
+  ],
+  "overall_summary": {
+    "runs_total": 3,
+    "runs_ok": 0,
+    "runs_failed_oom": 0,
+    "runs_failed_other": 3,
+    "errors": [
+      "ctx=16384: ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):"
+    ],
+    "q4_max_context": null,
+    "q4_max_context_stable": null,
+    "q8_max_context": null,
+    "q8_max_context_stable": null,
+    "f16_max_context": null,
+    "f16_max_context_stable": null,
+    "deployment_score": null,
+    "deployment_score_kv_cache_label": null,
+    "deployment_score_context": null,
+    "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+    "deployment_tier": null,
+    "deployment_tier_threshold": null,
+    "deployment_score_breakpoints": {
+      "interactive": 4.0,
+      "batch": 0.5,
+      "exclude": 0.0
+    }
+  },
+  "runs": {
+    "q4": {
+      "kv_cache_label": "q4",
+      "kv_cache_type": "q4_0",
+      "max_context": null,
+      "max_context_stable": null,
+      "first_fail_ctx": 16384,
+      "bisect_fail_ctx": null,
+      "runs_total": 1,
+      "runs_ok": 0,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 1,
+      "errors": [
+        "ctx=16384: ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):"
+      ],
+      "deployment_score": null,
+      "deployment_score_pp_ts_mean": null,
+      "deployment_score_tg_ts_mean": null,
+      "deployment_score_source_context": null,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_tier": null,
+      "deployment_tier_threshold": null,
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      }
+    },
+    "q8": {
+      "kv_cache_label": "q8",
+      "kv_cache_type": "q8_0",
+      "max_context": null,
+      "max_context_stable": null,
+      "first_fail_ctx": 16384,
+      "bisect_fail_ctx": null,
+      "runs_total": 1,
+      "runs_ok": 0,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 1,
+      "errors": [
+        "ctx=16384: ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):"
+      ],
+      "deployment_score": null,
+      "deployment_score_pp_ts_mean": null,
+      "deployment_score_tg_ts_mean": null,
+      "deployment_score_source_context": null,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_tier": null,
+      "deployment_tier_threshold": null,
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      }
+    },
+    "f16": {
+      "kv_cache_label": "f16",
+      "kv_cache_type": "f16",
+      "max_context": null,
+      "max_context_stable": null,
+      "first_fail_ctx": 16384,
+      "bisect_fail_ctx": null,
+      "runs_total": 1,
+      "runs_ok": 0,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 1,
+      "errors": [
+        "ctx=16384: ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):"
+      ],
+      "deployment_score": null,
+      "deployment_score_pp_ts_mean": null,
+      "deployment_score_tg_ts_mean": null,
+      "deployment_score_source_context": null,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_tier": null,
+      "deployment_tier_threshold": null,
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      }
+    }
+  }
+}

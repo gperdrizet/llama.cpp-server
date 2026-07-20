@@ -1,0 +1,26 @@
+run:
+  model_list: tests/config/context_fit/models.csv       # CSV file with: model,max_context
+  gpus: "1,2"                                           # GPUs to use (CUDA_VISIBLE_DEVICES)
+  bench_bin: /opt/llama.cpp/build/bin/llama-bench       # Path to llama-bench binary
+  results_dir: tests/results/context-size/fast-discovery # Directory for results
+  run_name: First pass max context discovery run        # Optional run name (null => auto-generated)
+  n_gpu_layers: -1                                      # Number of model layers on GPU (-1 for all)
+  split_mode: layer                                     # Multi-GPU split mode for llama.cpp
+  tensor_split: "1,1"                                   # Relative tensor split across selected GPUs
+  fit_target: 1024                                      # llama-bench fit margin per GPU in MiB
+  fit_ctx: 2048                                         # Minimum context considered by fit logic
+  n_prompt: 128                                         # Prompt tokens benchmarked per run
+  n_gen: 32                                             # Generation tokens benchmarked per run
+  repetitions: 1                                        # llama-bench repeats per probe
+  poll_interval: 0.10                                   # Seconds between VRAM sampling polls
+  refine_step: 4096                                     # Bisection refinement context step
+  verify_runs: 0                                        # Stability confirmation runs at max context (0 => skip)
+  max_run_seconds: 5400                                 # Hard timeout per llama-bench run (seconds)
+  kv_cache_types: q4_0                                  # KV cache types to benchmark (comma-separated)
+  service_name: llamacpp.service                        # Service to stop/start around benchmark runs
+  no_manage_service: false                              # If true, skip service lifecycle management
+
+score_breakpoints: # Minimum score required for each deployment tier
+  interactive: 4.0
+  batch: 0.5
+  exclude: 0.0

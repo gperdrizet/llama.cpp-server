@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-run_fit_context_size.py
+context_fit.py
 
 Targeted context-fit benchmark runner for llama.cpp / llama-bench.
 
@@ -36,16 +36,78 @@ from pathlib import Path
 from typing import Optional
 
 import matplotlib.pyplot as plt
+import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BENCH_BIN = Path("/opt/llama.cpp/build/bin/llama-bench")
-DEFAULT_RESULTS_DIR = REPO_ROOT / "tests" / "results" / "context_fit"
+DEFAULT_RESULTS_DIR = REPO_ROOT / "tests" / "results" / "context-size"
+DEFAULT_CONTEXT_FIT_CONFIG = REPO_ROOT / "tests" / "config" / "context_fit" / "context_fit.yaml"
+DEFAULT_SCORE_BREAKPOINTS: list[tuple[str, float]] = [
+    ("interactive", 4.0),
+    ("batch", 0.5),
+    ("exclude", 0.0),
+]
 COARSE_CONTEXT_SIZES = [32768, 65536, 131072, 262144]
 
 
 def coarse_sizes_for_max(max_ctx: int) -> list[int]:
     '''Returns 4 context sizes for the coarse sweep: max//8, max//4, max//2, max.'''
     return [max_ctx >> 3, max_ctx >> 2, max_ctx >> 1, max_ctx]
+
+
+def normalize_score_breakpoints(raw_breakpoints: object) -> list[tuple[str, float]]:
+    '''Normalizes breakpoint definitions into a descending list of (label, minimum_score) tuples.'''
+
+    if raw_breakpoints is None:
+        breakpoints = list(DEFAULT_SCORE_BREAKPOINTS)
+    elif isinstance(raw_breakpoints, dict):
+        breakpoints = [(str(label), float(min_score)) for label, min_score in raw_breakpoints.items()]
+    else:
+        raise ValueError("score_breakpoints must be a mapping of label -> minimum_score")
+
+    return sorted(breakpoints, key=lambda item: item[1], reverse=True)
+
+
+def score_breakpoints_to_dict(breakpoints: list[tuple[str, float]]) -> dict[str, float]:
+    '''Converts normalized breakpoint tuples back into a JSON-serializable dict.'''
+
+    return {label: minimum_score for label, minimum_score in breakpoints}
+
+
+def load_context_fit_config(config_path: Optional[Path]) -> tuple[dict[str, object], list[tuple[str, float]], Optional[Path]]:
+    '''Loads the optional YAML config for benchmark defaults and score thresholds.'''
+
+    if config_path is None:
+        return {}, list(DEFAULT_SCORE_BREAKPOINTS), None
+
+    if not config_path.exists():
+        if config_path == DEFAULT_CONTEXT_FIT_CONFIG:
+            return {}, list(DEFAULT_SCORE_BREAKPOINTS), None
+
+        print(f"ERROR: config file not found: {config_path}")
+        sys.exit(1)
+
+    raw = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+
+    if not isinstance(raw, dict):
+        print(f"ERROR: config file must contain a YAML mapping: {config_path}")
+        sys.exit(1)
+
+    run_config = raw.get("run") if isinstance(raw.get("run"), dict) else raw
+    if not isinstance(run_config, dict):
+        print(f"ERROR: config run section must be a YAML mapping: {config_path}")
+        sys.exit(1)
+
+    breakpoints_raw = raw.get("score_breakpoints", run_config.get("score_breakpoints"))
+
+    try:
+        breakpoints = normalize_score_breakpoints(breakpoints_raw)
+
+    except (TypeError, ValueError) as exc:
+        print(f"ERROR: invalid score_breakpoints in {config_path}: {exc}")
+        sys.exit(1)
+
+    return run_config, breakpoints, config_path
 
 
 OOM_PATTERNS = [
@@ -213,7 +275,9 @@ def detect_oom_like_failure(return_code: int, stdout: str, stderr: str) -> bool:
 
 def parse_llama_bench_csv(stdout: str) -> tuple[Optional[float], Optional[float], Optional[float], Optional[float]]:
     '''Parses the CSV output from llama-bench and returns (pp_ts, pp_stddev_ts, tg_ts, tg_stddev_ts).
-    Rows are matched by the ``type`` column ("pp" / "tg").'''
+    Supports both schemas:
+    - Explicit ``type`` column ("pp" / "tg")
+    - Implicit rows inferred from ``n_prompt``/``n_gen`` (pp: prompt-only, tg: gen-only).'''
 
     lines = [line.strip() for line in stdout.splitlines() if line.strip()]
 
@@ -239,17 +303,57 @@ def parse_llama_bench_csv(stdout: str) -> tuple[Optional[float], Optional[float]
         except ValueError:
             return None
 
-    def row_for_type(t: str) -> Optional[dict]:
-        return next((r for r in rows if (r.get("type") or "").strip() == t), None)
+    def as_int(value: str | None) -> Optional[int]:
+        '''Converts a string to int, returning None if conversion fails or value is empty.'''
 
-    pp = row_for_type("pp")
-    tg = row_for_type("tg")
+        if value is None or value == "":
+            return None
+
+        try:
+            return int(value)
+
+        except ValueError:
+            return None
+
+    def classify_row(row: dict[str, str]) -> Optional[str]:
+        '''Classifies a llama-bench CSV row as "pp", "tg", or None.'''
+
+        explicit_type = (row.get("type") or "").strip().lower()
+        if explicit_type in ("pp", "tg"):
+            return explicit_type
+
+        n_prompt = as_int(row.get("n_prompt"))
+        n_gen = as_int(row.get("n_gen"))
+
+        if (n_prompt or 0) > 0 and (n_gen or 0) == 0:
+            return "pp"
+
+        if (n_gen or 0) > 0 and (n_prompt or 0) == 0:
+            return "tg"
+
+        return None
+
+    def mean_of_type(kind: str, key: str) -> Optional[float]:
+        values: list[float] = []
+
+        for row in rows:
+            if classify_row(row) != kind:
+                continue
+
+            parsed = as_float(row.get(key))
+            if parsed is not None:
+                values.append(parsed)
+
+        if not values:
+            return None
+
+        return sum(values) / len(values)
 
     return (
-        as_float(pp.get("avg_ts") if pp else None),
-        as_float(pp.get("stddev_ts") if pp else None),
-        as_float(tg.get("avg_ts") if tg else None),
-        as_float(tg.get("stddev_ts") if tg else None),
+        mean_of_type("pp", "avg_ts"),
+        mean_of_type("pp", "stddev_ts"),
+        mean_of_type("tg", "avg_ts"),
+        mean_of_type("tg", "stddev_ts"),
     )
 
 
@@ -396,6 +500,8 @@ def run_one_context(
     t0 = time.perf_counter()
     poller.start()
 
+    timeout_hit = False
+
     try:
         proc = subprocess.run(
             cmd,
@@ -404,6 +510,30 @@ def run_one_context(
             env=env,
             cwd=REPO_ROOT,
             check=False,
+            timeout=args.max_run_seconds,
+        )
+
+    except subprocess.TimeoutExpired as exc:
+        timeout_hit = True
+        stdout = exc.stdout or ""
+        stderr = exc.stderr or ""
+
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode("utf-8", errors="replace")
+
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode("utf-8", errors="replace")
+
+        timeout_line = (
+            f"TIMEOUT: run exceeded --max-run-seconds={args.max_run_seconds} "
+            f"(phase={phase}, ctx={context_size}, kv={kv_cache_type})"
+        )
+        stderr = (stderr + "\n" + timeout_line).strip() + "\n"
+        proc = subprocess.CompletedProcess(
+            args=cmd,
+            returncode=124,
+            stdout=stdout,
+            stderr=stderr,
         )
 
     finally:
@@ -414,7 +544,10 @@ def run_one_context(
 
     pp_ts, pp_stddev_ts, tg_ts, tg_stddev_ts = parse_llama_bench_csv(proc.stdout)
 
-    if proc.returncode == 0:
+    if timeout_hit:
+        status = "failed"
+
+    elif proc.returncode == 0:
         status = "ok"
 
     elif detect_oom_like_failure(proc.returncode, proc.stdout, proc.stderr):
@@ -445,6 +578,17 @@ def run_one_context(
 
 def write_csv(path: Path, rows: list[RunResult], model: str, devices_text: str) -> None:
     '''Writes the benchmark results to a CSV file with structured columns.'''
+
+    def make_excerpt(text: str, limit: int = 1200) -> str:
+        '''Returns a compact excerpt preserving both header and tail context.'''
+
+        if len(text) <= limit:
+            return text.replace("\n", "\\n")
+
+        head = text[: limit // 2]
+        tail = text[-(limit // 2):]
+        combined = head + "\n...[truncated]...\n" + tail
+        return combined.replace("\n", "\\n")
 
     fieldnames = [
         "timestamp",
@@ -492,8 +636,8 @@ def write_csv(path: Path, rows: list[RunResult], model: str, devices_text: str) 
                     "tg_ts": "" if row.tg_ts is None else f"{row.tg_ts:.6f}",
                     "tg_stddev_ts": "" if row.tg_stddev_ts is None else f"{row.tg_stddev_ts:.6f}",
                     "command": " ".join(row.command),
-                    "stdout_excerpt": row.stdout[:400].replace("\n", "\\n"),
-                    "stderr_excerpt": row.stderr[:400].replace("\n", "\\n"),
+                    "stdout_excerpt": make_excerpt(row.stdout),
+                    "stderr_excerpt": make_excerpt(row.stderr),
                 }
             )
 
@@ -539,12 +683,138 @@ def append_warning(log_path: Path, message: str) -> None:
         f.write("!" * 88 + "\n")
 
 
+def best_error_line(stderr: str) -> str:
+    '''Selects the most informative error line from stderr, skipping noisy banners.'''
+
+    lines = [line.strip() for line in stderr.splitlines() if line.strip()]
+    if not lines:
+        return "unknown error"
+
+    def is_noise(line: str) -> bool:
+        l = line.lower()
+        return (
+            l.startswith("ggml_cuda_init:")
+            or l.startswith("device ")
+            or l.startswith("warning:")
+        )
+
+    informative_patterns = [
+        re.compile(r"failed to load model", re.IGNORECASE),
+        re.compile(r"failed to create context", re.IGNORECASE),
+        re.compile(r"timeout", re.IGNORECASE),
+        re.compile(r"out of memory", re.IGNORECASE),
+        re.compile(r"common_fit_params.*error", re.IGNORECASE),
+        re.compile(r"ggml_cuda_pool_vmm::alloc", re.IGNORECASE),
+        re.compile(r"cuda error", re.IGNORECASE),
+        re.compile(r"abort|aborted", re.IGNORECASE),
+    ]
+
+    non_noise = [line for line in lines if not is_noise(line)]
+    for pattern in informative_patterns:
+        for line in non_noise:
+            if pattern.search(line):
+                return line
+
+    if non_noise:
+        return non_noise[0]
+
+    return lines[0]
+
+
+def weighted_harmonic_mean(pp_ts: Optional[float], tg_ts: Optional[float], *, prompt_weight: float = 0.35, generation_weight: float = 0.65) -> Optional[float]:
+    '''Computes a deployment-oriented throughput score from prompt and generation rates.
+
+    The weighted harmonic mean penalizes imbalance and keeps the score in tokens/second.
+    Generation is weighted more heavily because it is usually the user-visible bottleneck.
+    '''
+
+    if pp_ts is None or tg_ts is None:
+        return None
+
+    if pp_ts <= 0 or tg_ts <= 0:
+        return None
+
+    total_weight = prompt_weight + generation_weight
+    if total_weight <= 0:
+        return None
+
+    return total_weight / ((prompt_weight / pp_ts) + (generation_weight / tg_ts))
+
+
+def mean_optional(values: list[Optional[float]]) -> Optional[float]:
+    '''Returns the arithmetic mean of the non-None values, or None if empty.'''
+
+    filtered = [value for value in values if value is not None]
+    if not filtered:
+        return None
+
+    return sum(filtered) / len(filtered)
+
+
+def deployment_tier_for_score(
+    score: Optional[float],
+    breakpoints: list[tuple[str, float]],
+) -> tuple[Optional[str], Optional[float]]:
+    '''Maps a deployment score to the best matching tier based on configured breakpoints.'''
+
+    if score is None:
+        return None, None
+
+    for label, minimum_score in breakpoints:
+        if score >= minimum_score:
+            return label, minimum_score
+
+    return None, None
+
+
+def select_deployment_rows(rows: list[RunResult], kv_cache_type: str, max_context: Optional[int]) -> list[RunResult]:
+    '''Selects the rows that define the deployment score for one KV cache type.'''
+
+    if max_context is None:
+        return []
+
+    return [
+        row
+        for row in rows
+        if row.kv_cache_type == kv_cache_type and row.context_size == max_context and row.status == "ok"
+    ]
+
+
+def aggregate_runtime_by_context(rows: list[RunResult]) -> dict[str, float]:
+    '''Aggregates elapsed runtime by context size across the provided rows.'''
+
+    totals: dict[int, float] = {}
+
+    for row in rows:
+        totals[row.context_size] = totals.get(row.context_size, 0.0) + row.elapsed_s
+
+    return {
+        str(ctx): round(total_s, 3)
+        for ctx, total_s in sorted(totals.items())
+    }
+
+
+def aggregate_runtime_by_phase(rows: list[RunResult]) -> dict[str, float]:
+    '''Aggregates elapsed runtime by benchmark phase across the provided rows.'''
+
+    totals: dict[str, float] = {}
+
+    for row in rows:
+        totals[row.phase] = totals.get(row.phase, 0.0) + row.elapsed_s
+
+    return {
+        phase: round(total_s, 3)
+        for phase, total_s in sorted(totals.items())
+    }
+
+
 def write_summary_json(
     path: Path,
     *,
     model: str,
     gpu_devices: str,
     coarse_sizes: list[int],
+    score_breakpoints: list[tuple[str, float]],
     rows: list[RunResult],
     quant_summaries: list[QuantRunSummary],
     warnings: list[str],
@@ -553,20 +823,30 @@ def write_summary_json(
 
     runs: dict[str, dict[str, object]] = {}
     overall_errors: list[str] = list(warnings)
+    overall_score_candidates: list[tuple[float, str, Optional[int]]] = []
+    breakpoint_dict = score_breakpoints_to_dict(score_breakpoints)
+    runtime_by_kv_cache_s: dict[str, float] = {}
 
     for summary in quant_summaries:
         quant_rows = [r for r in rows if r.kv_cache_type == summary.kv_cache_type]
         run_errors: list[str] = list(summary.warnings)
+        deployment_rows = select_deployment_rows(rows, summary.kv_cache_type, summary.max_success_ctx)
+
+        deployment_pp_ts = mean_optional([r.pp_ts for r in deployment_rows])
+        deployment_tg_ts = mean_optional([r.tg_ts for r in deployment_rows])
+        deployment_score = weighted_harmonic_mean(deployment_pp_ts, deployment_tg_ts)
+        deployment_tier, deployment_tier_threshold = deployment_tier_for_score(deployment_score, score_breakpoints)
+        runtime_total_s = sum(r.elapsed_s for r in quant_rows)
+        runtime_by_context_s = aggregate_runtime_by_context(quant_rows)
+        runtime_by_phase_s = aggregate_runtime_by_phase(quant_rows)
+        runtime_by_kv_cache_s[summary.kv_cache_label] = round(runtime_total_s, 3)
+
+        if deployment_score is not None:
+            overall_score_candidates.append((deployment_score, summary.kv_cache_label, summary.max_success_ctx))
 
         for row in quant_rows:
             if row.status == "failed":
-                err_line = "unknown error"
-
-                for line in row.stderr.splitlines():
-                    if line.strip():
-                        err_line = line.strip()
-
-                        break
+                err_line = best_error_line(row.stderr)
 
                 run_errors.append(f"ctx={row.context_size}: {err_line}")
 
@@ -584,6 +864,17 @@ def write_summary_json(
             "runs_ok": sum(1 for r in quant_rows if r.status == "ok"),
             "runs_failed_oom": sum(1 for r in quant_rows if r.status == "failed_oom"),
             "runs_failed_other": sum(1 for r in quant_rows if r.status == "failed"),
+            "runtime_total_s": round(runtime_total_s, 3),
+            "runtime_by_context_s": runtime_by_context_s,
+            "runtime_by_phase_s": runtime_by_phase_s,
+            "deployment_score": deployment_score,
+            "deployment_tier": deployment_tier,
+            "deployment_tier_threshold": deployment_tier_threshold,
+            "deployment_score_pp_ts_mean": deployment_pp_ts,
+            "deployment_score_tg_ts_mean": deployment_tg_ts,
+            "deployment_score_source_context": summary.max_success_ctx,
+            "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+            "deployment_score_breakpoints": breakpoint_dict,
             "errors": run_errors,
         }
 
@@ -594,12 +885,35 @@ def write_summary_json(
         "runs_ok": sum(1 for r in rows if r.status == "ok"),
         "runs_failed_oom": sum(1 for r in rows if r.status == "failed_oom"),
         "runs_failed_other": sum(1 for r in rows if r.status == "failed"),
+        "runtime_total_s": round(sum(r.elapsed_s for r in rows), 3),
+        "runtime_by_kv_cache_s": runtime_by_kv_cache_s,
+        "runtime_by_context_s": aggregate_runtime_by_context(rows),
+        "runtime_by_phase_s": aggregate_runtime_by_phase(rows),
         "errors": overall_errors,
     }
 
     for summary in quant_summaries:
         overall_summary[f"{summary.kv_cache_label}_max_context"] = summary.max_success_ctx
         overall_summary[f"{summary.kv_cache_label}_max_context_stable"] = summary.boundary_stable
+
+    if overall_score_candidates:
+        best_score, best_label, best_context = max(overall_score_candidates, key=lambda item: item[0])
+        best_tier, best_tier_threshold = deployment_tier_for_score(best_score, score_breakpoints)
+        overall_summary["deployment_score"] = best_score
+        overall_summary["deployment_score_kv_cache_label"] = best_label
+        overall_summary["deployment_score_context"] = best_context
+        overall_summary["deployment_tier"] = best_tier
+        overall_summary["deployment_tier_threshold"] = best_tier_threshold
+        overall_summary["deployment_score_formula"] = "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)"
+    else:
+        overall_summary["deployment_score"] = None
+        overall_summary["deployment_score_kv_cache_label"] = None
+        overall_summary["deployment_score_context"] = None
+        overall_summary["deployment_tier"] = None
+        overall_summary["deployment_tier_threshold"] = None
+        overall_summary["deployment_score_formula"] = "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)"
+
+    overall_summary["deployment_score_breakpoints"] = breakpoint_dict
 
     payload = {
         "timestamp": datetime.now().isoformat(timespec="seconds"),
@@ -700,7 +1014,20 @@ def start_service(service_name: str) -> None:
 def parse_args() -> argparse.Namespace:
     '''Parses command-line arguments for the context-fit benchmark runner.'''
 
+    bootstrap = argparse.ArgumentParser(add_help=False)
+    bootstrap.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Path to a YAML config file with run settings and score breakpoints",
+    )
+
+    bootstrap_args, _ = bootstrap.parse_known_args()
+    config_path = bootstrap_args.config or (DEFAULT_CONTEXT_FIT_CONFIG if DEFAULT_CONTEXT_FIT_CONFIG.exists() else None)
+    run_config, score_breakpoints, config_path = load_context_fit_config(config_path)
+
     parser = argparse.ArgumentParser(
+        parents=[bootstrap],
         description=(
             "Run context-size fit benchmarks one context at a time, track peak VRAM, "
             "and refine the fail boundary with bisection probes."
@@ -708,99 +1035,117 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--model",
-        default=None,
+        default=run_config.get("model"),
         help="Model path or filename (mutually exclusive with --model-list)"
     )
     parser.add_argument(
         "--model-list",
         type=Path,
-        default=None,
+        default=Path(run_config["model_list"]) if run_config.get("model_list") else None,
         help="Path to a text file listing one model path or filename per line (mutually exclusive with --model)"
     )
     parser.add_argument(
+        "--max-context",
+        type=int,
+        default=int(run_config.get("max_context", 262144)),
+        help=(
+            "Maximum context for single-model runs (no --model-list). "
+            "The coarse sweep is derived as max//8, max//4, max//2, max"
+        ),
+    )
+    parser.add_argument(
         "--gpus",
-        required=True,
+        default=run_config.get("gpus"),
         help="CUDA_VISIBLE_DEVICES string, e.g. '1,2'"
     )
     parser.add_argument(
         "--bench-bin",
         type=Path,
-        default=DEFAULT_BENCH_BIN,
+        default=Path(run_config.get("bench_bin", DEFAULT_BENCH_BIN)),
         help="Path to llama-bench binary"
     )
     parser.add_argument(
         "--results-dir",
         type=Path,
-        default=DEFAULT_RESULTS_DIR,
+        default=Path(run_config.get("results_dir", DEFAULT_RESULTS_DIR)),
         help="Output directory"
     )
     parser.add_argument(
         "--run-name",
-        default=None,
+        default=run_config.get("run_name"),
         help="Output run label (default: timestamp + model name)"
     )
     parser.add_argument(
         "--n-gpu-layers",
         type=int,
-        default=99
+        default=int(run_config.get("n_gpu_layers", 99))
     )
     parser.add_argument(
         "--split-mode",
-        default="layer"
+        default=str(run_config.get("split_mode", "layer"))
     )
     parser.add_argument(
         "--tensor-split",
-        default="1,1"
+        default=str(run_config.get("tensor_split", "1,1"))
     )
     parser.add_argument(
         "--fit-target",
         type=int,
-        default=512
+        default=int(run_config.get("fit_target", 512))
     )
     parser.add_argument(
         "--fit-ctx",
         type=int,
-        default=2048
+        default=int(run_config.get("fit_ctx", 2048))
     )
     parser.add_argument(
         "--n-prompt",
         type=int,
-        default=512
+        default=int(run_config.get("n_prompt", 512))
     )
     parser.add_argument(
         "--n-gen",
         type=int,
-        default=128
+        default=int(run_config.get("n_gen", 128))
     )
     parser.add_argument(
         "--repetitions",
         type=int,
-        default=3
+        default=int(run_config.get("repetitions", 3))
     )
     parser.add_argument(
         "--poll-interval",
         type=float,
-        default=0.25,
+        default=float(run_config.get("poll_interval", 0.25)),
         help="nvidia-smi poll interval in seconds"
     )
     parser.add_argument(
         "--refine-step",
         type=int,
-        default=1024,
+        default=int(run_config.get("refine_step", 1024)),
         help="Step size for bisection refinement contexts"
     )
     parser.add_argument(
         "--verify-runs",
         type=int,
-        default=3,
+        default=int(run_config.get("verify_runs", 3)),
         help=(
             "Number of confirmation runs at the final max "
             "context; any failure marks that context as unstable"
         )
     )
     parser.add_argument(
+        "--max-run-seconds",
+        type=int,
+        default=int(run_config.get("max_run_seconds", 21600)),
+        help=(
+            "Hard wall-clock timeout per llama-bench invocation. "
+            "Timed-out runs are marked failed (default: 21600)"
+        )
+    )
+    parser.add_argument(
         "--kv-cache-types",
-        default="q4_0,q8_0,f16",
+        default=str(run_config.get("kv_cache_types", "q4_0,q8_0,f16")),
         help=(
             "Comma-separated KV cache types for iterative runs. "
             "Defaults to q4_0,q8_0,f16"
@@ -808,16 +1153,34 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--service-name",
-        default="llamacpp.service",
+        default=str(run_config.get("service_name", "llamacpp.service")),
         help="Systemd service to stop before run and restore after run"
     )
     parser.add_argument(
         "--no-manage-service",
         action="store_true",
+        default=bool(run_config.get("no_manage_service", False)),
         help="Disable automatic stop/start of the llama.cpp service around the benchmark run",
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    if not args.gpus:
+        print("ERROR: --gpus must be provided either on the command line or in the YAML config")
+        sys.exit(1)
+
+    if not args.model and not args.model_list:
+        print("ERROR: one of --model or --model-list is required, either on the command line or in the YAML config")
+        sys.exit(1)
+
+    if args.max_context <= 0:
+        print("ERROR: --max-context must be > 0")
+        sys.exit(1)
+
+    args.config = config_path
+    args.score_breakpoints = score_breakpoints
+
+    return args
 
 
 def _run_for_model(
@@ -842,8 +1205,8 @@ def _run_for_model(
     out_dir = args.results_dir / run_name
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    csv_path = out_dir / "context_fit.csv"
-    log_path = out_dir / "context_fit.log"
+    csv_path = out_dir / "results.csv"
+    log_path = out_dir / "run.log"
 
     rows: list[RunResult] = []
     quant_summaries: list[QuantRunSummary] = []
@@ -1043,6 +1406,28 @@ def _run_for_model(
                         )
                         boundary_stable = True
 
+        elif first_fail_ctx is not None and not successful:
+            msg = (
+                f"[{kv_label}] Coarse failure at first tested context={first_fail_ctx}; "
+                "no successful lower bound is available, so bisection refinement is skipped."
+            )
+
+            print(f"WARNING: {msg}")
+            warnings.append(msg)
+            quant_warnings.append(msg)
+            append_warning(log_path, msg)
+
+        elif first_fail_ctx is not None:
+            msg = (
+                f"[{kv_label}] Refinement skipped: first tested context {first_fail_ctx} failed, "
+                "so there is no successful lower bracket to bisect from."
+            )
+
+            print(f"WARNING: {msg}")
+            warnings.append(msg)
+            quant_warnings.append(msg)
+            append_warning(log_path, msg)
+
         quant_rows = [row for row in rows if row.kv_cache_type == kv_type]
         successful = get_stable_success_contexts(quant_rows)
 
@@ -1060,14 +1445,15 @@ def _run_for_model(
 
     write_csv(csv_path, rows, str(model_path), args.gpus)
 
-    summary_path = out_dir / "context_fit_summary.json"
-    plot_path = out_dir / "context_fit_plot.png"
+    summary_path = out_dir / "summary.json"
+    plot_path = out_dir / "plot.png"
 
     write_summary_json(
         summary_path,
         model=model_path.name,
         gpu_devices=args.gpus,
         coarse_sizes=coarse_sizes,
+        score_breakpoints=args.score_breakpoints,
         rows=rows,
         quant_summaries=quant_summaries,
         warnings=warnings,
@@ -1140,7 +1526,7 @@ def main() -> None:
         models = load_model_list(args.model_list)
 
     else:
-        models = [(resolve_model_path(args.model), None)]
+        models = [(resolve_model_path(args.model), args.max_context)]
 
     env = os.environ.copy()
     env["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"

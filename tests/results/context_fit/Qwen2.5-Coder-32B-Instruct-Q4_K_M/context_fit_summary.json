@@ -1,0 +1,112 @@
+{
+  "timestamp": "2026-07-19T22:29:32",
+  "model": "Qwen2.5-Coder-32B-Instruct-Q4_K_M.gguf",
+  "gpu_devices": "1,2",
+  "context_sizes": [
+    16384,
+    32768,
+    65536,
+    131072
+  ],
+  "overall_summary": {
+    "runs_total": 12,
+    "runs_ok": 12,
+    "runs_failed_oom": 0,
+    "runs_failed_other": 0,
+    "errors": [],
+    "q4_max_context": 131072,
+    "q4_max_context_stable": true,
+    "q8_max_context": 131072,
+    "q8_max_context_stable": true,
+    "f16_max_context": 131072,
+    "f16_max_context_stable": true,
+    "deployment_score": 4.026097857714771,
+    "deployment_score_kv_cache_label": "q4",
+    "deployment_score_context": 131072,
+    "deployment_tier": "interactive",
+    "deployment_tier_threshold": 4.0,
+    "deployment_score_breakpoints": {
+      "interactive": 4.0,
+      "batch": 0.5,
+      "exclude": 0.0
+    },
+    "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)"
+  },
+  "runs": {
+    "q4": {
+      "kv_cache_label": "q4",
+      "kv_cache_type": "q4_0",
+      "max_context": 131072,
+      "max_context_stable": true,
+      "first_fail_ctx": null,
+      "bisect_fail_ctx": null,
+      "runs_total": 4,
+      "runs_ok": 4,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 0,
+      "errors": [],
+      "deployment_score": 4.026097857714771,
+      "deployment_score_pp_ts_mean": 23.320402,
+      "deployment_score_tg_ts_mean": 2.785263,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_source_context": 131072,
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)"
+    },
+    "q8": {
+      "kv_cache_label": "q8",
+      "kv_cache_type": "q8_0",
+      "max_context": 131072,
+      "max_context_stable": true,
+      "first_fail_ctx": null,
+      "bisect_fail_ctx": null,
+      "runs_total": 4,
+      "runs_ok": 4,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 0,
+      "errors": [],
+      "deployment_score": 0.49174241543711045,
+      "deployment_score_pp_ts_mean": 21.582272,
+      "deployment_score_tg_ts_mean": 0.322202,
+      "deployment_tier": "exclude",
+      "deployment_tier_threshold": 0.0,
+      "deployment_score_source_context": 131072,
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)"
+    },
+    "f16": {
+      "kv_cache_label": "f16",
+      "kv_cache_type": "f16",
+      "max_context": 131072,
+      "max_context_stable": true,
+      "first_fail_ctx": null,
+      "bisect_fail_ctx": null,
+      "runs_total": 4,
+      "runs_ok": 4,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 0,
+      "errors": [],
+      "deployment_score": 0.2643167404077892,
+      "deployment_score_pp_ts_mean": 18.76665,
+      "deployment_score_tg_ts_mean": 0.172657,
+      "deployment_tier": "exclude",
+      "deployment_tier_threshold": 0.0,
+      "deployment_score_source_context": 131072,
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)"
+    }
+  }
+}

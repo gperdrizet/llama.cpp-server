@@ -3,17 +3,33 @@
 # Uses the same YAML strategy as load-test.yaml, but targets 2-GPU cases.
 # Each case updates .env, redeploys via utils/deploy_service.sh --restart,
 # then writes:
-#   tests/results/YYYY-MM-DD_<case-label>_slotsN/load_test.csv
+#   tests/results/load-test/YYYY-MM-DD_<case-label>_slotsN/load_test.csv
 
 global:
+  # If true, update deployment env and restart service before each case
   deploy: true
+  # If true, pass --restart when deploying
   deploy_restart: true
+  # Base HTTP endpoint for load_test.py requests
   url: http://localhost:8502
+  # Requests issued per concurrency level
   requests: 3
+  # Concurrency levels tested for each case
   levels: [1, 2, 4, 8]
+  # max_tokens for each API request
   max_tokens: 128
+  # Whether to use streaming responses
   stream: false
 
+# Case fields:
+# - label: output suffix for this scenario
+# - model: GGUF model filename
+# - cuda_device: CUDA_VISIBLE_DEVICES value
+# - tensor_split: optional per-GPU tensor split ratios
+# - gpu_layers: number of GPU-offloaded layers
+# - ctx_size: model context size for deployment
+# - slots: server slot count
+# - prompt_cache_size: prompt cache capacity
 cases:
   - label: 16384
     model: Qwen3.6-27B-Q4_K_M.gguf

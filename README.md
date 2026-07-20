@@ -151,45 +151,61 @@ The service runs as the unprivileged `llama` user/group and several flags are se
 
 ### Max context size
 
-The maximum context size that will fit within the avalible GPU memory is determined with `tests/run_fit_context_size.py`.
+The maximum context size that will fit within the available GPU memory is determined with `tests/context_fit.py`.
+
+The benchmark is driven by `tests/config/context_fit/context_fit.yaml`, which supplies the default run settings, score breakpoints, and the model list file. The model list itself lives in `tests/config/context_fit/models.csv`; comment out any model you want to skip before the next run. Each model row may also include a per-model `max_context` value, which the runner uses to derive that model's coarse context scan.
 
 The runner has two phases:
-1. **Coarse scan** over a standard context list (`4096` to `262144`).
-2. **Refinement scan** after first OOM:
-   - fit a linear model (`peak_vram_total_mib` vs `ctx_size`) from successful runs
-   - predict the memory-limit context
-    - probe around that estimate for a tighter boundary.
+1. **Coarse scan** over a context list from the YAML config.
+2. **Bisection refinement** around the first failing context.
 
-It does the max context determination three times, once for each KV-cache quantization level (`q4_0`, `q8_0`, `f16`) and aggregates all results into the same CSV/log/summary/plot artifacts.
+It runs the max-context search three times, once for each KV-cache quantization level (`q4_0`, `q8_0`, `f16`) and aggregates all results into the same CSV/log/summary/plot artifacts.
 
-- `context_fit.csv`: one row per attempted context (`ok`, `failed_oom`, or `failed`)
-- `context_fit.log`: full command, stdout, stderr, and VRAM summary per run
-- `context_fit_summary.json`: compact run summary (boundary estimates and regression details)
-- `context_fit_plot.png`: matplotlib plot combining all KV-cache runs on one chart with color-separated series
+- `results.csv`: one row per attempted context (`ok`, `failed_oom`, or `failed`)
+- `run.log`: full command, stdout, stderr, and VRAM summary per run
+- `summary.json`: compact run summary with boundary estimates, throughput averages, deployment score, and tier
+- `plot.png`: matplotlib plot combining all KV-cache runs on one chart with color-separated series
 
 
 ```bash
-# Example: run context-fit on two P100 GPUs
-.venv/bin/python tests/run_fit_context_size.py \
-  --model /opt/models/Qwen3.6-27B-Q4_K_M.gguf \
-  --gpus 1,2 \
-  --tensor-split 1,1 \
-  --split-mode layer
+# Example: run the full context-fit suite on two P100 GPUs
+.venv/bin/python tests/context_fit.py \
+  --config tests/config/context_fit/context_fit.yaml \
+  --model-list tests/config/context_fit/models.csv
 ```
 
 **Useful options**:
 
 | Option | Purpose |
 |---|---|
-| `--model` | Model path (absolute or filename under `/opt/models`) |
+| `--config` | YAML file with run defaults and score breakpoints |
+| `--model` | Single model path or filename under `models/` |
+| `--model-list` | CSV file with one model path and optional per-model max context per line |
+| `--max-context` | Max context for single-model runs; coarse sweep derives from this value |
 | `--gpus` | Physical GPU indexes for `CUDA_VISIBLE_DEVICES` |
+| `--bench-bin` | Path to `llama-bench` |
+| `--results-dir` | Output directory |
+| `--run-name` | Output run label |
 | `--tensor-split` | Tensor split ratio for multi-GPU runs |
-| `--memory-cap-mib` | Explicit regression target memory cap |
-| `--memory-headroom-mib` | VRAM safety margin when auto-computing memory cap |
-| `--refine-step` | Granularity for refinement probe contexts |
+| `--split-mode` | Tensor split mode (`layer` in the current setup) |
+| `--fit-target` / `--fit-ctx` | Target context-size fit parameters passed to `llama-bench` |
+| `--n-prompt` / `--n-gen` / `--repetitions` | Throughput benchmark settings |
+| `--refine-step` | Granularity for bisection refinement probes |
+| `--verify-runs` | Confirmation runs at the final context |
+| `--max-run-seconds` | Hard timeout for each `llama-bench` invocation |
 | `--kv-cache-types` | Comma-separated KV cache types to run (default: `q4_0,q8_0,f16`) |
-| `--results-dir` / `--run-name` | Output location and run label |
 | `--service-name` / `--no-manage-service` | Service lifecycle control around benchmark runs |
+
+### Deployment scores
+
+The summary JSON now includes a deployment score derived from the prompt and generation throughput at the stable max context. The current breakpoints are `interactive >= 4.0`, `batch >= 0.5`, and `exclude < 0.5`.
+
+Recent completed runs:
+
+| Model | Stable max context | Deployment score | Tier | Notes |
+|---|---:|---:|---|---|
+| Qwen2.5-Coder-32B-Instruct-Q4_K_M | 131072 | 4.03 | interactive | q4 was the strongest score source; q8 and f16 fell into `exclude` |
+| gemma-4-31B-it-Q4_K_M | 262144 | 5.41 | interactive | q4 scored highest; q8 and f16 landed in `batch` |
 
 ### Results
 
@@ -227,11 +243,11 @@ Single run mode measures end-to-end response latency against the running `llamac
 Use `--suite-config` to run a sequence of load-test experiments defined in YAML.
 
 ```bash
-# Run the default suite
-.venv/bin/python tests/load_test.py --suite-config tests/benchmarks/load-test.yaml
+# Run a suite
+.venv/bin/python tests/load_test.py --suite-config tests/config/load_test/load-test-GTP-OSS-20B.yaml
 
 # Preview actions without redeploying or sending requests
-.venv/bin/python tests/load_test.py --suite-config tests/benchmarks/load-test.yaml --dry-run
+.venv/bin/python tests/load_test.py --suite-config tests/config/load_test/load-test-GTP-OSS-20B.yaml --dry-run
 ```
 
 In suite mode, each case can set model/deployment settings (`model`, `slots`, `ctx_size`, `gpu_layers`, `cuda_device`, `tensor_split`, `prompt_cache_size`) and test settings (`levels`, `requests`, `max_tokens`, `stream`, `url`).

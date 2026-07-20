@@ -1,0 +1,112 @@
+{
+  "timestamp": "2026-07-16T19:26:19",
+  "model": "gemma-4-31B-it-Q4_K_M.gguf",
+  "gpu_devices": "1,2",
+  "context_sizes": [
+    32768,
+    65536,
+    131072,
+    262144
+  ],
+  "overall_summary": {
+    "runs_total": 12,
+    "runs_ok": 12,
+    "runs_failed_oom": 0,
+    "runs_failed_other": 0,
+    "errors": [],
+    "q4_max_context": 262144,
+    "q4_max_context_stable": true,
+    "q8_max_context": 262144,
+    "q8_max_context_stable": true,
+    "f16_max_context": 262144,
+    "f16_max_context_stable": true,
+    "deployment_score": 5.413741883952063,
+    "deployment_score_kv_cache_label": "q4",
+    "deployment_score_context": 262144,
+    "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+    "deployment_tier": "interactive",
+    "deployment_tier_threshold": 4.0,
+    "deployment_score_breakpoints": {
+      "interactive": 4.0,
+      "batch": 0.5,
+      "exclude": 0.0
+    }
+  },
+  "runs": {
+    "q4": {
+      "kv_cache_label": "q4",
+      "kv_cache_type": "q4_0",
+      "max_context": 262144,
+      "max_context_stable": true,
+      "first_fail_ctx": null,
+      "bisect_fail_ctx": null,
+      "runs_total": 4,
+      "runs_ok": 4,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 0,
+      "errors": [],
+      "deployment_score": 5.413741883952063,
+      "deployment_score_pp_ts_mean": 25.012633,
+      "deployment_score_tg_ts_mean": 3.807355,
+      "deployment_score_source_context": 262144,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      }
+    },
+    "q8": {
+      "kv_cache_label": "q8",
+      "kv_cache_type": "q8_0",
+      "max_context": 262144,
+      "max_context_stable": true,
+      "first_fail_ctx": null,
+      "bisect_fail_ctx": null,
+      "runs_total": 4,
+      "runs_ok": 4,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 0,
+      "errors": [],
+      "deployment_score": 0.979297808811629,
+      "deployment_score_pp_ts_mean": 23.510236,
+      "deployment_score_tg_ts_mean": 0.645961,
+      "deployment_score_source_context": 262144,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_tier": "batch",
+      "deployment_tier_threshold": 0.5,
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      }
+    },
+    "f16": {
+      "kv_cache_label": "f16",
+      "kv_cache_type": "f16",
+      "max_context": 262144,
+      "max_context_stable": true,
+      "first_fail_ctx": null,
+      "bisect_fail_ctx": null,
+      "runs_total": 4,
+      "runs_ok": 4,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 0,
+      "errors": [],
+      "deployment_score": 0.5056861745644616,
+      "deployment_score_pp_ts_mean": 21.908874,
+      "deployment_score_tg_ts_mean": 0.331373,
+      "deployment_score_source_context": 262144,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_tier": "batch",
+      "deployment_tier_threshold": 0.5,
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      }
+    }
+  }
+}

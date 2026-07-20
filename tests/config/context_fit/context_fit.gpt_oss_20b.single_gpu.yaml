@@ -1,0 +1,27 @@
+run:
+  model: gpt-oss-20b-mxfp4.gguf                     # Single model path or filename under models/
+  max_context: 262144                               # Max context for single-model runs (derives coarse sweep)
+  gpus: "1"                                         # GPUs to use (CUDA_VISIBLE_DEVICES)
+  bench_bin: /opt/llama.cpp/build/bin/llama-bench   # Path to llama-bench binary
+  results_dir: tests/results/context-size/gpt-oss-20b-single-gpu # Directory for results
+  run_name: gpt_oss_20b_single_gpu_full             # Optional run name (null => auto-generated)
+  n_gpu_layers: -1                                  # Number of model layers on GPU (-1 for all)
+  split_mode: layer                                 # Multi-GPU split mode for llama.cpp
+  tensor_split: "1"                                 # Relative tensor split across selected GPUs
+  fit_target: 512                                   # llama-bench fit margin per GPU in MiB
+  fit_ctx: 2048                                     # Minimum context considered by fit logic
+  n_prompt: 512                                     # Prompt tokens benchmarked per run
+  n_gen: 128                                        # Generation tokens benchmarked per run
+  repetitions: 3                                    # llama-bench repeats per probe
+  poll_interval: 0.1                                # Seconds between VRAM sampling polls
+  refine_step: 1024                                 # Bisection refinement context step
+  verify_runs: 3                                    # Stability confirmation runs at discovered max context
+  max_run_seconds: 21600                            # Hard timeout per llama-bench run (seconds)
+  kv_cache_types: q4_0,q8_0,f16                     # KV cache types to benchmark (comma-separated)
+  service_name: llamacpp.service                    # Service to stop/start around benchmark runs
+  no_manage_service: false                          # If true, skip service lifecycle management
+
+score_breakpoints: # Minimum score required for each deployment tier
+  interactive: 4.0
+  batch: 0.5
+  exclude: 0.0

@@ -877,6 +877,21 @@ def parse_args() -> argparse.Namespace:
         help="Systemd service to stop before run and restore after run"
     )
     parser.add_argument(
+        "--skip-completed",
+        action="store_true",
+        default=bool(run_config.get("skip_completed", False)),
+        help=(
+            "Skip models with an existing summary.json in the output directory. "
+            "Useful for resuming interrupted multi-model runs."
+        ),
+    )
+    parser.add_argument(
+        "--stop-after-model",
+        type=int,
+        default=int(run_config.get("stop_after_model", 0)),
+        help="Stop after N models in this invocation (0 means all models)",
+    )
+    parser.add_argument(
         "--no-manage-service",
         action="store_true",
         default=bool(run_config.get("no_manage_service", False)),
@@ -895,6 +910,10 @@ def parse_args() -> argparse.Namespace:
 
     if args.max_context <= 0:
         print("ERROR: --max-context must be > 0")
+        sys.exit(1)
+
+    if args.stop_after_model < 0:
+        print("ERROR: --stop-after-model must be >= 0")
         sys.exit(1)
 
     args.config = config_path
@@ -1269,6 +1288,8 @@ def main() -> None:
             else:
                 print(f"Service not active, no stop needed: {args.service_name}")
 
+        ran_models = 0
+
         for model_path, max_ctx in models:
             coarse_sizes = coarse_sizes_for_max(max_ctx) if max_ctx is not None else COARSE_CONTEXT_SIZES
             run_name = (
@@ -1277,7 +1298,25 @@ def main() -> None:
                 else (args.run_name or f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{model_path.stem}")
             )
 
+            out_dir = args.results_dir / run_name
+            summary_path = out_dir / "summary.json"
+
+            if args.skip_completed and summary_path.exists():
+                print(
+                    f"Skipping completed model: {model_path.name} "
+                    f"(found {summary_path})"
+                )
+                continue
+
             _run_for_model(model_path, run_name, kv_runs, devices, args, env, coarse_sizes)
+            ran_models += 1
+
+            if args.stop_after_model > 0 and ran_models >= args.stop_after_model:
+                print(
+                    f"Stopping early after {ran_models} model(s) "
+                    f"due to --stop-after-model={args.stop_after_model}"
+                )
+                break
 
     finally:
         if should_restore_service:

@@ -194,6 +194,8 @@ It runs the max-context search three times, once for each KV-cache quantization 
 | `--verify-runs` | Confirmation runs at the final context |
 | `--max-run-seconds` | Hard timeout for each `llama-bench` invocation |
 | `--kv-cache-types` | Comma-separated KV cache types to run (default: `q4_0,q8_0,f16`) |
+| `--skip-completed` | Resume helper: skip models whose `summary.json` already exists |
+| `--stop-after-model` | Run only N models, then exit cleanly |
 | `--service-name` / `--no-manage-service` | Service lifecycle control around benchmark runs |
 
 ### Deployment scores

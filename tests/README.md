@@ -11,7 +11,6 @@ Minimal metadata for what each file and subdirectory is for.
 | `load_test.py` | API load/latency test runner (concurrency levels, repeat batches, optional deploy/restart workflow). |
 | `results/` | Benchmark and load-test output artifacts (organized by benchmark). |
 | `config/` | Benchmark configuration files, organized by benchmark type. |
-| `benchmarks/` | Legacy leftover directory from earlier load-test layout; currently expected to be empty. |
 | `helper_funcs/` | Shared helper modules used by test runners. |
 
 ## config/
@@ -34,7 +33,6 @@ Minimal metadata for what each file and subdirectory is for.
 | Path | Purpose |
 |---|---|
 | `requests.py` | Async HTTP request helpers used by `load_test.py` (single request + concurrent batch execution). |
-| `__pycache__/` | Python bytecode cache (auto-generated). |
 
 ## Notes
 

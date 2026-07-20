@@ -1,0 +1,160 @@
+{
+  "timestamp": "2026-07-20T16:18:43",
+  "model": "gpt-oss-20b-mxfp4.gguf",
+  "gpu_devices": "1",
+  "context_sizes": [
+    32768,
+    65536,
+    131072,
+    262144
+  ],
+  "overall_summary": {
+    "runs_total": 18,
+    "runs_ok": 18,
+    "runs_failed_oom": 0,
+    "runs_failed_other": 0,
+    "runtime_total_s": 19321.227,
+    "runtime_by_kv_cache_s": {
+      "q4": 2665.821,
+      "q8": 8053.36,
+      "f16": 8602.045
+    },
+    "runtime_by_context_s": {
+      "32768": 283.122,
+      "65536": 625.851,
+      "131072": 1690.5,
+      "262144": 16721.753
+    },
+    "runtime_by_phase_s": {
+      "coarse": 8124.49,
+      "verify": 11196.737
+    },
+    "errors": [],
+    "q4_max_context": 262144,
+    "q4_max_context_stable": true,
+    "q8_max_context": 262144,
+    "q8_max_context_stable": true,
+    "f16_max_context": 262144,
+    "f16_max_context_stable": true,
+    "deployment_score": 23.629846766026944,
+    "deployment_score_kv_cache_label": "f16",
+    "deployment_score_context": 262144,
+    "deployment_tier": "interactive",
+    "deployment_tier_threshold": 4.0,
+    "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+    "deployment_score_breakpoints": {
+      "interactive": 4.0,
+      "batch": 0.5,
+      "exclude": 0.0
+    }
+  },
+  "runs": {
+    "q4": {
+      "kv_cache_label": "q4",
+      "kv_cache_type": "q4_0",
+      "max_context": 262144,
+      "max_context_stable": true,
+      "first_fail_ctx": null,
+      "bisect_fail_ctx": null,
+      "runs_total": 4,
+      "runs_ok": 4,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 0,
+      "runtime_total_s": 2665.821,
+      "runtime_by_context_s": {
+        "32768": 94.686,
+        "65536": 210.08,
+        "131072": 567.118,
+        "262144": 1793.938
+      },
+      "runtime_by_phase_s": {
+        "coarse": 2665.821
+      },
+      "deployment_score": 15.19784204407791,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 84.36002,
+      "deployment_score_tg_ts_mean": 10.543402,
+      "deployment_score_source_context": 262144,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": []
+    },
+    "q8": {
+      "kv_cache_label": "q8",
+      "kv_cache_type": "q8_0",
+      "max_context": 262144,
+      "max_context_stable": true,
+      "first_fail_ctx": null,
+      "bisect_fail_ctx": null,
+      "runs_total": 7,
+      "runs_ok": 7,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 0,
+      "runtime_total_s": 8053.36,
+      "runtime_by_context_s": {
+        "32768": 94.544,
+        "65536": 209.703,
+        "131072": 566.556,
+        "262144": 7182.557
+      },
+      "runtime_by_phase_s": {
+        "coarse": 2667.253,
+        "verify": 5386.107
+      },
+      "deployment_score": 13.705903819480595,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 84.684726,
+      "deployment_score_tg_ts_mean": 9.443792250000001,
+      "deployment_score_source_context": 262144,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": []
+    },
+    "f16": {
+      "kv_cache_label": "f16",
+      "kv_cache_type": "f16",
+      "max_context": 262144,
+      "max_context_stable": true,
+      "first_fail_ctx": null,
+      "bisect_fail_ctx": null,
+      "runs_total": 7,
+      "runs_ok": 7,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 0,
+      "runtime_total_s": 8602.045,
+      "runtime_by_context_s": {
+        "32768": 93.892,
+        "65536": 206.068,
+        "131072": 556.827,
+        "262144": 7745.258
+      },
+      "runtime_by_phase_s": {
+        "coarse": 2791.416,
+        "verify": 5810.63
+      },
+      "deployment_score": 23.629846766026944,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 81.910413,
+      "deployment_score_tg_ts_mean": 17.0844025,
+      "deployment_score_source_context": 262144,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": []
+    }
+  }
+}

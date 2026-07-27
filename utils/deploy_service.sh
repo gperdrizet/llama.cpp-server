@@ -112,6 +112,17 @@ if ! [[ "$CTX_SIZE" =~ ^[1-9][0-9]*$ ]]; then
     exit 1
 fi
 
+# Check KV cache type presence and validity
+if [[ -z "${KV_CACHE_TYPE:-}" ]]; then
+    echo "ERROR: KV_CACHE_TYPE is not set in $ENV_FILE" >&2
+    exit 1
+fi
+
+if ! [[ "$KV_CACHE_TYPE" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+    echo "ERROR: KV_CACHE_TYPE must be a single cache type token (got: '$KV_CACHE_TYPE')" >&2
+    exit 1
+fi
+
 # Check GPU layers presence and validity
 if [[ -z "${GPU_LAYERS:-}" ]]; then
     echo "ERROR: GPU_LAYERS is not set in $ENV_FILE" >&2
@@ -160,6 +171,25 @@ if ! id -u llama &>/dev/null; then
     exit 1
 fi
 
+# Check that the configured model file is readable by the service user.
+MODEL_PATH="${MODEL_DIR%/}/${MODEL}"
+if [[ ! -f "$MODEL_PATH" ]]; then
+    echo "ERROR: Model file not found: $MODEL_PATH" >&2
+    exit 1
+fi
+
+if ! sudo -u llama test -r "$MODEL_PATH"; then
+    echo "ERROR: User 'llama' cannot read model file: $MODEL_PATH" >&2
+    echo "       The service runs as user 'llama' and needs read/traverse access" >&2
+    echo "       on the full model path (including parent directories)." >&2
+    echo "" >&2
+    echo "       Example fix (adjust paths for your system):" >&2
+    echo "         setfacl -m u:llama:x /home/<user>" >&2
+    echo "         setfacl -m u:llama:rx $REPO_ROOT" >&2
+    echo "         setfacl -m u:llama:rx ${MODEL_DIR%/}" >&2
+    exit 1
+fi
+
 # ---------------------------------------------------------------------------
 # Substitute and deploy
 # ---------------------------------------------------------------------------
@@ -170,6 +200,7 @@ RENDERED="$(sed \
     -e "s/SUB_MODEL_FILE_HERE/${MODEL}/" \
     -e "s/SUB_CUDA_DEVICE_HERE/${CUDA_DEVICE}/" \
     -e "s/SUB_CTX_SIZE_HERE/${CTX_SIZE}/" \
+    -e "s/SUB_KV_CACHE_TYPE_HERE/${KV_CACHE_TYPE}/" \
     -e "s/SUB_GPU_LAYERS_HERE/${GPU_LAYERS}/" \
     -e "s/SUB_SLOTS_HERE/${SLOTS}/" \
     -e "s/SUB_PROMPT_CACHE_SIZE_HERE/${PROMPT_CACHE_SIZE}/" \

@@ -1,0 +1,103 @@
+{
+  "timestamp": "2026-07-22T01:48:55",
+  "model": "GLM-4.7-Flash-REAP-23B-A3B-Q4_K_M.gguf",
+  "gpu_devices": "1,2",
+  "context_sizes": [
+    25344,
+    50688,
+    101376,
+    202752
+  ],
+  "overall_summary": {
+    "runs_total": 9,
+    "runs_ok": 5,
+    "runs_failed_oom": 0,
+    "runs_failed_other": 4,
+    "runtime_total_s": 35067.41,
+    "runtime_by_kv_cache_s": {
+      "q4": 35067.41
+    },
+    "runtime_by_context_s": {
+      "25344": 244.731,
+      "50688": 666.029,
+      "101376": 2328.885,
+      "151552": 4980.412,
+      "155648": 5243.528,
+      "159744": 5400.672,
+      "163840": 5401.189,
+      "176128": 5400.793,
+      "202752": 5401.172
+    },
+    "runtime_by_phase_s": {
+      "coarse": 8640.817,
+      "refine": 26426.593
+    },
+    "errors": [
+      "ctx=202752: TIMEOUT: run exceeded --max-run-seconds=5400 (phase=coarse, ctx=202752, kv=q4_0)",
+      "ctx=176128: TIMEOUT: run exceeded --max-run-seconds=5400 (phase=refine, ctx=176128, kv=q4_0)",
+      "ctx=163840: TIMEOUT: run exceeded --max-run-seconds=5400 (phase=refine, ctx=163840, kv=q4_0)",
+      "ctx=159744: TIMEOUT: run exceeded --max-run-seconds=5400 (phase=refine, ctx=159744, kv=q4_0)"
+    ],
+    "q4_max_context": 155648,
+    "q4_max_context_stable": null,
+    "deployment_score": 6.574017558464739,
+    "deployment_score_kv_cache_label": "q4",
+    "deployment_score_context": 155648,
+    "deployment_tier": "interactive",
+    "deployment_tier_threshold": 4.0,
+    "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+    "deployment_score_breakpoints": {
+      "interactive": 4.0,
+      "batch": 0.5,
+      "exclude": 0.0
+    }
+  },
+  "runs": {
+    "q4": {
+      "kv_cache_label": "q4",
+      "kv_cache_type": "q4_0",
+      "max_context": 155648,
+      "max_context_stable": null,
+      "first_fail_ctx": 202752,
+      "bisect_fail_ctx": 159744,
+      "runs_total": 9,
+      "runs_ok": 5,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 4,
+      "runtime_total_s": 35067.41,
+      "runtime_by_context_s": {
+        "25344": 244.731,
+        "50688": 666.029,
+        "101376": 2328.885,
+        "151552": 4980.412,
+        "155648": 5243.528,
+        "159744": 5400.672,
+        "163840": 5401.189,
+        "176128": 5400.793,
+        "202752": 5401.172
+      },
+      "runtime_by_phase_s": {
+        "coarse": 8640.817,
+        "refine": 26426.593
+      },
+      "deployment_score": 6.574017558464739,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 14.6162945,
+      "deployment_score_tg_ts_mean": 5.071464499999999,
+      "deployment_score_source_context": 155648,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": [
+        "ctx=202752: TIMEOUT: run exceeded --max-run-seconds=5400 (phase=coarse, ctx=202752, kv=q4_0)",
+        "ctx=176128: TIMEOUT: run exceeded --max-run-seconds=5400 (phase=refine, ctx=176128, kv=q4_0)",
+        "ctx=163840: TIMEOUT: run exceeded --max-run-seconds=5400 (phase=refine, ctx=163840, kv=q4_0)",
+        "ctx=159744: TIMEOUT: run exceeded --max-run-seconds=5400 (phase=refine, ctx=159744, kv=q4_0)"
+      ]
+    }
+  }
+}

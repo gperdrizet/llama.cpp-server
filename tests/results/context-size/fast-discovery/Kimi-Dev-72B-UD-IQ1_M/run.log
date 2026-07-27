@@ -1,0 +1,149 @@
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=coarse context_size=16384 status=ok
+return_code=0 elapsed_s=416.315
+peak_vram_total_mib=26222
+peak_vram_per_device={"1": 12902, "2": 13320}
+pp_ts=29.4496695 pp_stddev_ts=0.0 tg_ts=4.236026000000001 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 16384 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","16384","2026-07-22T15:32:37Z","4335289182","0","29.525135","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","16384","2026-07-22T15:37:53Z","7555037925","0","4.235584","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","16384","2026-07-22T15:38:12Z","4357564891","0","29.374204","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","16384","2026-07-22T15:38:31Z","7553462069","0","4.236468","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=coarse context_size=32768 status=ok
+return_code=0 elapsed_s=773.324
+peak_vram_total_mib=27790
+peak_vram_per_device={"1": 13704, "2": 14086}
+pp_ts=23.576378499999997 pp_stddev_ts=0.0 tg_ts=3.3877990000000002 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 32768 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","32768","2026-07-22T15:38:52Z","5422323786","0","23.606115","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","32768","2026-07-22T15:50:42Z","9444820949","0","3.388100","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","32768","2026-07-22T15:51:03Z","5436019327","0","23.546642","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","32768","2026-07-22T15:51:22Z","9446499153","0","3.387498","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=coarse context_size=65536 status=ok
+return_code=0 elapsed_s=1859.950
+peak_vram_total_mib=31034
+peak_vram_per_device={"1": 15408, "2": 15626}
+pp_ts=16.92761 pp_stddev_ts=0.0 tg_ts=2.3719200000000003 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 65536 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","65536","2026-07-22T15:51:43Z","7554859819","0","16.942737","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","65536","2026-07-22T16:21:31Z","13488642693","0","2.372366","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","65536","2026-07-22T16:21:55Z","7568374130","0","16.912483","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","65536","2026-07-22T16:22:17Z","13493718927","0","2.371474","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=coarse context_size=131072 status=failed
+return_code=124 elapsed_s=5402.545
+peak_vram_total_mib=31314
+peak_vram_per_device={"1": 15710, "2": 15604}
+pp_ts=None pp_stddev_ts=None tg_ts=None tg_stddev_ts=None
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 131072 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+TIMEOUT: run exceeded --max-run-seconds=5400 (phase=coarse, ctx=131072, kv=q4_0)
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=refine context_size=98304 status=ok
+return_code=0 elapsed_s=3590.667
+peak_vram_total_mib=30844
+peak_vram_per_device={"1": 15422, "2": 15422}
+pp_ts=12.3713755 pp_stddev_ts=0.0 tg_ts=0.55338 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 98304 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","98304","2026-07-22T17:52:49Z","10352150748","0","12.364580","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","98304","2026-07-22T18:49:40Z","57801588672","0","0.553618","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","98304","2026-07-22T18:50:53Z","10340784381","0","12.378171","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","98304","2026-07-22T18:51:24Z","57851283172","0","0.553142","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=refine context_size=114688 status=ok
+return_code=0 elapsed_s=4642.692
+peak_vram_total_mib=31132
+peak_vram_per_device={"1": 15394, "2": 15738}
+pp_ts=10.952288 pp_stddev_ts=0.0 tg_ts=0.375675 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 114688 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","114688","2026-07-22T18:52:40Z","11690183911","0","10.949357","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","114688","2026-07-22T20:06:03Z","85956203775","0","0.372283","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","114688","2026-07-22T20:07:46Z","11683928747","0","10.955219","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","114688","2026-07-22T20:08:19Z","84417740763","0","0.379067","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=refine context_size=122880 status=ok
+return_code=0 elapsed_s=5174.657
+peak_vram_total_mib=31440
+peak_vram_per_device={"1": 15760, "2": 15680}
+pp_ts=10.375464000000001 pp_stddev_ts=0.0 tg_ts=0.3193895 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 122880 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","122880","2026-07-22T20:10:03Z","12297884522","0","10.408294","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","122880","2026-07-22T21:31:51Z","100200548490","0","0.319360","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","122880","2026-07-22T21:33:47Z","12375957208","0","10.342634","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","122880","2026-07-22T21:34:20Z","100181741625","0","0.319419","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=refine context_size=126976 status=failed
+return_code=124 elapsed_s=5401.054
+peak_vram_total_mib=30974
+peak_vram_per_device={"1": 15534, "2": 15440}
+pp_ts=9.901245 pp_stddev_ts=0.0 tg_ts=0.293082 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 126976 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","126976","2026-07-22T21:36:16Z","12701994512","0","10.077158","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","126976","2026-07-22T23:03:10Z","109184287221","0","0.293082","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Kimi-Dev-72B-UD-IQ1_M.gguf","qwen2 70B IQ1_M - 1.75 bpw","23988371456","72706203648","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","126976","2026-07-22T23:05:15Z","13161504149","0","9.725332","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+TIMEOUT: run exceeded --max-run-seconds=5400 (phase=refine, ctx=126976, kv=q4_0)

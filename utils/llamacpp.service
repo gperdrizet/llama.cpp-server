@@ -15,6 +15,8 @@ WorkingDirectory=SUB_LLAMA_PATH_HERE
 ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
 ExecStart=SUB_LLAMA_PATH_HERE/build/bin/llama-server \
     -m SUB_MODEL_DIR_HERE/SUB_MODEL_FILE_HERE \
+    --cache-type-k SUB_KV_CACHE_TYPE_HERE \
+    --cache-type-v SUB_KV_CACHE_TYPE_HERE \
     --n-gpu-layers SUB_GPU_LAYERS_HERE \
     --tensor-split SUB_TENSOR_SPLIT_HERE \
     --ctx-size SUB_CTX_SIZE_HERE \
@@ -39,7 +41,7 @@ StartLimitBurst=5
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ProtectHome=true
+ProtectHome=read-only
 ReadOnlyPaths=SUB_LLAMA_PATH_HERE SUB_MODEL_DIR_HERE
 
 # Logging

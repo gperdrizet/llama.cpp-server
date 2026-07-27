@@ -1,0 +1,76 @@
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=coarse context_size=32768 status=ok
+return_code=0 elapsed_s=260.767
+peak_vram_total_mib=20900
+peak_vram_per_device={"1": 10218, "2": 10682}
+pp_ts=67.06728100000001 pp_stddev_ts=0.0 tg_ts=8.2047945 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 32768 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","32768","2026-07-21T03:36:04Z","1913317389","0","66.899512","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","32768","2026-07-21T03:39:25Z","3922842025","0","8.157351","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","32768","2026-07-21T03:39:37Z","1903768929","0","67.235050","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","32768","2026-07-21T03:39:48Z","3877735906","0","8.252238","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=coarse context_size=65536 status=ok
+return_code=0 elapsed_s=520.210
+peak_vram_total_mib=22156
+peak_vram_per_device={"1": 10962, "2": 11194}
+pp_ts=52.3888565 pp_stddev_ts=0.0 tg_ts=7.053888 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 65536 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","65536","2026-07-21T03:40:01Z","2452464372","0","52.192399","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","65536","2026-07-21T03:48:00Z","4550327397","0","7.032461","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","65536","2026-07-21T03:48:14Z","2434139697","0","52.585314","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","65536","2026-07-21T03:48:27Z","4522767104","0","7.075315","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=coarse context_size=131072 status=ok
+return_code=0 elapsed_s=1295.931
+peak_vram_total_mib=25132
+peak_vram_per_device={"1": 12450, "2": 12682}
+pp_ts=36.399074999999996 pp_stddev_ts=0.0 tg_ts=5.496922 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 131072 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","131072","2026-07-21T03:48:42Z","3527478717","0","36.286541","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","131072","2026-07-21T04:09:29Z","5818056827","0","5.500118","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","131072","2026-07-21T04:09:45Z","3505734315","0","36.511609","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","131072","2026-07-21T04:10:00Z","5824826836","0","5.493726","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=coarse context_size=262144 status=ok
+return_code=0 elapsed_s=3894.177
+peak_vram_total_mib=31090
+peak_vram_per_device={"1": 15136, "2": 15954}
+pp_ts=22.6092795 pp_stddev_ts=0.0 tg_ts=3.801662 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 262144 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","262144","2026-07-21T04:10:26Z","5666660999","0","22.588258","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","262144","2026-07-21T05:13:55Z","8417962247","0","3.801395","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","262144","2026-07-21T05:14:23Z","5656133314","0","22.630301","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gemma-4-31B-it-Q4_K_M.gguf","gemma4 31B Q4_K - Medium","18307897584","30697345596","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","262144","2026-07-21T05:14:50Z","8416780355","0","3.801929","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB

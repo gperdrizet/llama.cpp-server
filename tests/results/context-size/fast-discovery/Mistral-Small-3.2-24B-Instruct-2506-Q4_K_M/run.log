@@ -1,0 +1,76 @@
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=coarse context_size=16384 status=ok
+return_code=0 elapsed_s=125.383
+peak_vram_total_mib=16042
+peak_vram_per_device={"1": 8052, "2": 7990}
+pp_ts=81.5450905 pp_stddev_ts=0.0 tg_ts=11.734472499999999 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 16384 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","16384","2026-07-23T02:56:27Z","1573696224","0","81.337172","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","16384","2026-07-23T02:57:40Z","2727365818","0","11.732933","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","16384","2026-07-23T02:57:49Z","1565691608","0","81.753009","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","16384","2026-07-23T02:57:58Z","2726650196","0","11.736012","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=coarse context_size=32768 status=ok
+return_code=0 elapsed_s=184.542
+peak_vram_total_mib=16890
+peak_vram_per_device={"1": 8494, "2": 8396}
+pp_ts=68.944757 pp_stddev_ts=0.0 tg_ts=10.0803055 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 32768 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","32768","2026-07-23T02:58:08Z","1875096886","0","68.263139","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","32768","2026-07-23T03:00:43Z","3175458587","0","10.077285","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","32768","2026-07-23T03:00:53Z","1838383804","0","69.626375","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","32768","2026-07-23T03:01:02Z","3173556114","0","10.083326","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=coarse context_size=65536 status=ok
+return_code=0 elapsed_s=400.374
+peak_vram_total_mib=18688
+peak_vram_per_device={"1": 9452, "2": 9236}
+pp_ts=53.175311 pp_stddev_ts=0.0 tg_ts=7.762464 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 65536 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","65536","2026-07-23T03:01:12Z","2403353114","0","53.258924","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","65536","2026-07-23T03:07:20Z","4121022874","0","7.765062","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","65536","2026-07-23T03:07:30Z","2410923100","0","53.091698","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","65536","2026-07-23T03:07:41Z","4123782375","0","7.759866","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q4 (q4_0) phase=coarse context_size=131072 status=ok
+return_code=0 elapsed_s=1047.429
+peak_vram_total_mib=22592
+peak_vram_per_device={"1": 11476, "2": 11116}
+pp_ts=36.121264 pp_stddev_ts=0.0 tg_ts=5.197132 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 131072 -r 1 -ctk q4_0 -ctv q4_0 -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","131072","2026-07-23T03:07:53Z","3541283629","0","36.145086","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","131072","2026-07-23T03:24:41Z","6157129488","0","5.197227","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","131072","2026-07-23T03:24:54Z","3545957638","0","36.097442","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf","llama 13B Q4_K - Medium","14326026240","23572403200","2048","512","12","0x0","0","50","q4_0","q4_0","-1","0","layer","0","0","-1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","131072","2026-07-23T03:25:06Z","6157355043","0","5.197037","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB

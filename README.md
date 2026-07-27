@@ -81,7 +81,19 @@ bash utils/deploy_service.sh --restart
 
 > **Note:** `.env` contains the real API key - do not commit it. It is listed in `.gitignore`.
 
-Model files are not included in this repository. Download them separately with `huggingface-cli` or `wget`.
+Model files are not included in this repository. Download them separately with `huggingface-cli` or `wget` into the repository's `models/` path.
+
+In this setup, `models/` is a symlink to storage under `/mnt/fast_scratch`. Keep `MODEL_DIR` set to `<repo>/models` in `.env` so service configuration stays repo-relative.
+
+When deploying from benchmark-derived context sizes, keep server KV-cache quantization aligned with benchmark settings. Set `KV_CACHE_TYPE` in `.env` (for example `q4_0`) so `llama-server` uses the same K/V cache type. Mismatched cache type (for example default `f16`) can cause startup OOM even when context-fit benchmarks succeeded.
+
+Because the service runs as user `llama` and `ProtectHome=read-only` is enabled, the full path to model files must be traversable/readable by `llama` (including parent directories). If needed, grant access with ACLs, for example:
+
+```bash
+setfacl -m u:llama:x /home/<user>
+setfacl -m u:llama:rx <repo>
+setfacl -m u:llama:rx /mnt/fast_scratch/llama-models
+```
 
 
 ### Service management
@@ -143,8 +155,8 @@ The service runs as the unprivileged `llama` user/group and several flags are se
 | `NoNewPrivileges=true` | Prevents privilege escalation via setuid/setgid |
 | `PrivateTmp=true` | Isolated `/tmp` namespace |
 | `ProtectSystem=strict` | Filesystem mounted read-only except listed paths |
-| `ProtectHome=true` | `/home`, `/root`, `/run/user` invisible to the process |
-| `ReadOnlyPaths=/opt/llama.cpp /opt/models` | Both the install tree and model directory are read-only (model files are memory-mapped for reading only) |
+| `ProtectHome=read-only` | `/home`, `/root`, `/run/user` are visible read-only to the process |
+| `ReadOnlyPaths=/opt/llama.cpp <repo>/models` | Both the install tree and model directory are read-only (model files are memory-mapped for reading only) |
 
 
 ## Testing

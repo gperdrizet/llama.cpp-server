@@ -220,28 +220,32 @@ Fast-discovery sweep completed 2026-08-13 across all 18 models in `tests/config/
 
 Run settings: GPUs `1,2`, `split-mode layer`, `tensor-split 1/1`, KV cache `q4_0`, `fit-target 1024`, `n_prompt 128`, `n_gen 32`, `repetitions 1`, `verify-runs 0`.
 
-Max context is the largest size that completed successfully, bounded above by the per-model ceiling in `models.csv`. Because `verify-runs` is 0 in the fast-discovery profile, these are unverified boundaries. Throughput and peak VRAM are measured at that context.
+**Max context** is the answer this benchmark exists to produce: the largest context that completed successfully, bounded above by the per-model ceiling in `models.csv`. Peak VRAM is measured at that context. Because `verify-runs` is 0 in the fast-discovery profile, these boundaries are unverified.
 
-| Model | Max context | Peak VRAM (GiB) | PP tok/s | TG tok/s | Score | Tier |
+The TG columns are a **rough guideline only**, not a performance characterisation. They come from single unrepeated 32-token generations (`-r 1 -n 32`) with flash attention left on `auto` rather than forced on as the service does. Use them to compare models against each other, not as expected serving throughput. See the note on context depth below.
+
+| Model | Max context | Peak VRAM (GiB) | TG @ 32k | TG @ 64k | TG @ max | Tier |
 |---|---:|---:|---:|---:|---:|---|
-| gemma-4-26B-A4B-it-UD-Q4_K_M | 256k | 22.2 | 82.6 | 15.87 | 22.12 | interactive |
-| gemma-4-26B-A4B-it-UD-Q6_K | 256k | 28.0 | 84.9 | 15.59 | 21.83 | interactive |
-| Qwen3-Coder-Next-UD-IQ1_M | 256k | 25.6 | 58.3 | 11.38 | 15.84 | interactive |
-| Llama-3.1-8B-Instruct-BF16 | 128k | 21.3 | 58.2 | 7.52 | 10.82 | interactive |
-| Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M | 128k | 22.1 | 36.1 | 5.20 | 7.42 | interactive |
-| GLM-4.7-Flash-Q4_K_M | 152k | 21.5 | 14.6 | 5.12 | 6.63 | interactive |
-| GLM-4.7-Flash-REAP-23B-A3B-Q4_K_M | 152k | 17.6 | 14.6 | 5.07 | 6.57 | interactive |
-| GLM-4.7-Flash-REAP-23B-A3B-UD-Q6_K_XL | 152k | 23.2 | 14.9 | 4.94 | 6.45 | interactive |
-| Qwen3.6-27B-Q4_K_M | 256k | 24.8 | 35.3 | 4.33 | 6.24 | interactive |
-| Qwen3.6-27B-Q5_K_M | 256k | 27.2 | 36.4 | 4.21 | 6.10 | interactive |
-| Qwen3.6-27B-Q3_K_S | 256k | 21.0 | 35.7 | 3.95 | 5.74 | interactive |
-| Qwen3.6-27B-Q6_K | 256k | 29.8 | 36.6 | 3.86 | 5.62 | interactive |
-| gemma-4-31B-it-Q4_K_M | 256k | 30.4 | 22.6 | 3.80 | 5.36 | interactive |
-| Qwen3-Coder-30B-A3B-Instruct-Q4_K_M | 244k | 27.2 | 22.8 | 3.38 | 4.81 | interactive |
-| Qwen2.5-Coder-32B-Instruct-Q4_K_M | 128k | 30.4 | 20.7 | 2.79 | 4.00 | batch |
-| Llama-3.3-70B-Instruct-UD-IQ1_M | 128k | 30.6 | 11.1 | 1.42 | 2.04 | batch |
-| Kimi-Dev-72B-UD-IQ1_M | 120k | 30.7 | 10.4 | 0.32 | 0.48 | exclude |
-| Mistral-Nemo-Instruct-2407.Q8_0 | - | - | - | - | - | failed to load |
+| gemma-4-26B-A4B-it-UD-Q4_K_M | 256k | 22.2 | 36.9 | 31.0 | 15.9 | interactive |
+| gemma-4-26B-A4B-it-UD-Q6_K | 256k | 28.0 | 33.1 | 29.4 | 15.6 | interactive |
+| Qwen3-Coder-Next-UD-IQ1_M | 256k | 25.6 | 29.4 | 24.2 | 11.4 | interactive |
+| Qwen3.6-27B-Q4_K_M | 256k | 24.8 | 9.7 | 8.3 | 4.3 | interactive |
+| Qwen3.6-27B-Q5_K_M | 256k | 27.2 | 9.1 | 7.9 | 4.2 | interactive |
+| Qwen3.6-27B-Q3_K_S | 256k | 21.0 | 8.0 | 7.0 | 4.0 | interactive |
+| Qwen3.6-27B-Q6_K | 256k | 29.8 | 7.6 | 6.7 | 3.9 | interactive |
+| gemma-4-31B-it-Q4_K_M | 256k | 30.4 | 8.2 | 7.1 | 3.8 | interactive |
+| Qwen3-Coder-30B-A3B-Instruct-Q4_K_M | 244k | 27.2 | 19.8 | 11.9 | 3.4 | interactive |
+| GLM-4.7-Flash-Q4_K_M | 152k | 21.5 | 20.6\* | 12.9\* | 5.1 | interactive |
+| GLM-4.7-Flash-REAP-23B-A3B-Q4_K_M | 152k | 17.6 | 19.3\* | 12.8\* | 5.1 | interactive |
+| GLM-4.7-Flash-REAP-23B-A3B-UD-Q6_K_XL | 152k | 23.2 | 17.9\* | 11.9\* | 4.9 | interactive |
+| Llama-3.1-8B-Instruct-BF16 | 128k | 21.3 | 17.2 | 12.2 | 7.5 | interactive |
+| Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M | 128k | 22.1 | 10.1 | 7.8 | 5.2 | interactive |
+| Qwen2.5-Coder-32B-Instruct-Q4_K_M | 128k | 30.4 | 6.3 | 4.5 | 2.8 | batch |
+| Llama-3.3-70B-Instruct-UD-IQ1_M | 128k | 30.6 | 3.3 | 2.3 | 1.4 | batch |
+| Kimi-Dev-72B-UD-IQ1_M | 120k | 30.7 | 3.4 | 2.4 | 0.3 | exclude |
+| Mistral-Nemo-Instruct-2407.Q8_0 | failed to load | - | - | - | - | - |
+
+\* The coarse sweep derives its steps from each model's own ceiling, so the GLM-4.7-Flash variants (ceiling 198k) were probed at 24k and 49k rather than 32k and 64k. Those columns hold the 24k and 49k measurements.
 
 Notes:
 
@@ -256,8 +260,20 @@ Notes:
   | Kimi-Dev-72B-UD-IQ1_M | 120k | 128k |
 
 - `Mistral-Nemo-Instruct-2407.Q8_0` failed at the first probed context with `failed to load model`, so no lower bound exists and bisection was skipped. The file is present on disk, so this looks like a bad or incompatible GGUF rather than a memory limit.
-- The gemma-4-26B-A4B mixture-of-experts variants lead on throughput by a wide margin, sustaining 256k context at roughly 16 tok/s generation.
-- Among the dense candidates at 128k, `Qwen2.5-Coder-32B-Instruct-Q4_K_M` lands just at the `batch` boundary with 2.79 tok/s generation.
+- The gemma-4-26B-A4B mixture-of-experts variants hold their throughput far better than the dense models as context grows, and sustain 256k.
+
+#### On context depth
+
+`llama-bench -d <n>` prefills the KV cache to that depth before measuring, so **TG @ max is the worst point on each model's curve**, not its typical speed. Generation slows steeply with occupied context, and the same model measured against the running server at a short prompt is an order of magnitude faster than its TG @ max figure. For Qwen3-Coder-30B-A3B-Q4_K_M:
+
+| Prompt tokens | TG tok/s |
+|---:|---:|
+| 11 | 90.8 |
+| 2,233 | 86.8 |
+| 7,791 | 63.3 |
+| 20,011 | 23.0 |
+
+versus 3.4 tok/s at 244k depth in the table above. Judge serving performance with `tests/load_test.py` against the real server at representative prompt lengths; use this table for context ceilings and for ranking models against each other.
 
 
 ### Load test

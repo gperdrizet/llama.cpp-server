@@ -153,7 +153,7 @@ class GpuPeakPoller:
 
     def _read_snapshot(self) -> None:
         '''Captures snapshot of current VRAM usage and updates peak values.'''
-    
+
         cmd = [
             "nvidia-smi",
             "--query-gpu=index,memory.used,memory.total",
@@ -318,6 +318,7 @@ def build_command(args: argparse.Namespace, context_size: int, kv_cache_type: st
         "-r", str(args.repetitions),
         "-ctk", kv_cache_type,
         "-ctv", kv_cache_type,
+        "-fa", args.flash_attn,
         "-o", "csv",
     ]
 
@@ -838,6 +839,12 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=float(run_config.get("poll_interval", 0.25)),
         help="nvidia-smi poll interval in seconds"
+    )
+    parser.add_argument(
+        "--flash-attn",
+        choices=["on", "off", "auto"],
+        default=str(run_config.get("flash_attn", "on")),
+        help="Flash attention mode passed to llama-bench (default: on, matching llamacpp.service)",
     )
     parser.add_argument(
         "--refine-step",

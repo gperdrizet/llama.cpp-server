@@ -11,11 +11,12 @@ run:
   fit_ctx: 2048                                         # Minimum context considered by fit logic
   n_prompt: 128                                         # Prompt tokens benchmarked per run
   n_gen: 32                                             # Generation tokens benchmarked per run
-  repetitions: 1                                        # llama-bench repeats per probe
+  repetitions: 3                                        # llama-bench repeats per probe
+  flash_attn: "on"                                      # Match --flash-attn on in llamacpp.service
   poll_interval: 0.10                                   # Seconds between VRAM sampling polls
   refine_step: 4096                                     # Bisection refinement context step
   verify_runs: 0                                        # Stability confirmation runs at max context (0 => skip)
-  max_run_seconds: 5400                                 # Hard timeout per llama-bench run (seconds)
+  max_run_seconds: 10800                                # Hard timeout per llama-bench run (seconds)
   kv_cache_types: q4_0                                  # KV cache types to benchmark (comma-separated)
   service_name: llamacpp.service                        # Service to stop/start around benchmark runs
   no_manage_service: false                              # If true, skip service lifecycle management

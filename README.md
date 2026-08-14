@@ -202,6 +202,7 @@ It runs the max-context search three times, once for each KV-cache quantization 
 | `--split-mode` | Tensor split mode (`layer` in the current setup) |
 | `--fit-target` / `--fit-ctx` | Target context-size fit parameters passed to `llama-bench` |
 | `--n-prompt` / `--n-gen` / `--repetitions` | Throughput benchmark settings |
+| `--flash-attn` | Flash attention mode: `on` (default, matches `llamacpp.service`), `off`, or `auto` |
 | `--refine-step` | Granularity for bisection refinement probes |
 | `--verify-runs` | Confirmation runs at the final context |
 | `--max-run-seconds` | Hard timeout for each `llama-bench` invocation |

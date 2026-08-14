@@ -214,25 +214,50 @@ It runs the max-context search three times, once for each KV-cache quantization 
 
 The summary JSON now includes a deployment score derived from the prompt and generation throughput at the stable max context. The current breakpoints are `interactive >= 4.0`, `batch >= 0.5`, and `exclude < 0.5`.
 
-Recent completed runs:
-
-| Model | Stable max context | Deployment score | Tier | Notes |
-|---|---:|---:|---|---|
-| Qwen2.5-Coder-32B-Instruct-Q4_K_M | 131072 | 4.03 | interactive | q4 was the strongest score source; q8 and f16 fell into `exclude` |
-| gemma-4-31B-it-Q4_K_M | 262144 | 5.41 | interactive | q4 scored highest; q8 and f16 landed in `batch` |
-
 ### Results
 
-The table below uses the completed context-fit runs for the Qwen Q3 and Q4 quants on GPUs `1,2` with `split-mode layer` and `tensor-split 1/1`. The throughput columns are taken from the max-context benchmark rows (`ctx=262144`) in the run logs.
+Fast-discovery sweep completed 2026-08-13 across all 18 models in `tests/config/context_fit/models.csv`. Artifacts are in `tests/results/context-size/fast-discovery/`.
 
-| Model | Model quant | KV quant | GPU config | Max context | Peak VRAM @ max context (GiB) | PP rate @ max ctx | TG rate @ max ctx |
-|---|---|---|---|---:|---:|---:|---:|
-| Qwen3.6-27B | Q3_K_S | f16 | `1,2` / layer / 1/1 | 256k | 29.7 | 38.9 | 5.35 |
-| Qwen3.6-27B | Q3_K_S | q8  | `1,2` / layer / 1/1 | 256k | 25.7 | 39.0 | 3.83 |
-| Qwen3.6-27B | Q3_K_S | q4  | `1,2` / layer / 1/1 | 256k | 21.6 | 38.8 | 3.96 |
-| Qwen3.6-27B | Q4_K_M | f16 | `1,2` / layer / 1/1 | 256k | 30.8 | 36.5 | 0.88 |
-| Qwen3.6-27B | Q4_K_M | q8  | `1,2` / layer / 1/1 | 256k | 29.5 | 38.8 | 4.17 |
-| Qwen3.6-27B | Q4_K_M | q4  | `1,2` / layer / 1/1 | 256k | 25.4 | 38.7 | 4.32 |
+Run settings: GPUs `1,2`, `split-mode layer`, `tensor-split 1/1`, KV cache `q4_0`, `fit-target 1024`, `n_prompt 128`, `n_gen 32`, `repetitions 1`, `verify-runs 0`.
+
+Max context is the largest size that completed successfully, bounded above by the per-model ceiling in `models.csv`. Because `verify-runs` is 0 in the fast-discovery profile, these are unverified boundaries. Throughput and peak VRAM are measured at that context.
+
+| Model | Max context | Peak VRAM (GiB) | PP tok/s | TG tok/s | Score | Tier |
+|---|---:|---:|---:|---:|---:|---|
+| gemma-4-26B-A4B-it-UD-Q4_K_M | 256k | 22.2 | 82.6 | 15.87 | 22.12 | interactive |
+| gemma-4-26B-A4B-it-UD-Q6_K | 256k | 28.0 | 84.9 | 15.59 | 21.83 | interactive |
+| Qwen3-Coder-Next-UD-IQ1_M | 256k | 25.6 | 58.3 | 11.38 | 15.84 | interactive |
+| Llama-3.1-8B-Instruct-BF16 | 128k | 21.3 | 58.2 | 7.52 | 10.82 | interactive |
+| Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M | 128k | 22.1 | 36.1 | 5.20 | 7.42 | interactive |
+| GLM-4.7-Flash-Q4_K_M | 152k | 21.5 | 14.6 | 5.12 | 6.63 | interactive |
+| GLM-4.7-Flash-REAP-23B-A3B-Q4_K_M | 152k | 17.6 | 14.6 | 5.07 | 6.57 | interactive |
+| GLM-4.7-Flash-REAP-23B-A3B-UD-Q6_K_XL | 152k | 23.2 | 14.9 | 4.94 | 6.45 | interactive |
+| Qwen3.6-27B-Q4_K_M | 256k | 24.8 | 35.3 | 4.33 | 6.24 | interactive |
+| Qwen3.6-27B-Q5_K_M | 256k | 27.2 | 36.4 | 4.21 | 6.10 | interactive |
+| Qwen3.6-27B-Q3_K_S | 256k | 21.0 | 35.7 | 3.95 | 5.74 | interactive |
+| Qwen3.6-27B-Q6_K | 256k | 29.8 | 36.6 | 3.86 | 5.62 | interactive |
+| gemma-4-31B-it-Q4_K_M | 256k | 30.4 | 22.6 | 3.80 | 5.36 | interactive |
+| Qwen3-Coder-30B-A3B-Instruct-Q4_K_M | 244k | 27.2 | 22.8 | 3.38 | 4.81 | interactive |
+| Qwen2.5-Coder-32B-Instruct-Q4_K_M | 128k | 30.4 | 20.7 | 2.79 | 4.00 | batch |
+| Llama-3.3-70B-Instruct-UD-IQ1_M | 128k | 30.6 | 11.1 | 1.42 | 2.04 | batch |
+| Kimi-Dev-72B-UD-IQ1_M | 120k | 30.7 | 10.4 | 0.32 | 0.48 | exclude |
+| Mistral-Nemo-Instruct-2407.Q8_0 | - | - | - | - | - | failed to load |
+
+Notes:
+
+- No model hit an out-of-memory failure. Every boundary below a model's configured ceiling came from the 5400 s per-run timeout, so those five figures are throughput limits rather than VRAM limits and would likely move up with a larger `--max-run-seconds`:
+
+  | Model | Max context reached | First timeout |
+  |---|---:|---:|
+  | Qwen3-Coder-30B-A3B-Instruct-Q4_K_M | 244k | 256k |
+  | GLM-4.7-Flash-Q4_K_M | 152k | 198k |
+  | GLM-4.7-Flash-REAP-23B-A3B-Q4_K_M | 152k | 198k |
+  | GLM-4.7-Flash-REAP-23B-A3B-UD-Q6_K_XL | 152k | 198k |
+  | Kimi-Dev-72B-UD-IQ1_M | 120k | 128k |
+
+- `Mistral-Nemo-Instruct-2407.Q8_0` failed at the first probed context with `failed to load model`, so no lower bound exists and bisection was skipped. The file is present on disk, so this looks like a bad or incompatible GGUF rather than a memory limit.
+- The gemma-4-26B-A4B mixture-of-experts variants lead on throughput by a wide margin, sustaining 256k context at roughly 16 tok/s generation.
+- Among the dense candidates at 128k, `Qwen2.5-Coder-32B-Instruct-Q4_K_M` lands just at the `batch` boundary with 2.79 tok/s generation.
 
 
 ### Load test

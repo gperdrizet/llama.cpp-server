@@ -2,7 +2,7 @@ run:
   model_list: tests/config/context_fit/models.csv       # CSV file with: model,max_context
   gpus: "1,2"                                           # GPUs to use (CUDA_VISIBLE_DEVICES)
   bench_bin: /opt/llama.cpp/build/bin/llama-bench       # Path to llama-bench binary
-  results_dir: tests/results/context-size/fast-discovery # Directory for results
+  results_dir: tests/results/context-size/fast-discovery-f16 # Directory for results
   run_name: First pass max context discovery run        # Optional run name (null => auto-generated)
   n_gpu_layers: -1                                      # Number of model layers on GPU (-1 for all)
   split_mode: layer                                     # Multi-GPU split mode for llama.cpp
@@ -17,7 +17,7 @@ run:
   refine_step: 4096                                     # Bisection refinement context step
   verify_runs: 0                                        # Stability confirmation runs at max context (0 => skip)
   max_run_seconds: 10800                                # Hard timeout per llama-bench run (seconds)
-  kv_cache_types: q4_0                                  # KV cache types to benchmark (comma-separated)
+  kv_cache_types: f16                                   # KV cache types to benchmark (comma-separated)
   service_name: llamacpp.service                        # Service to stop/start around benchmark runs
   no_manage_service: false                              # If true, skip service lifecycle management
 

@@ -1,0 +1,81 @@
+{
+  "timestamp": "2026-08-24T16:41:10",
+  "model": "Kimi-Dev-72B-UD-IQ1_M.gguf",
+  "gpu_devices": "1,2",
+  "context_sizes": [
+    16384,
+    32768,
+    65536,
+    131072
+  ],
+  "overall_summary": {
+    "runs_total": 4,
+    "runs_ok": 4,
+    "runs_failed_oom": 0,
+    "runs_failed_other": 0,
+    "runtime_total_s": 13757.015,
+    "runtime_by_kv_cache_s": {
+      "f16": 13757.015
+    },
+    "runtime_by_context_s": {
+      "16384": 389.673,
+      "32768": 847.631,
+      "65536": 2426.409,
+      "131072": 10093.301
+    },
+    "runtime_by_phase_s": {
+      "coarse": 13757.015
+    },
+    "errors": [],
+    "f16_max_context": 131072,
+    "f16_max_context_stable": null,
+    "deployment_score": 0.04303608038069516,
+    "deployment_score_kv_cache_label": "f16",
+    "deployment_score_context": 131072,
+    "deployment_tier": "exclude",
+    "deployment_tier_threshold": 0.0,
+    "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+    "deployment_score_breakpoints": {
+      "interactive": 4.0,
+      "batch": 0.5,
+      "exclude": 0.0
+    }
+  },
+  "runs": {
+    "f16": {
+      "kv_cache_label": "f16",
+      "kv_cache_type": "f16",
+      "max_context": 131072,
+      "max_context_stable": null,
+      "first_fail_ctx": null,
+      "bisect_fail_ctx": null,
+      "runs_total": 4,
+      "runs_ok": 4,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 0,
+      "runtime_total_s": 13757.015,
+      "runtime_by_context_s": {
+        "16384": 389.673,
+        "32768": 847.631,
+        "65536": 2426.409,
+        "131072": 10093.301
+      },
+      "runtime_by_phase_s": {
+        "coarse": 13757.015
+      },
+      "deployment_score": 0.04303608038069516,
+      "deployment_tier": "exclude",
+      "deployment_tier_threshold": 0.0,
+      "deployment_score_pp_ts_mean": 4.5434225,
+      "deployment_score_tg_ts_mean": 0.0280665,
+      "deployment_score_source_context": 131072,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": []
+    }
+  }
+}

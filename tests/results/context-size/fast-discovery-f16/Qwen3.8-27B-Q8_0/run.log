@@ -1,0 +1,76 @@
+
+========================================================================================
+kv_cache=f16 (f16) phase=coarse context_size=32768 status=ok
+return_code=0 elapsed_s=330.904
+peak_vram_total_mib=29920
+peak_vram_per_device={"1": 14883, "2": 15037}
+pp_ts=91.96743649999999 pp_stddev_ts=0.0 tg_ts=6.5056175 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 32768 -r 1 -ctk f16 -ctv f16 -fa on -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","32768","2026-08-25T21:36:05Z","1391275375","0","92.001916","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","32768","2026-08-25T21:39:27Z","4987173485","0","6.416460","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","32768","2026-08-25T21:39:50Z","1392318975","0","91.932957","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","32768","2026-08-25T21:40:12Z","4852326007","0","6.594775","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=f16 (f16) phase=coarse context_size=65536 status=ok
+return_code=0 elapsed_s=576.989
+peak_vram_total_mib=30720
+peak_vram_per_device={"1": 15345, "2": 15375}
+pp_ts=61.845764 pp_stddev_ts=0.0 tg_ts=2.5574820000000003 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 65536 -r 1 -ctk f16 -ctv f16 -fa on -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","65536","2026-08-25T21:40:38Z","2063727559","0","62.023691","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","65536","2026-08-25T21:48:38Z","12651546533","0","2.529335","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","65536","2026-08-25T21:49:13Z","2075636293","0","61.667837","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","65536","2026-08-25T21:49:41Z","12376098406","0","2.585629","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=f16 (f16) phase=coarse context_size=131072 status=ok
+return_code=0 elapsed_s=1625.295
+peak_vram_total_mib=30414
+peak_vram_per_device={"1": 15189, "2": 15225}
+pp_ts=32.6551105 pp_stddev_ts=0.0 tg_ts=0.6905605 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 131072 -r 1 -ctk f16 -ctv f16 -fa on -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","131072","2026-08-25T21:50:14Z","3965866730","0","32.275416","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","131072","2026-08-25T22:14:31Z","45560287888","0","0.702366","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","131072","2026-08-25T22:15:38Z","3874701222","0","33.034805","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","131072","2026-08-25T22:16:08Z","47145169575","0","0.678755","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=f16 (f16) phase=coarse context_size=262144 status=ok
+return_code=0 elapsed_s=5280.114
+peak_vram_total_mib=30502
+peak_vram_per_device={"1": 15297, "2": 15205}
+pp_ts=17.467244 pp_stddev_ts=0.0 tg_ts=0.2276805 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf -ngl -1 -sm layer --fit-target 1024 --fit-ctx 2048 -p 128 -n 32 -d 262144 -r 1 -ctk f16 -ctv f16 -fa on -o csv -ts 1,1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","262144","2026-08-25T22:17:22Z","7438685819","0","17.207341","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","262144","2026-08-25T23:38:59Z","140800466635","0","0.227272","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","128","0","262144","2026-08-25T23:41:50Z","7220563921","0","17.727147","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/Qwen3.8-27B-Q8_0.gguf","qwen35 27B Q8_0","29036089344","27320697856","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00","none","1","0","0","0","0","1024","2048","0","32","262144","2026-08-25T23:42:31Z","140296345354","0","0.228089","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB

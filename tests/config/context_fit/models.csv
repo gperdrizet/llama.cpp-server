@@ -17,3 +17,6 @@ Qwen3.6-27B-Q3_K_S.gguf,262144
 Qwen3.6-27B-Q4_K_M.gguf,262144
 Qwen3.6-27B-Q5_K_M.gguf,262144
 Qwen3.6-27B-Q6_K.gguf,262144
+Qwen3.8-27B-Q8_0.gguf,262144
+Qwen3.8-27B-UD-Q4_K_XL.gguf,262144
+Qwen3.8-27B-UD-Q6_K_XL.gguf,262144

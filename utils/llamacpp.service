@@ -10,18 +10,32 @@ User=llama
 Environment=CUDA_DEVICE_ORDER=PCI_BUS_ID
 Environment=CUDA_VISIBLE_DEVICES=SUB_CUDA_DEVICE_HERE
 Group=llama
+CPUAffinity=SUB_CPU_AFFINITY_HERE
 WorkingDirectory=SUB_LLAMA_PATH_HERE
 
+# split-mode/fit-target/fit-ctx pin the context-fit benchmark's memory-fit margin, since
+# max-context deployments run close to the VRAM ceiling measured during benchmarking.
 ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
 ExecStart=SUB_LLAMA_PATH_HERE/build/bin/llama-server \
     -m SUB_MODEL_DIR_HERE/SUB_MODEL_FILE_HERE \
     --cache-type-k SUB_KV_CACHE_TYPE_HERE \
     --cache-type-v SUB_KV_CACHE_TYPE_HERE \
     --n-gpu-layers SUB_GPU_LAYERS_HERE \
+    --split-mode SUB_SPLIT_MODE_HERE \
     --tensor-split SUB_TENSOR_SPLIT_HERE \
     --ctx-size SUB_CTX_SIZE_HERE \
     --parallel SUB_SLOTS_HERE \
+    --threads SUB_THREADS_HERE \
+    --threads-batch SUB_THREADS_HERE \
+    --spec-type SUB_SPEC_TYPE_HERE \
+    --model-draft SUB_SPEC_DRAFT_MODEL_HERE \
     --flash-attn on \
+    --fit-target 3072 \
+    --fit-ctx 2048 \
+    --temp 1.0 \
+    --top-k 20 \
+    --min-p 0.0 \
+    --chat-template-kwargs '{"reasoning_effort":"medium"}' \
     --jinja \
     --host 0.0.0.0 \
     --port 8502 \

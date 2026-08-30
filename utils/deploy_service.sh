@@ -163,6 +163,41 @@ if [[ -n "$TENSOR_SPLIT" ]] && ! [[ "$TENSOR_SPLIT" =~ ^[0-9]+(\.[0-9]+)?(,[0-9]
     exit 1
 fi
 
+# SPLIT_MODE is optional (default: layer). Use 'none' for true single-GPU deployments -
+# 'layer' with only one visible device can take a different, slower code path.
+SPLIT_MODE="${SPLIT_MODE:-layer}"
+if ! [[ "$SPLIT_MODE" =~ ^(none|layer|row)$ ]]; then
+    echo "ERROR: SPLIT_MODE must be one of none|layer|row (got: '$SPLIT_MODE')" >&2
+    exit 1
+fi
+
+# CPU_AFFINITY is optional (empty = no pinning, all cores allowed).
+CPU_AFFINITY="${CPU_AFFINITY:-}"
+if [[ -n "$CPU_AFFINITY" ]] && ! [[ "$CPU_AFFINITY" =~ ^[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$ ]]; then
+    echo "ERROR: CPU_AFFINITY must be empty or a core list/range e.g. '12-23' or '0,2,4' (got: '$CPU_AFFINITY')" >&2
+    exit 1
+fi
+
+# THREADS is optional (empty = let llama.cpp auto-detect).
+THREADS="${THREADS:-}"
+if [[ -n "$THREADS" ]] && ! [[ "$THREADS" =~ ^[1-9][0-9]*$ ]]; then
+    echo "ERROR: THREADS must be empty or a positive integer (got: '$THREADS')" >&2
+    exit 1
+fi
+
+# SPEC_TYPE is optional (empty = no speculative decoding).
+SPEC_TYPE="${SPEC_TYPE:-}"
+
+# SPEC_DRAFT_MODEL is optional (only used by draft-simple/draft-mtp spec types).
+SPEC_DRAFT_MODEL="${SPEC_DRAFT_MODEL:-}"
+if [[ -n "$SPEC_DRAFT_MODEL" ]]; then
+    SPEC_DRAFT_MODEL_PATH="${MODEL_DIR%/}/${SPEC_DRAFT_MODEL}"
+    if [[ ! -f "$SPEC_DRAFT_MODEL_PATH" ]]; then
+        echo "ERROR: Draft model file not found: $SPEC_DRAFT_MODEL_PATH" >&2
+        exit 1
+    fi
+fi
+
 # Check that the 'llama' system user exists
 if ! id -u llama &>/dev/null; then
     echo "ERROR: System user 'llama' does not exist." >&2
@@ -202,14 +237,39 @@ RENDERED="$(sed \
     -e "s/SUB_CTX_SIZE_HERE/${CTX_SIZE}/" \
     -e "s/SUB_KV_CACHE_TYPE_HERE/${KV_CACHE_TYPE}/" \
     -e "s/SUB_GPU_LAYERS_HERE/${GPU_LAYERS}/" \
+    -e "s/SUB_SPLIT_MODE_HERE/${SPLIT_MODE}/" \
     -e "s/SUB_SLOTS_HERE/${SLOTS}/" \
     -e "s/SUB_PROMPT_CACHE_SIZE_HERE/${PROMPT_CACHE_SIZE}/" \
     -e "s/SUB_TENSOR_SPLIT_HERE/${TENSOR_SPLIT}/" \
+    -e "s/SUB_CPU_AFFINITY_HERE/${CPU_AFFINITY}/" \
+    -e "s/SUB_THREADS_HERE/${THREADS}/" \
+    -e "s/SUB_SPEC_TYPE_HERE/${SPEC_TYPE}/" \
+    -e "s|SUB_SPEC_DRAFT_MODEL_HERE|${MODEL_DIR%/}/${SPEC_DRAFT_MODEL}|" \
     "$TEMPLATE")"
 
 # Strip --tensor-split line if no value was configured
 if [[ -z "$TENSOR_SPLIT" ]]; then
     RENDERED="$(echo "$RENDERED" | sed '/--tensor-split/d')"
+fi
+
+# Strip CPUAffinity line if no value was configured
+if [[ -z "$CPU_AFFINITY" ]]; then
+    RENDERED="$(echo "$RENDERED" | sed '/^CPUAffinity=/d')"
+fi
+
+# Strip --threads/--threads-batch lines if no value was configured
+if [[ -z "$THREADS" ]]; then
+    RENDERED="$(echo "$RENDERED" | sed '/--threads /d;/--threads-batch /d')"
+fi
+
+# Strip --spec-type line if no value was configured
+if [[ -z "$SPEC_TYPE" ]]; then
+    RENDERED="$(echo "$RENDERED" | sed '/--spec-type /d')"
+fi
+
+# Strip --model-draft line if no value was configured
+if [[ -z "$SPEC_DRAFT_MODEL" ]]; then
+    RENDERED="$(echo "$RENDERED" | sed '/--model-draft /d')"
 fi
 
 echo "Deploying $TEMPLATE → $DEST"

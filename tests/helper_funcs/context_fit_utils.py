@@ -32,7 +32,9 @@ def normalize_score_breakpoints(
     if raw_breakpoints is None:
         breakpoints = list(default_breakpoints)
     elif isinstance(raw_breakpoints, dict):
-        breakpoints = [(str(label), float(min_score)) for label, min_score in raw_breakpoints.items()]
+        breakpoints = [
+            (str(label), float(min_score)) for label, min_score in raw_breakpoints.items()
+        ]
     else:
         raise ValueError("score_breakpoints must be a mapping of label -> minimum_score")
 
@@ -58,7 +60,9 @@ def detect_oom_like_failure(return_code: int, stdout: str, stderr: str) -> bool:
     return any(pattern.search(combined) for pattern in RESOURCE_FAILURE_PATTERNS)
 
 
-def parse_llama_bench_csv(stdout: str) -> tuple[Optional[float], Optional[float], Optional[float], Optional[float]]:
+def parse_llama_bench_csv(
+    stdout: str,
+) -> tuple[Optional[float], Optional[float], Optional[float], Optional[float]]:
     lines = [line.strip() for line in stdout.splitlines() if line.strip()]
 
     if len(lines) < 2:
@@ -152,7 +156,9 @@ def midpoint_in_bracket(low: int, high: int, step: int) -> int:
 
 def get_stable_success_contexts(rows: list[object]) -> list[int]:
     ok_ctx = {getattr(r, "context_size") for r in rows if getattr(r, "status") == "ok"}
-    failed_ctx = {getattr(r, "context_size") for r in rows if getattr(r, "status") in ("failed", "failed_oom")}
+    failed_ctx = {
+        getattr(r, "context_size") for r in rows if getattr(r, "status") in ("failed", "failed_oom")
+    }
 
     return sorted(ctx for ctx in ok_ctx if ctx not in failed_ctx)
 
@@ -235,7 +241,9 @@ def deployment_tier_for_score(
     return None, None
 
 
-def select_deployment_rows(rows: list[object], kv_cache_type: str, max_context: Optional[int]) -> list[object]:
+def select_deployment_rows(
+    rows: list[object], kv_cache_type: str, max_context: Optional[int]
+) -> list[object]:
     if max_context is None:
         return []
 

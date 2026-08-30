@@ -75,7 +75,8 @@ def print_stats(label: str, values: list[float]) -> None:
     p95_idx = max(0, min(n - 1, int(round(0.95 * (n - 1)))))
     print(
         f'  {label}: min={values[0]:.3f}s  mean={statistics.mean(values):.3f}s  '
-        f'median={statistics.median(values):.3f}s  p95={values[p95_idx]:.3f}s  max={values[-1]:.3f}s'
+        f'median={statistics.median(values):.3f}s  '
+        f'p95={values[p95_idx]:.3f}s  max={values[-1]:.3f}s'
     )
 
 
@@ -247,11 +248,15 @@ async def main(cfg: argparse.Namespace) -> None:
                     f'Throughput: {tps:.1f} tok/s (aggregate)'
                 )
 
-                batch_tps = [r.get('batch_aggregate_tps', 0.0) for r in results if r.get('batch_success_count', 0) > 0]
+                batch_tps = [
+                    r.get('batch_aggregate_tps', 0.0)
+                    for r in results if r.get('batch_success_count', 0) > 0
+                ]
                 if batch_tps:
                     print(
                         '  Batch throughput      : ' +
-                        f'min={min(batch_tps):.1f}  mean={statistics.mean(batch_tps):.1f}  max={max(batch_tps):.1f} tok/s'
+                        f'min={min(batch_tps):.1f}  mean={statistics.mean(batch_tps):.1f}  '
+                        f'max={max(batch_tps):.1f} tok/s'
                     )
 
     print(separator)
@@ -327,19 +332,62 @@ async def run_suite(args: argparse.Namespace) -> None:
         for case in cases:
             label = str(case.get('label') or case.get('model') or 'case')
             model = str(case.get('model', '')).strip()
-            slots = int(case.get('slots', global_cfg.get('slots', _env_default('SLOTS', fallback='1'))))
-            ctx_size = int(case.get('ctx_size', global_cfg.get('ctx_size', _env_default('CTX_SIZE', fallback='4096'))))
-            gpu_layers = int(case.get('gpu_layers', global_cfg.get('gpu_layers', _env_default('GPU_LAYERS', fallback='-1'))))
-            cuda_device = str(case.get('cuda_device', global_cfg.get('cuda_device', _env_default('CUDA_DEVICE', fallback='0'))))
-            tensor_split = str(case.get('tensor_split', global_cfg.get('tensor_split', _env_default('TENSOR_SPLIT', fallback=''))))
-            prompt_cache_size = int(case.get('prompt_cache_size', global_cfg.get('prompt_cache_size', _env_default('PROMPT_CACHE_SIZE', fallback='0'))))
+            slots = int(
+                case.get('slots', global_cfg.get('slots', _env_default('SLOTS', fallback='1')))
+            )
+            ctx_size = int(
+                case.get(
+                    'ctx_size',
+                    global_cfg.get('ctx_size', _env_default('CTX_SIZE', fallback='4096')),
+                )
+            )
+            gpu_layers = int(
+                case.get(
+                    'gpu_layers',
+                    global_cfg.get('gpu_layers', _env_default('GPU_LAYERS', fallback='-1')),
+                )
+            )
+            cuda_device = str(
+                case.get(
+                    'cuda_device',
+                    global_cfg.get('cuda_device', _env_default('CUDA_DEVICE', fallback='0')),
+                )
+            )
+            tensor_split = str(
+                case.get(
+                    'tensor_split',
+                    global_cfg.get('tensor_split', _env_default('TENSOR_SPLIT', fallback='')),
+                )
+            )
+            prompt_cache_size = int(
+                case.get(
+                    'prompt_cache_size',
+                    global_cfg.get(
+                        'prompt_cache_size', _env_default('PROMPT_CACHE_SIZE', fallback='0')
+                    ),
+                )
+            )
 
-            base_url = str(case.get('url', global_cfg.get('url', _env_default('BASE_URL', 'LLAMA_BASE_URL', fallback=DEFAULT_URL))))
-            api_key = case.get('api_key', global_cfg.get('api_key', _env_default('API_KEY', 'LLAMA_API_KEY', fallback='')))
+            base_url = str(
+                case.get(
+                    'url',
+                    global_cfg.get(
+                        'url', _env_default('BASE_URL', 'LLAMA_BASE_URL', fallback=DEFAULT_URL)
+                    ),
+                )
+            )
+            api_key = case.get(
+                'api_key',
+                global_cfg.get('api_key', _env_default('API_KEY', 'LLAMA_API_KEY', fallback='')),
+            )
             levels = case.get('levels', global_cfg.get('levels', DEFAULT_LEVELS))
-            requests = int(case.get('requests', global_cfg.get('requests', DEFAULT_REQUESTS_PER_LEVEL)))
+            requests = int(
+                case.get('requests', global_cfg.get('requests', DEFAULT_REQUESTS_PER_LEVEL))
+            )
             prompt = str(case.get('prompt', global_cfg.get('prompt', DEFAULT_PROMPT)))
-            max_tokens = int(case.get('max_tokens', global_cfg.get('max_tokens', DEFAULT_MAX_TOKENS)))
+            max_tokens = int(
+                case.get('max_tokens', global_cfg.get('max_tokens', DEFAULT_MAX_TOKENS))
+            )
             stream = bool(case.get('stream', global_cfg.get('stream', False)))
 
             if deploy_enabled:
@@ -354,12 +402,19 @@ async def run_suite(args: argparse.Namespace) -> None:
                 }
                 if dry_run:
                     print(f'[dry-run] Would update .env keys: {", ".join(sorted(updates.keys()))}')
-                    print(f'[dry-run] Would run deploy script: bash {DEPLOY_SCRIPT} {"--restart" if deploy_restart else ""}'.strip())
+                    restart_flag = "--restart" if deploy_restart else ""
+                    print(
+                        f'[dry-run] Would run deploy script: '
+                        f'bash {DEPLOY_SCRIPT} {restart_flag}'.strip()
+                    )
                 else:
                     _set_env_values(ENV_PATH, updates)
                     _run_deploy(restart=deploy_restart)
                     if not _wait_for_server(base_url, str(api_key) if api_key else None):
-                        print(f'ERROR: service did not become healthy after deploy for case {label}; skipping case')
+                        print(
+                            f'ERROR: service did not become healthy after deploy '
+                            f'for case {label}; skipping case'
+                        )
                         continue
 
             output_path = _build_case_output_path(label, slots, run_date)
@@ -367,7 +422,10 @@ async def run_suite(args: argparse.Namespace) -> None:
 
             print('\n' + '=' * 80)
             print(f'Case: {label}')
-            print(f'  model={model} ctx_size={ctx_size} slots={slots} gpu_layers={gpu_layers} cuda_device={cuda_device}')
+            print(
+                f'  model={model} ctx_size={ctx_size} slots={slots} '
+                f'gpu_layers={gpu_layers} cuda_device={cuda_device}'
+            )
             print(f'  url={base_url} levels={levels} requests={requests} stream={stream}')
             print(f'  output={output_path}')
 
@@ -486,7 +544,10 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=int(_env_default('SLOTS', 'LLAMA_SLOTS', fallback='1')),
         metavar='N',
-        help='Number of parallel slots the server is configured with (default: $SLOTS/$LLAMA_SLOTS or 1)'
+        help=(
+            'Number of parallel slots the server is configured with '
+            '(default: $SLOTS/$LLAMA_SLOTS or 1)'
+        )
     )
 
     parser.add_argument(

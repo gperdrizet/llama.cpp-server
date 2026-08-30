@@ -69,7 +69,9 @@ def coarse_sizes_for_max(max_ctx: int) -> list[int]:
     return [max_ctx >> 3, max_ctx >> 2, max_ctx >> 1, max_ctx]
 
 
-def load_context_fit_config(config_path: Optional[Path]) -> tuple[dict[str, object], list[tuple[str, float]], Optional[Path]]:
+def load_context_fit_config(
+    config_path: Optional[Path]
+) -> tuple[dict[str, object], list[tuple[str, float]], Optional[Path]]:
     '''Loads the optional YAML config for benchmark defaults and score thresholds.'''
 
     if config_path is None:
@@ -500,7 +502,10 @@ def append_log(path: Path, row: RunResult, env: dict[str, str]) -> None:
         f.write(f"return_code={row.return_code} elapsed_s={row.elapsed_s:.3f}\n")
         f.write(f"peak_vram_total_mib={row.peak_vram_total_mib}\n")
         f.write(f"peak_vram_per_device={json.dumps(row.peak_vram_per_device, sort_keys=True)}\n")
-        f.write(f"pp_ts={row.pp_ts} pp_stddev_ts={row.pp_stddev_ts} tg_ts={row.tg_ts} tg_stddev_ts={row.tg_stddev_ts}\n")
+        f.write(
+            f"pp_ts={row.pp_ts} pp_stddev_ts={row.pp_stddev_ts} "
+            f"tg_ts={row.tg_ts} tg_stddev_ts={row.tg_stddev_ts}\n"
+        )
         f.write(f"CUDA_VISIBLE_DEVICES={env.get('CUDA_VISIBLE_DEVICES', '')}\n")
         f.write("CMD: " + " ".join(row.command) + "\n")
 
@@ -551,19 +556,25 @@ def write_summary_json(
     for summary in quant_summaries:
         quant_rows = [r for r in rows if r.kv_cache_type == summary.kv_cache_type]
         run_errors: list[str] = list(summary.warnings)
-        deployment_rows = select_deployment_rows(rows, summary.kv_cache_type, summary.max_success_ctx)
+        deployment_rows = select_deployment_rows(
+            rows, summary.kv_cache_type, summary.max_success_ctx
+        )
 
         deployment_pp_ts = mean_optional([r.pp_ts for r in deployment_rows])
         deployment_tg_ts = mean_optional([r.tg_ts for r in deployment_rows])
         deployment_score = weighted_harmonic_mean(deployment_pp_ts, deployment_tg_ts)
-        deployment_tier, deployment_tier_threshold = deployment_tier_for_score(deployment_score, score_breakpoints)
+        deployment_tier, deployment_tier_threshold = deployment_tier_for_score(
+            deployment_score, score_breakpoints
+        )
         runtime_total_s = sum(r.elapsed_s for r in quant_rows)
         runtime_by_context_s = aggregate_runtime_by_context(quant_rows)
         runtime_by_phase_s = aggregate_runtime_by_phase(quant_rows)
         runtime_by_kv_cache_s[summary.kv_cache_label] = round(runtime_total_s, 3)
 
         if deployment_score is not None:
-            overall_score_candidates.append((deployment_score, summary.kv_cache_label, summary.max_success_ctx))
+            overall_score_candidates.append(
+                (deployment_score, summary.kv_cache_label, summary.max_success_ctx)
+            )
 
         for row in quant_rows:
             if row.status == "failed":
@@ -594,7 +605,10 @@ def write_summary_json(
             "deployment_score_pp_ts_mean": deployment_pp_ts,
             "deployment_score_tg_ts_mean": deployment_tg_ts,
             "deployment_score_source_context": summary.max_success_ctx,
-            "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+            "deployment_score_formula": (
+                "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; "
+                "prompt_weight=0.35, generation_weight=0.65)"
+            ),
             "deployment_score_breakpoints": breakpoint_dict,
             "errors": run_errors,
         }
@@ -618,21 +632,29 @@ def write_summary_json(
         overall_summary[f"{summary.kv_cache_label}_max_context_stable"] = summary.boundary_stable
 
     if overall_score_candidates:
-        best_score, best_label, best_context = max(overall_score_candidates, key=lambda item: item[0])
+        best_score, best_label, best_context = max(
+            overall_score_candidates, key=lambda item: item[0]
+        )
         best_tier, best_tier_threshold = deployment_tier_for_score(best_score, score_breakpoints)
         overall_summary["deployment_score"] = best_score
         overall_summary["deployment_score_kv_cache_label"] = best_label
         overall_summary["deployment_score_context"] = best_context
         overall_summary["deployment_tier"] = best_tier
         overall_summary["deployment_tier_threshold"] = best_tier_threshold
-        overall_summary["deployment_score_formula"] = "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)"
+        overall_summary["deployment_score_formula"] = (
+            "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; "
+            "prompt_weight=0.35, generation_weight=0.65)"
+        )
     else:
         overall_summary["deployment_score"] = None
         overall_summary["deployment_score_kv_cache_label"] = None
         overall_summary["deployment_score_context"] = None
         overall_summary["deployment_tier"] = None
         overall_summary["deployment_tier_threshold"] = None
-        overall_summary["deployment_score_formula"] = "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)"
+        overall_summary["deployment_score_formula"] = (
+            "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; "
+            "prompt_weight=0.35, generation_weight=0.65)"
+        )
 
     overall_summary["deployment_score_breakpoints"] = breakpoint_dict
 
@@ -665,7 +687,8 @@ def write_plot_png(
     }
 
     labels = sorted(
-        {r.kv_cache_label for r in rows}, key=lambda x: quant_order.index(x) if x in quant_order else x
+        {r.kv_cache_label for r in rows},
+        key=lambda x: quant_order.index(x) if x in quant_order else x,
     )
 
     for label in labels:
@@ -744,7 +767,9 @@ def parse_args() -> argparse.Namespace:
     )
 
     bootstrap_args, _ = bootstrap.parse_known_args()
-    config_path = bootstrap_args.config or (DEFAULT_CONTEXT_FIT_CONFIG if DEFAULT_CONTEXT_FIT_CONFIG.exists() else None)
+    config_path = bootstrap_args.config or (
+        DEFAULT_CONTEXT_FIT_CONFIG if DEFAULT_CONTEXT_FIT_CONFIG.exists() else None
+    )
     run_config, score_breakpoints, config_path = load_context_fit_config(config_path)
 
     parser = argparse.ArgumentParser(
@@ -763,7 +788,10 @@ def parse_args() -> argparse.Namespace:
         "--model-list",
         type=Path,
         default=Path(run_config["model_list"]) if run_config.get("model_list") else None,
-        help="Path to a text file listing one model path or filename per line (mutually exclusive with --model)"
+        help=(
+            "Path to a text file listing one model path or filename per line "
+            "(mutually exclusive with --model)"
+        )
     )
     parser.add_argument(
         "--max-context",
@@ -912,7 +940,10 @@ def parse_args() -> argparse.Namespace:
         sys.exit(1)
 
     if not args.model and not args.model_list:
-        print("ERROR: one of --model or --model-list is required, either on the command line or in the YAML config")
+        print(
+            "ERROR: one of --model or --model-list is required, "
+            "either on the command line or in the YAML config"
+        )
         sys.exit(1)
 
     if args.max_context <= 0:
@@ -946,7 +977,8 @@ def _run_for_model(
     _vram_probe = GpuPeakPoller(devices=devices, interval_s=1.0)
     _vram_probe._read_snapshot()
     total_vram_mib = sum(_vram_probe.total_mem.values())
-    verify_vram_threshold_mib = max(0, total_vram_mib - 1024)  # verify only when within 1 GiB of limit
+    # verify only when within 1 GiB of limit
+    verify_vram_threshold_mib = max(0, total_vram_mib - 1024)
 
     out_dir = args.results_dir / run_name
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -994,20 +1026,29 @@ def _run_for_model(
 
             if args.verify_runs > 0:
                 max_coarse_result = next(
-                    (r for r in reversed(rows) if r.context_size == max_coarse and r.kv_cache_type == kv_type and r.status == "ok"),
+                    (
+                        r for r in reversed(rows)
+                        if r.context_size == max_coarse
+                        and r.kv_cache_type == kv_type
+                        and r.status == "ok"
+                    ),
                     None,
                 )
                 peak = max_coarse_result.peak_vram_total_mib if max_coarse_result else 0
                 if peak >= verify_vram_threshold_mib:
                     print(
                         f"[{kv_label}] Verifying max context={max_coarse} "
-                        f"with {args.verify_runs} run(s) (peak {peak} MiB within 1 GiB of {total_vram_mib} MiB)"
+                        f"with {args.verify_runs} run(s) "
+                        f"(peak {peak} MiB within 1 GiB of {total_vram_mib} MiB)"
                     )
 
                     verify_failed = False
 
                     for i in range(args.verify_runs):
-                        print(f"[{kv_label} verify] ctx={max_coarse} run={i + 1}/{args.verify_runs}")
+                        print(
+                            f"[{kv_label} verify] ctx={max_coarse} "
+                            f"run={i + 1}/{args.verify_runs}"
+                        )
 
                         result = run_one_context(
                             kv_label,
@@ -1101,20 +1142,29 @@ def _run_for_model(
 
                 if args.verify_runs > 0:
                     low_result = next(
-                        (r for r in reversed(rows) if r.context_size == low and r.kv_cache_type == kv_type and r.status == "ok"),
+                        (
+                            r for r in reversed(rows)
+                            if r.context_size == low
+                            and r.kv_cache_type == kv_type
+                            and r.status == "ok"
+                        ),
                         None,
                     )
                     peak = low_result.peak_vram_total_mib if low_result else 0
                     if peak >= verify_vram_threshold_mib:
                         print(
                             f"[{kv_label}] Verifying boundary "
-                            f"context={low} with {args.verify_runs} run(s) (peak {peak} MiB within 1 GiB of {total_vram_mib} MiB)"
+                            f"context={low} with {args.verify_runs} run(s) "
+                            f"(peak {peak} MiB within 1 GiB of {total_vram_mib} MiB)"
                         )
 
                         verify_failed = False
 
                         for i in range(args.verify_runs):
-                            print(f"[{kv_label} verify] ctx={low} run={i + 1}/{args.verify_runs}")
+                            print(
+                                f"[{kv_label} verify] ctx={low} "
+                                f"run={i + 1}/{args.verify_runs}"
+                            )
 
                             result = run_one_context(
                                 kv_label,
@@ -1298,11 +1348,16 @@ def main() -> None:
         ran_models = 0
 
         for model_path, max_ctx in models:
-            coarse_sizes = coarse_sizes_for_max(max_ctx) if max_ctx is not None else COARSE_CONTEXT_SIZES
+            coarse_sizes = (
+                coarse_sizes_for_max(max_ctx) if max_ctx is not None else COARSE_CONTEXT_SIZES
+            )
             run_name = (
                 model_path.stem
                 if args.model_list
-                else (args.run_name or f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{model_path.stem}")
+                else (
+                    args.run_name
+                    or f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{model_path.stem}"
+                )
             )
 
             out_dir = args.results_dir / run_name

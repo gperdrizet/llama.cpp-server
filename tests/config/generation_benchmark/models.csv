@@ -1,0 +1,4 @@
+model,cache_type_k,cache_type_v,description
+Qwen3.8-27B-Q8_0.gguf,f16,f16,Current production baseline (Q8_0 weights + f16 KV cache)
+Qwen3.8-27B-UD-IQ4_XS.gguf,f16,f16,IQ4_XS weights + f16 KV cache
+Qwen3.8-27B-UD-IQ4_XS.gguf,q8_0,q8_0,IQ4_XS weights + quantized KV cache (optimized)

@@ -6,9 +6,10 @@ run:
   run_name: null                                  # Optional run name (null => auto-generated)
   n_gpu_layers: 99                                # Number of model layers on GPU (-1 for all)
   split_mode: layer                               # Multi-GPU split mode for llama.cpp
-  tensor_split: "1,1"                             # Relative tensor split across selected GPUs
-  fit_target: 512                                 # llama-bench fit margin per GPU in MiB
-  fit_ctx: 2048                                   # Minimum context considered by fit logic
+  tensor_split: "1/1"                             # Relative tensor split across selected GPUs (llama-bench uses '/' not ',')
+  allow_host: false                               # Allow host RAM spill beyond GPU VRAM; strict GPU-only by default
+  fit_target: 0                                   # Only used when allow_host is true; set >0 to allow host spill with a GPU-memory margin
+  fit_ctx: 0                                      # Minimum context considered by fit logic when allow_host is true
   n_prompt: 512                                   # Prompt tokens benchmarked per run
   n_gen: 128                                      # Generation tokens benchmarked per run
   repetitions: 3                                  # llama-bench repeats per probe

@@ -1,0 +1,119 @@
+{
+  "timestamp": "2026-09-02T06:09:33",
+  "model": "GLM-4.7-Flash-Q4_K_M.gguf",
+  "gpu_devices": "1,2",
+  "context_sizes": [
+    25344,
+    50688,
+    101376,
+    202752
+  ],
+  "overall_summary": {
+    "runs_total": 8,
+    "runs_ok": 8,
+    "runs_failed_oom": 0,
+    "runs_failed_other": 0,
+    "runtime_total_s": 23745.97,
+    "runtime_by_kv_cache_s": {
+      "f16": 11872.577,
+      "q8": 11873.393
+    },
+    "runtime_by_context_s": {
+      "25344": 408.786,
+      "50688": 1305.676,
+      "101376": 4631.788,
+      "202752": 17399.72
+    },
+    "runtime_by_phase_s": {
+      "coarse": 23745.97
+    },
+    "errors": [],
+    "f16_max_context": 202752,
+    "f16_max_context_stable": true,
+    "q8_max_context": 202752,
+    "q8_max_context_stable": true,
+    "deployment_score": 6.57718347344165,
+    "deployment_score_kv_cache_label": "f16",
+    "deployment_score_context": 202752,
+    "deployment_tier": "interactive",
+    "deployment_tier_threshold": 4.0,
+    "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+    "deployment_score_breakpoints": {
+      "interactive": 4.0,
+      "batch": 0.5,
+      "exclude": 0.0
+    }
+  },
+  "runs": {
+    "f16": {
+      "kv_cache_label": "f16",
+      "kv_cache_type": "f16",
+      "max_context": 202752,
+      "max_context_stable": true,
+      "first_fail_ctx": null,
+      "bisect_fail_ctx": null,
+      "runs_total": 4,
+      "runs_ok": 4,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 0,
+      "runtime_total_s": 11872.577,
+      "runtime_by_context_s": {
+        "25344": 205.257,
+        "50688": 653.297,
+        "101376": 2316.148,
+        "202752": 8697.876
+      },
+      "runtime_by_phase_s": {
+        "coarse": 11872.577
+      },
+      "deployment_score": 6.57718347344165,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 11.456066,
+      "deployment_score_tg_ts_mean": 5.350267,
+      "deployment_score_source_context": 202752,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": []
+    },
+    "q8": {
+      "kv_cache_label": "q8",
+      "kv_cache_type": "q8_0",
+      "max_context": 202752,
+      "max_context_stable": true,
+      "first_fail_ctx": null,
+      "bisect_fail_ctx": null,
+      "runs_total": 4,
+      "runs_ok": 4,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 0,
+      "runtime_total_s": 11873.393,
+      "runtime_by_context_s": {
+        "25344": 203.529,
+        "50688": 652.379,
+        "101376": 2315.64,
+        "202752": 8701.844
+      },
+      "runtime_by_phase_s": {
+        "coarse": 11873.393
+      },
+      "deployment_score": 5.772941246824484,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 11.445729,
+      "deployment_score_tg_ts_mean": 4.556836,
+      "deployment_score_source_context": 202752,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": []
+    }
+  }
+}

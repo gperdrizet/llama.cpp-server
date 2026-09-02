@@ -6,9 +6,10 @@ run:
   run_name: First pass max context discovery run        # Optional run name (null => auto-generated)
   n_gpu_layers: -1                                      # Number of model layers on GPU (-1 for all)
   split_mode: layer                                     # Multi-GPU split mode for llama.cpp
-  tensor_split: "1,1"                                   # Relative tensor split across selected GPUs
-  fit_target: 1024                                      # llama-bench fit margin per GPU in MiB
-  fit_ctx: 2048                                         # Minimum context considered by fit logic
+  tensor_split: "1/1"                                   # Relative tensor split across selected GPUs (llama-bench uses '/' not ',')
+  allow_host: false                                     # Strict GPU-only discovery: no host RAM spill by default
+  fit_target: 0                                         # Only used if allow_host is true; set to a positive value to permit GPU-fit headroom plus host spill
+  fit_ctx: 0                                            # Minimum context considered by fit logic when allow_host is true
   n_prompt: 128                                         # Prompt tokens benchmarked per run
   n_gen: 32                                             # Generation tokens benchmarked per run
   repetitions: 1                                        # llama-bench repeats per probe (ceiling-finding only; throughput comes from load_test.py)

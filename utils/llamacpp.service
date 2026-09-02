@@ -34,7 +34,7 @@ ExecStart=SUB_LLAMA_PATH_HERE/build/bin/llama-server \
     --model-draft SUB_SPEC_DRAFT_MODEL_HERE \
     --flash-attn on \
     --fit-target 256 \
-    --fit-ctx 2048 \
+    --fit-ctx SUB_CTX_SIZE_HERE \
     --temp 1.0 \
     --top-k 20 \
     --min-p 0.0 \

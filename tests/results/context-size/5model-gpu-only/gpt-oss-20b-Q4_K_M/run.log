@@ -1,0 +1,136 @@
+
+========================================================================================
+kv_cache=f16 (f16) phase=coarse context_size=16384 status=ok
+return_code=0 elapsed_s=33.218
+peak_vram_total_mib=12498
+peak_vram_per_device={"1": 6223, "2": 6275}
+pp_ts=320.25644 pp_stddev_ts=0.0 tg_ts=64.532235 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf -ngl -1 -sm layer -p 128 -n 32 -d 16384 -r 1 -ctk f16 -ctv f16 -fa on -o csv --no-host 1 -ts 1/1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","128","0","16384","2026-09-02T10:58:32Z","399679707","0","320.256440","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","0","32","16384","2026-09-02T10:59:00Z","495876205","0","64.532235","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=f16 (f16) phase=coarse context_size=32768 status=ok
+return_code=0 elapsed_s=70.358
+peak_vram_total_mib=13010
+peak_vram_per_device={"1": 6479, "2": 6531}
+pp_ts=266.375213 pp_stddev_ts=0.0 tg_ts=61.116711 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf -ngl -1 -sm layer -p 128 -n 32 -d 32768 -r 1 -ctk f16 -ctv f16 -fa on -o csv --no-host 1 -ts 1/1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","128","0","32768","2026-09-02T10:59:06Z","480525190","0","266.375213","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","0","32","32768","2026-09-02T11:00:10Z","523588387","0","61.116711","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=f16 (f16) phase=coarse context_size=65536 status=ok
+return_code=0 elapsed_s=173.821
+peak_vram_total_mib=14034
+peak_vram_per_device={"1": 6991, "2": 7043}
+pp_ts=200.386151 pp_stddev_ts=0.0 tg_ts=55.213874 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf -ngl -1 -sm layer -p 128 -n 32 -d 65536 -r 1 -ctk f16 -ctv f16 -fa on -o csv --no-host 1 -ts 1/1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","128","0","65536","2026-09-02T11:00:16Z","638766698","0","200.386151","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","0","32","65536","2026-09-02T11:03:04Z","579564474","0","55.213874","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=f16 (f16) phase=coarse context_size=131072 status=ok
+return_code=0 elapsed_s=499.029
+peak_vram_total_mib=16082
+peak_vram_per_device={"1": 8015, "2": 8067}
+pp_ts=126.472785 pp_stddev_ts=0.0 tg_ts=45.899579 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf -ngl -1 -sm layer -p 128 -n 32 -d 131072 -r 1 -ctk f16 -ctv f16 -fa on -o csv --no-host 1 -ts 1/1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","128","0","131072","2026-09-02T11:03:10Z","1012075444","0","126.472785","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","f16","f16","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","0","32","131072","2026-09-02T11:11:22Z","697174146","0","45.899579","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q8 (q8_0) phase=coarse context_size=16384 status=ok
+return_code=0 elapsed_s=33.256
+peak_vram_total_mib=12304
+peak_vram_per_device={"1": 6125, "2": 6179}
+pp_ts=318.722133 pp_stddev_ts=0.0 tg_ts=53.288624 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf -ngl -1 -sm layer -p 128 -n 32 -d 16384 -r 1 -ctk q8_0 -ctv q8_0 -fa on -o csv --no-host 1 -ts 1/1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","q8_0","q8_0","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","128","0","16384","2026-09-02T11:11:29Z","401603738","0","318.722133","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","q8_0","q8_0","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","0","32","16384","2026-09-02T11:11:57Z","600503405","0","53.288624","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q8 (q8_0) phase=coarse context_size=32768 status=ok
+return_code=0 elapsed_s=70.553
+peak_vram_total_mib=12642
+peak_vram_per_device={"1": 6297, "2": 6345}
+pp_ts=263.599858 pp_stddev_ts=0.0 tg_ts=44.030618 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf -ngl -1 -sm layer -p 128 -n 32 -d 32768 -r 1 -ctk q8_0 -ctv q8_0 -fa on -o csv --no-host 1 -ts 1/1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","q8_0","q8_0","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","128","0","32768","2026-09-02T11:12:02Z","485584480","0","263.599858","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","q8_0","q8_0","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","0","32","32768","2026-09-02T11:13:07Z","726766991","0","44.030618","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q8 (q8_0) phase=coarse context_size=65536 status=ok
+return_code=0 elapsed_s=174.016
+peak_vram_total_mib=13370
+peak_vram_per_device={"1": 6693, "2": 6677}
+pp_ts=198.302055 pp_stddev_ts=0.0 tg_ts=31.734837 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf -ngl -1 -sm layer -p 128 -n 32 -d 65536 -r 1 -ctk q8_0 -ctv q8_0 -fa on -o csv --no-host 1 -ts 1/1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","q8_0","q8_0","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","128","0","65536","2026-09-02T11:13:13Z","645479946","0","198.302055","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","q8_0","q8_0","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","0","32","65536","2026-09-02T11:16:01Z","1008355567","0","31.734837","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+
+========================================================================================
+kv_cache=q8 (q8_0) phase=coarse context_size=131072 status=ok
+return_code=0 elapsed_s=500.298
+peak_vram_total_mib=14826
+peak_vram_per_device={"1": 7485, "2": 7341}
+pp_ts=128.424262 pp_stddev_ts=0.0 tg_ts=18.593921 tg_stddev_ts=0.0
+CUDA_VISIBLE_DEVICES=1,2
+CMD: /opt/llama.cpp/build/bin/llama-bench -m /home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf -ngl -1 -sm layer -p 128 -n 32 -d 131072 -r 1 -ctk q8_0 -ctv q8_0 -fa on -o csv --no-host 1 -ts 1/1
+--- stdout ---
+build_commit,build_number,cpu_info,gpu_info,backends,model_filename,model_type,model_size,model_n_params,n_batch,n_ubatch,n_threads,cpu_mask,cpu_strict,poll,type_k,type_v,n_gpu_layers,n_cpu_moe,split_mode,main_gpu,no_kv_offload,flash_attn,devices,tensor_split,tensor_buft_overrides,use_mmap,use_direct_io,embeddings,no_op_offload,no_host,fit_target,fit_min_ctx,n_prompt,n_gen,n_depth,test_time,avg_ns,stddev_ns,avg_ts,stddev_ts
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","q8_0","q8_0","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","128","0","131072","2026-09-02T11:16:07Z","996696402","0","128.424262","0.000000"
+"b4024af6c","9687","Intel(R) Xeon(R) CPU E5-2697 v2 @ 2.70GHz","Tesla P100-PCIE-16GB, Tesla P100-PCIE-16GB","CUDA","/home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf","gpt-oss 20B Q4_K - Medium","11611750656","20914757184","2048","512","12","0x0","0","50","q8_0","q8_0","-1","0","layer","0","0","1","auto","1.00/1.00","none","1","0","0","0","1","0","0","0","32","131072","2026-09-02T11:24:20Z","1720992545","0","18.593921","0.000000"
+--- stderr ---
+ggml_cuda_init: found 2 CUDA devices (Total VRAM: 32538 MiB):
+  Device 0: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB
+  Device 1: Tesla P100-PCIE-16GB, compute capability 6.0, VMM: yes, VRAM: 16269 MiB

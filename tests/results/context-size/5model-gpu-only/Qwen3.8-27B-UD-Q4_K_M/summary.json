@@ -1,0 +1,137 @@
+{
+  "timestamp": "2026-09-01T18:21:37",
+  "model": "Qwen3.8-27B-UD-Q4_K_M.gguf",
+  "gpu_devices": "1,2",
+  "context_sizes": [
+    32768,
+    65536,
+    131072,
+    262144
+  ],
+  "overall_summary": {
+    "runs_total": 13,
+    "runs_ok": 9,
+    "runs_failed_oom": 2,
+    "runs_failed_other": 2,
+    "runtime_total_s": 10348.701,
+    "runtime_by_kv_cache_s": {
+      "f16": 5632.378,
+      "q8": 4716.323
+    },
+    "runtime_by_context_s": {
+      "32768": 396.86,
+      "65536": 874.103,
+      "131072": 2124.682,
+      "196608": 1850.197,
+      "212992": 2085.423,
+      "217088": 7.475,
+      "221184": 8.296,
+      "229376": 6.319,
+      "262144": 2995.346
+    },
+    "runtime_by_phase_s": {
+      "coarse": 6390.991,
+      "refine": 3957.709
+    },
+    "errors": [
+      "ctx=262144: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Qwen3.8-27B-UD-Q4_K_M.gguf'",
+      "ctx=229376: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Qwen3.8-27B-UD-Q4_K_M.gguf'"
+    ],
+    "f16_max_context": 212992,
+    "f16_max_context_stable": true,
+    "q8_max_context": 262144,
+    "q8_max_context_stable": true,
+    "deployment_score": 10.344538283203537,
+    "deployment_score_kv_cache_label": "f16",
+    "deployment_score_context": 212992,
+    "deployment_tier": "interactive",
+    "deployment_tier_threshold": 4.0,
+    "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+    "deployment_score_breakpoints": {
+      "interactive": 4.0,
+      "batch": 0.5,
+      "exclude": 0.0
+    }
+  },
+  "runs": {
+    "f16": {
+      "kv_cache_label": "f16",
+      "kv_cache_type": "f16",
+      "max_context": 212992,
+      "max_context_stable": true,
+      "first_fail_ctx": 262144,
+      "bisect_fail_ctx": 217088,
+      "runs_total": 9,
+      "runs_ok": 5,
+      "runs_failed_oom": 2,
+      "runs_failed_other": 2,
+      "runtime_total_s": 5632.378,
+      "runtime_by_context_s": {
+        "32768": 196.202,
+        "65536": 430.825,
+        "131072": 1041.609,
+        "196608": 1850.197,
+        "212992": 2085.423,
+        "217088": 7.475,
+        "221184": 8.296,
+        "229376": 6.319,
+        "262144": 6.032
+      },
+      "runtime_by_phase_s": {
+        "coarse": 1674.668,
+        "refine": 3957.709
+      },
+      "deployment_score": 10.344538283203537,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 41.75659,
+      "deployment_score_tg_ts_mean": 7.362314,
+      "deployment_score_source_context": 212992,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": [
+        "ctx=262144: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Qwen3.8-27B-UD-Q4_K_M.gguf'",
+        "ctx=229376: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Qwen3.8-27B-UD-Q4_K_M.gguf'"
+      ]
+    },
+    "q8": {
+      "kv_cache_label": "q8",
+      "kv_cache_type": "q8_0",
+      "max_context": 262144,
+      "max_context_stable": true,
+      "first_fail_ctx": null,
+      "bisect_fail_ctx": null,
+      "runs_total": 4,
+      "runs_ok": 4,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 0,
+      "runtime_total_s": 4716.323,
+      "runtime_by_context_s": {
+        "32768": 200.658,
+        "65536": 443.279,
+        "131072": 1083.072,
+        "262144": 2989.314
+      },
+      "runtime_by_phase_s": {
+        "coarse": 4716.323
+      },
+      "deployment_score": 6.226001013529196,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 36.01633,
+      "deployment_score_tg_ts_mean": 4.307519,
+      "deployment_score_source_context": 262144,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": []
+    }
+  }
+}

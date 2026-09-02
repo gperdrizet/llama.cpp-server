@@ -1,0 +1,135 @@
+{
+  "timestamp": "2026-09-02T06:58:28",
+  "model": "Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf",
+  "gpu_devices": "1,2",
+  "context_sizes": [
+    16384,
+    32768,
+    65536,
+    131072
+  ],
+  "overall_summary": {
+    "runs_total": 12,
+    "runs_ok": 8,
+    "runs_failed_oom": 2,
+    "runs_failed_other": 2,
+    "runtime_total_s": 2934.363,
+    "runtime_by_kv_cache_s": {
+      "f16": 1297.571,
+      "q8": 1636.793
+    },
+    "runtime_by_context_s": {
+      "16384": 154.052,
+      "32768": 317.144,
+      "65536": 755.994,
+      "98304": 664.285,
+      "102400": 5.781,
+      "106496": 5.628,
+      "114688": 5.229,
+      "131072": 1026.249
+    },
+    "runtime_by_phase_s": {
+      "coarse": 2253.439,
+      "refine": 680.924
+    },
+    "errors": [
+      "ctx=131072: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf'",
+      "ctx=114688: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf'"
+    ],
+    "f16_max_context": 98304,
+    "f16_max_context_stable": true,
+    "q8_max_context": 131072,
+    "q8_max_context_stable": true,
+    "deployment_score": 14.027491921591889,
+    "deployment_score_kv_cache_label": "f16",
+    "deployment_score_context": 98304,
+    "deployment_tier": "interactive",
+    "deployment_tier_threshold": 4.0,
+    "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+    "deployment_score_breakpoints": {
+      "interactive": 4.0,
+      "batch": 0.5,
+      "exclude": 0.0
+    }
+  },
+  "runs": {
+    "f16": {
+      "kv_cache_label": "f16",
+      "kv_cache_type": "f16",
+      "max_context": 98304,
+      "max_context_stable": true,
+      "first_fail_ctx": 131072,
+      "bisect_fail_ctx": 102400,
+      "runs_total": 8,
+      "runs_ok": 4,
+      "runs_failed_oom": 2,
+      "runs_failed_other": 2,
+      "runtime_total_s": 1297.571,
+      "runtime_by_context_s": {
+        "16384": 77.435,
+        "32768": 157.41,
+        "65536": 376.604,
+        "98304": 664.285,
+        "102400": 5.781,
+        "106496": 5.628,
+        "114688": 5.229,
+        "131072": 5.198
+      },
+      "runtime_by_phase_s": {
+        "coarse": 616.646,
+        "refine": 680.924
+      },
+      "deployment_score": 14.027491921591889,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 44.394549,
+      "deployment_score_tg_ts_mean": 10.251601,
+      "deployment_score_source_context": 98304,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": [
+        "ctx=131072: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf'",
+        "ctx=114688: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf'"
+      ]
+    },
+    "q8": {
+      "kv_cache_label": "q8",
+      "kv_cache_type": "q8_0",
+      "max_context": 131072,
+      "max_context_stable": true,
+      "first_fail_ctx": null,
+      "bisect_fail_ctx": null,
+      "runs_total": 4,
+      "runs_ok": 4,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 0,
+      "runtime_total_s": 1636.793,
+      "runtime_by_context_s": {
+        "16384": 76.617,
+        "32768": 159.734,
+        "65536": 379.389,
+        "131072": 1021.052
+      },
+      "runtime_by_phase_s": {
+        "coarse": 1636.793
+      },
+      "deployment_score": 7.247189907516948,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 36.778234,
+      "deployment_score_tg_ts_mean": 5.059625,
+      "deployment_score_source_context": 131072,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": []
+    }
+  }
+}

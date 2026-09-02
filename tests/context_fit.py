@@ -305,15 +305,17 @@ def load_model_list(path: Path) -> list[tuple[Path, int]]:
 
 def build_command(args: argparse.Namespace, context_size: int, kv_cache_type: str) -> list[str]:
     '''Builds the command line for llama-bench based on the provided arguments,
-    context size, and KV cache type.'''
+    context size, and KV cache type.
+
+    Default behavior is strict GPU-only fitting: no host spill and no fit-target
+    padding. Host RAM spill is only allowed when the user explicitly opts in.
+    '''
 
     cmd = [
         str(args.bench_bin),
         "-m", str(args.model),
         "-ngl", str(args.n_gpu_layers),
         "-sm", args.split_mode,
-        "--fit-target", str(args.fit_target),
-        "--fit-ctx", str(args.fit_ctx),
         "-p", str(args.n_prompt),
         "-n", str(args.n_gen),
         "-d", str(context_size),
@@ -323,6 +325,11 @@ def build_command(args: argparse.Namespace, context_size: int, kv_cache_type: st
         "-fa", args.flash_attn,
         "-o", "csv",
     ]
+
+    if args.no_host:
+        cmd.extend(["--no-host", "1"])
+    elif args.fit_target > 0 or args.fit_ctx > 0:
+        cmd.extend(["--fit-target", str(args.fit_target), "--fit-ctx", str(args.fit_ctx)])
 
     if args.tensor_split:
         cmd.extend(["-ts", args.tensor_split])
@@ -835,17 +842,32 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--tensor-split",
-        default=str(run_config.get("tensor_split", "1,1"))
+        default=str(run_config.get("tensor_split", "1/1")),
+        help=(
+            "Per-device split ratio passed to llama-bench -ts. Use '/' between "
+            "device ratios (e.g. '1/1'); llama-bench treats ',' as a delimiter "
+            "between separate sweep configs, so '1,1' silently puts everything "
+            "on device 0 instead of splitting across devices."
+        ),
+    )
+    parser.add_argument(
+        "--allow-host",
+        action="store_true",
+        default=bool(run_config.get("allow_host", False)),
+        help=(
+            "Allow llama-bench to spill beyond the GPUs into host RAM. "
+            "By default this benchmark uses strict GPU-only fitting."
+        ),
     )
     parser.add_argument(
         "--fit-target",
         type=int,
-        default=int(run_config.get("fit_target", 512))
+        default=int(run_config.get("fit_target", 0))
     )
     parser.add_argument(
         "--fit-ctx",
         type=int,
-        default=int(run_config.get("fit_ctx", 2048))
+        default=int(run_config.get("fit_ctx", 0))
     )
     parser.add_argument(
         "--n-prompt",
@@ -956,6 +978,7 @@ def parse_args() -> argparse.Namespace:
 
     args.config = config_path
     args.score_breakpoints = score_breakpoints
+    args.no_host = not args.allow_host
 
     return args
 

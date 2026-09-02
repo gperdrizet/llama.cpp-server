@@ -1,0 +1,50 @@
+{
+  "created": "2026-08-31T00:53:14",
+  "last_updated": "2026-08-31T00:53:14",
+  "config_csv": "tests/config/generation_benchmark/models_5model_sweep.csv",
+  "model_override": null,
+  "models": [
+    {
+      "model": "gemma-4-31B-it-Q4_K_M.gguf",
+      "cache_type_k": "q8_0",
+      "cache_type_v": "q8_0"
+    },
+    {
+      "model": "Qwen3.8-27B-UD-Q4_K_M.gguf",
+      "cache_type_k": "q8_0",
+      "cache_type_v": "q8_0"
+    },
+    {
+      "model": "GLM-4.7-Flash-Q4_K_M.gguf",
+      "cache_type_k": "q8_0",
+      "cache_type_v": "q8_0"
+    },
+    {
+      "model": "Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf",
+      "cache_type_k": "q8_0",
+      "cache_type_v": "q8_0"
+    },
+    {
+      "model": "gpt-oss-20b-Q4_K_M.gguf",
+      "cache_type_k": "q8_0",
+      "cache_type_v": "q8_0"
+    }
+  ],
+  "slot_counts": [
+    1
+  ],
+  "context_sizes": [
+    1024,
+    2048,
+    4096,
+    8192,
+    16384,
+    32768,
+    65536,
+    131072
+  ],
+  "repetitions": 3,
+  "cuda_device": "1,2",
+  "url": "http://localhost:8502",
+  "max_tokens": 128
+}

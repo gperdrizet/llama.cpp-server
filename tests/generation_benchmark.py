@@ -42,6 +42,7 @@ from typing import Optional
 
 try:
     from dotenv import load_dotenv
+
 except ImportError:
     print("ERROR: python-dotenv required. Install with: pip install python-dotenv")
     sys.exit(1)
@@ -130,11 +131,11 @@ def deploy_model(
         f"  Deploying {model_file} with {slot_count} slots, "
         f"cache={cache_type_k}/{cache_type_v}{gpu_note}{ctx_note}"
     )
-    
+
     try:
         # Update .env with new values
         env_content = ENV_PATH.read_text()
-        
+
         # Replace only the MODEL, SLOTS, KV_CACHE_TYPE, and (optionally)
         # CUDA_DEVICE/TENSOR_SPLIT/SPLIT_MODE lines
         env_content = re.sub(
@@ -195,6 +196,14 @@ def deploy_model(
         return False
 
 
+def estimate_tokens(text: str) -> int:
+    """
+    Rough token count estimate for English text (~4 characters per token).
+    Good enough for targeting approximate context sizes from a fixed corpus.
+    """
+    return max(1, len(text) // 4)
+
+
 def generate(
     prompt: str,
     max_tokens: int = DEFAULT_MAX_TOKENS,
@@ -210,14 +219,14 @@ def generate(
     }
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
-    
+
     body = {
         "model": "default",
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": max_tokens,
         "temperature": 1.0,
     }
-    
+
     start = time.time()
     try:
         req = urllib.request.Request(
@@ -229,11 +238,11 @@ def generate(
         with urllib.request.urlopen(req, timeout=600) as resp:
             data = json.loads(resp.read())
             latency = time.time() - start
-            
+
             # Extract token count from response
             tokens_generated = data.get("usage", {}).get("completion_tokens", 0)
             tok_per_sec = tokens_generated / latency if latency > 0 else 0
-            
+
             return {
                 "latency": latency,
                 "tokens": tokens_generated,
@@ -303,7 +312,7 @@ def write_run_config(
             created = json.loads(config_path.read_text(encoding="utf-8")).get("created", created)
         except (json.JSONDecodeError, OSError):
             pass
-    
+
     config = {
         "created": created,
         "last_updated": datetime.now().isoformat(timespec="seconds"),
@@ -379,10 +388,10 @@ def check_gpu_residency(deploy_time: datetime) -> dict:
         print(f"    WARN: could not read journal for GPU offload check: {e}")
         return {"layers_offloaded": None, "layers_total": None, "gpu_resident": None,
                 "cpu_buffer_mib": None, "wrong_gpu": None}
-    
+
     offload_matches = re.findall(r"offloaded (\d+)/(\d+) layers to GPU", log)
     cpu_buffer_matches = re.findall(r"CPU_Mapped model buffer size\s*=\s*([\d.]+) MiB", log)
-    
+
     # Guard against ever silently landing on the wrong physical GPU (e.g. the small
     # 8GB GTX 1070 used for display, instead of the P100s) - a device mismatch here
     # invalidates any timing regardless of layer offload status.
@@ -391,24 +400,24 @@ def check_gpu_residency(deploy_time: datetime) -> dict:
     wrong_gpu = bool(unexpected_devices)
     if wrong_gpu:
         print(f"    !!! WRONG GPU WARNING: deployed on non-P100 device(s): {unexpected_devices}")
-    
+
     if not offload_matches:
         print("    WARN: no 'offloaded X/Y layers to GPU' line found in journal "
               "since deploy - cannot confirm GPU residency")
         return {"layers_offloaded": None, "layers_total": None, "gpu_resident": None,
                 "cpu_buffer_mib": None, "wrong_gpu": wrong_gpu}
-    
+
     # Most recent match wins, in case the journal window caught an earlier restart too
     offloaded, total = (int(x) for x in offload_matches[-1])
     cpu_buffer_mib = float(cpu_buffer_matches[-1]) if cpu_buffer_matches else 0.0
     gpu_resident = offloaded == total
-    
+
     status = "OK (fully GPU-resident)" if gpu_resident else "WARNING (CPU offload confirmed)"
     print(
         f"    GPU residency check: {status} - "
         f"offloaded {offloaded}/{total} layers, CPU buffer={cpu_buffer_mib:.0f} MiB"
     )
-    
+
     return {
         "layers_offloaded": offloaded,
         "layers_total": total,
@@ -432,56 +441,64 @@ def test_condition(
     Test a single condition: model + cache + slot count.
     Returns list of result dicts.
     """
+
     results = []
-    
+
     # Deploy once for this condition, sizing CTX_SIZE to the deepest context this
     # run actually tests (plus headroom for the prompt suffix and generated tokens),
     # so --fit's KV-cache budget reflects reality instead of a stale prior value.
-    deploy_ctx_size = max(context_sizes) + DEFAULT_MAX_TOKENS + 512
+    deploy_ctx_size = int(max(context_sizes)) + DEFAULT_MAX_TOKENS + 512
     deploy_time = datetime.now()
+
     if not deploy_model(
         model, cache_k, cache_v, slot_count, api_key, cuda_device, deploy_ctx_size
     ):
         print(f"  WARN: Failed to deploy {model}, skipping")
+
         return results
-    
+
     # Warm up
-    print(f"    Warming up...")
+    print("    Warming up...")
     generate("Hello", url=DEFAULT_URL, api_key=api_key)
     time.sleep(2)
-    
+
     # Layer-to-GPU placement is decided once at model load time (llama.cpp's --fit
     # can silently reduce n_gpu_layers to stay within its memory-fit margin), so
     # one check per deploy is sufficient - it won't change mid-session.
     residency = check_gpu_residency(deploy_time)
+
     if residency["gpu_resident"] is False:
         print(
             f"    !!! SPILLOVER WARNING: {model} is NOT fully GPU-resident "
             f"({residency['layers_offloaded']}/{residency['layers_total']} layers on GPU, "
             f"{residency['cpu_buffer_mib']} MiB on CPU)"
         )
-    
+
     # Test growing context
     conversation = ""
+
     for context_size in context_sizes:
         print(f"    Testing context_size={context_size}")
-        
+
         # Add text until we reach target context size
-        while len(conversation.split()) < context_size:
+        while estimate_tokens(conversation) < context_size:
             lines = CORPUS.split(".")
+
             for line in lines:
                 conversation += line.strip() + ". "
+
                 if len(conversation.split()) >= context_size:
                     break
-        
+
         # Trim to exact size (roughly)
         words = conversation.split()[:context_size]
         truncated_context = " ".join(words)
-        
+
         # Run repetitions
         for rep in range(repetitions):
             prompt = truncated_context + "\n\nBriefly describe the key concepts mentioned above."
             result = generate(prompt, url=DEFAULT_URL, api_key=api_key)
+
             result.update({
                 "model": model,
                 "cache_k": cache_k,
@@ -492,11 +509,12 @@ def test_condition(
                 "timestamp": datetime.now().isoformat(),
                 **residency,
             })
+
             results.append(result)
-            
+
             # Small delay between repetitions
             time.sleep(0.5)
-    
+
     return results
 
 
@@ -618,7 +636,9 @@ def main():
     output_file = args.output or build_run_output_path(
         args.config_csv, args.model, args.slot_counts, args.context_sizes, args.repetitions
     )
+
     existing_rows = load_existing_rows(output_file)
+
     if existing_rows:
         print(f"Found existing results at {output_file} ({len(existing_rows)} rows) - resuming\n")
 

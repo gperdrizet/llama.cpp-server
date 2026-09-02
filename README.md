@@ -200,7 +200,8 @@ It runs the max-context search three times, once for each KV-cache quantization 
 | `--run-name` | Output run label |
 | `--tensor-split` | Tensor split ratio for multi-GPU runs |
 | `--split-mode` | Tensor split mode (`layer` in the current setup) |
-| `--fit-target` / `--fit-ctx` | Target context-size fit parameters passed to `llama-bench` |
+| `--allow-host` | Allow `llama-bench` to spill past GPU VRAM into system RAM; default is off for strict GPU-fit discovery |
+| `--fit-target` / `--fit-ctx` | Only used when `--allow-host` is set; these are not used in the default GPU-only fit pass |
 | `--n-prompt` / `--n-gen` / `--repetitions` | Throughput benchmark settings |
 | `--flash-attn` | Flash attention mode: `on` (default, matches `llamacpp.service`), `off`, or `auto` |
 | `--refine-step` | Granularity for bisection refinement probes |

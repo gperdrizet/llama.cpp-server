@@ -167,11 +167,12 @@ The maximum context size that will fit within the available GPU memory is determ
 
 The benchmark is driven by `tests/config/context_fit/context_fit.yaml`, which supplies the default run settings, score breakpoints, and the model list file. The model list itself lives in `tests/config/context_fit/models.csv`; comment out any model you want to skip before the next run. Each model row may also include a per-model `max_context` value, which the runner uses to derive that model's coarse context scan.
 
-The runner has two phases:
-1. **Coarse scan** over a context list from the YAML config.
-2. **Bisection refinement** around the first failing context.
+The runner has three phases:
+1. **Coarse scan** over four context sizes derived per model as `max//8, max//4, max//2, max`.
+2. **Bisection refinement** around the first failing context, at `--refine-step` granularity.
+3. **Verification** re-runs the candidate max context `--verify-runs` times; any single failure marks that context unstable.
 
-It runs the max-context search three times, once for each KV-cache quantization level (`q4_0`, `q8_0`, `f16`) and aggregates all results into the same CSV/log/summary/plot artifacts.
+It runs the max-context search once per KV-cache quantization level listed in `--kv-cache-types` (default `q4_0`, `q8_0`, `f16`) and aggregates all results into the same CSV/log/summary/plot artifacts.
 
 - `results.csv`: one row per attempted context (`ok`, `failed_oom`, or `failed`)
 - `run.log`: full command, stdout, stderr, and VRAM summary per run
@@ -214,47 +215,30 @@ It runs the max-context search three times, once for each KV-cache quantization 
 
 ### Results
 
-Fast-discovery-f16 sweep completed 2026-08-25 across all 21 models in `tests/config/context_fit/models.csv`. Artifacts are in `tests/results/context-size/fast-discovery-f16/`.
+The `dual_gpu` sweep (2026-09-01) measured the maximum stable context for five models on two Tesla P100-PCIE-16GB GPUs (32 GiB total), driven by `tests/config/context_fit/context_fit.dual_gpu.yaml`. Artifacts are in `tests/results/context_fit/dual_gpu/`.
 
-Run settings: GPUs `1,2`, `split-mode layer`, `tensor-split 1/1`, KV cache `f16`, `fit-target 1024`, `n_prompt 128`, `n_gen 32`, `repetitions 1`, `verify-runs 0`.
+Run settings: GPUs `1,2`, `split-mode layer`, `tensor-split 1/1`, KV cache `f16` and `q8_0`, strict GPU-only fit (`allow-host false`, `fit-target 0`), `n_prompt 128`, `n_gen 32`, `repetitions 1`, `refine-step 4096`, `verify-runs 1`.
 
-**Max context** is the largest context that completed successfully, bounded above by the per-model ceiling in `models.csv`. Peak VRAM is measured at that context. Because `verify-runs` is 0 in the fast-discovery profile, these boundaries are unverified.
+**Max context** is the largest context that passed the verification run, bounded above by the per-model ceiling in `models_dual_gpu.csv`. Peak VRAM is the summed peak across both GPUs at that context. All boundaries below verified stable, and every model reached the `interactive` deployment tier.
 
-| Model | Max context tested | Peak VRAM (GiB) |
-|---|---:|---:|
-| gemma-4-26B-A4B-it-UD-Q4_K_M | 256k | 24.5 |
-| gemma-4-26B-A4B-it-UD-Q6_K | 256k | 30.3 |
-| gemma-4-31B-it-Q4_K_M | 256k | 27.2 |
-| GLM-4.7-Flash-Q4_K_M | 198k | 28.4 |
-| GLM-4.7-Flash-REAP-23B-A3B-Q4_K_M | 198k | 25.9 |
-| GLM-4.7-Flash-REAP-23B-A3B-UD-Q6_K_XL | 198k | 29.8 |
-| Kimi-Dev-72B-UD-IQ1_M | 128k | 29.6 |
-| Llama-3.1-8B-Instruct-BF16 | 128k | 29.1 |
-| Llama-3.3-70B-Instruct-UD-IQ1_M | 128k | 30.2 |
-| Mistral-Nemo-Instruct-2407.Q8_0 | failed to load | - |
-| Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M | 128k | 29.6 |
-| Qwen2.5-Coder-32B-Instruct-Q4_K_M | 32k | 28.1 |
-| Qwen3-Coder-30B-A3B-Instruct-Q4_K_M | 256k | 29.8 |
-| Qwen3-Coder-Next-UD-IQ1_M | 256k | 29.2 |
-| Qwen3.6-27B-Q3_K_S | 256k | 29.0 |
-| Qwen3.6-27B-Q4_K_M | 256k | 29.9 |
-| Qwen3.6-27B-Q5_K_M | 256k | 28.1 |
-| Qwen3.6-27B-Q6_K | 256k | 29.6 |
-| Qwen3.8-27B-Q8_0 | 256k | 29.8 |
-| Qwen3.8-27B-UD-Q4_K_XL | 256k | 29.0 |
-| Qwen3.8-27B-UD-Q6_K_XL | 256k | 28.6 |
-| Mistral-Nemo-Instruct-2407.Q8_0 | failed to load | - |
+| Model | KV cache | Max context | Peak VRAM (GiB) |
+|---|---|---:|---:|
+| Qwen3.8-27B-UD-Q4_K_M | f16 | 208k | 29.8 |
+| Qwen3.8-27B-UD-Q4_K_M | q8_0 | 256k | 28.5 |
+| gemma-4-31B-it-Q4_K_M | f16 | 140k | 31.1 |
+| gemma-4-31B-it-Q4_K_M | q8_0 | 212k | 31.5 |
+| GLM-4.7-Flash-Q4_K_M | f16 | 198k | 29.8 |
+| GLM-4.7-Flash-Q4_K_M | q8_0 | 198k | 25.2 |
+| Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M | f16 | 96k | 30.6 |
+| Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M | q8_0 | 128k | 27.1 |
+| gpt-oss-20b-Q4_K_M | f16 | 128k | 15.7 |
+| gpt-oss-20b-Q4_K_M | q8_0 | 128k | 14.5 |
 
 Notes:
 
-- No model hit an out-of-memory failure. Results below a model's configured ceiling should be treated as observed limits from this fast-discovery run, not final VRAM boundaries; use the full context-fit suite for confirmation.
-
-  | Model | Max context reached | First timeout |
-  |---|---:|---:|
-  | Qwen2.5-Coder-32B-Instruct-Q4_K_M | 32k | 64k |
-
-- `Mistral-Nemo-Instruct-2407.Q8_0` failed at the first probed context with `failed to load model`, so no lower bound exists and bisection was skipped. The file is present on disk, so this looks like a bad or incompatible GGUF rather than a memory limit.
-- The three Qwen3.8 variants are included here; they were absent from the earlier `fast-discovery` table because that directory predates the complete model list.
+- Quantizing the KV cache to `q8_0` extended the reachable context for three of the five models (Qwen `+48k`, gemma `+72k`, Mistral `+32k`) at lower peak VRAM.
+- GLM-4.7-Flash and gpt-oss-20b reached the same context under both KV types because they were capped by their configured ceilings in `models_dual_gpu.csv` (198k and 128k), not by VRAM.
+- gpt-oss-20b is a 20B model and leaves large headroom (14-16 GiB peak of 32 GiB), so its ceiling is the model's own trained context limit rather than available memory.
 
 
 ### Load test

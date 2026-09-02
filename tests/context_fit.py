@@ -21,40 +21,40 @@ Workflow:
 from __future__ import annotations
 
 import argparse
-import csv
-import json
 import os
 import subprocess
 import sys
-import threading
-import time
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-import matplotlib.pyplot as plt
 import yaml
 
+from helper_funcs.context_fit_io import (
+    append_log,
+    append_warning,
+    service_is_active,
+    start_service,
+    stop_service,
+    write_csv,
+    write_plot_png,
+    write_summary_json,
+)
+from helper_funcs.context_fit_runner import run_one_context, verify_boundary
+from helper_funcs.context_fit_types import QuantRunSummary, RunResult
 from helper_funcs.context_fit_utils import (
-    aggregate_runtime_by_context,
-    aggregate_runtime_by_phase,
-    best_error_line,
-    deployment_tier_for_score,
-    detect_oom_like_failure,
+    coarse_sizes_for_max,
     get_stable_success_contexts,
-    mean_optional,
+    kv_label_for_type,
     midpoint_in_bracket,
     normalize_score_breakpoints,
-    parse_llama_bench_csv,
-    score_breakpoints_to_dict,
-    select_deployment_rows,
-    weighted_harmonic_mean,
+    parse_devices,
+    read_total_vram_mib,
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BENCH_BIN = Path("/opt/llama.cpp/build/bin/llama-bench")
-DEFAULT_RESULTS_DIR = REPO_ROOT / "tests" / "results" / "context-size"
+DEFAULT_RESULTS_DIR = REPO_ROOT / "tests" / "results" / "context_fit"
 DEFAULT_CONTEXT_FIT_CONFIG = REPO_ROOT / "tests" / "config" / "context_fit" / "context_fit.yaml"
 DEFAULT_SCORE_BREAKPOINTS: list[tuple[str, float]] = [
     ("interactive", 4.0),
@@ -62,11 +62,6 @@ DEFAULT_SCORE_BREAKPOINTS: list[tuple[str, float]] = [
     ("exclude", 0.0),
 ]
 COARSE_CONTEXT_SIZES = [32768, 65536, 131072, 262144]
-
-
-def coarse_sizes_for_max(max_ctx: int) -> list[int]:
-    '''Returns 4 context sizes for the coarse sweep: max//8, max//4, max//2, max.'''
-    return [max_ctx >> 3, max_ctx >> 2, max_ctx >> 1, max_ctx]
 
 
 def load_context_fit_config(
@@ -105,135 +100,6 @@ def load_context_fit_config(
         sys.exit(1)
 
     return run_config, breakpoints, config_path
-
-
-
-
-@dataclass
-class RunResult:
-    '''Dataclass to hold the result of a single context-size run.'''
-    kv_cache_label: str
-    kv_cache_type: str
-    phase: str
-    context_size: int
-    status: str
-    return_code: int
-    elapsed_s: float
-    peak_vram_total_mib: int
-    peak_vram_per_device: dict[int, int]
-    command: list[str]
-    pp_ts: Optional[float]
-    pp_stddev_ts: Optional[float]
-    tg_ts: Optional[float]
-    tg_stddev_ts: Optional[float]
-    stdout: str
-    stderr: str
-
-
-@dataclass
-class QuantRunSummary:
-    '''Dataclass to hold the summary of a all trials from a single quantization run.'''
-    kv_cache_label: str
-    kv_cache_type: str
-    max_success_ctx: Optional[int]
-    first_fail_ctx: Optional[int]
-    bisect_fail_ctx: Optional[int]
-    boundary_stable: Optional[bool]
-    warnings: list[str]
-
-
-class GpuPeakPoller:
-    '''Polls nvidia-smi for peak VRAM usage on the specified devices at a given interval.'''
-
-    def __init__(self, devices: list[int], interval_s: float):
-        self.devices = devices
-        self.interval_s = interval_s
-        self.peak_used: dict[int, int] = {d: 0 for d in devices}
-        self.total_mem: dict[int, int] = {}
-        self._stop = threading.Event()
-        self._thread: Optional[threading.Thread] = None
-
-    def _read_snapshot(self) -> None:
-        '''Captures snapshot of current VRAM usage and updates peak values.'''
-
-        cmd = [
-            "nvidia-smi",
-            "--query-gpu=index,memory.used,memory.total",
-            "--format=csv,noheader,nounits",
-        ]
-
-        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
-
-        if proc.returncode != 0:
-            return
-
-        for line in proc.stdout.splitlines():
-            parts = [p.strip() for p in line.split(",")]
-
-            if len(parts) != 3:
-                continue
-
-            try:
-                idx = int(parts[0])
-                used = int(parts[1])
-                total = int(parts[2])
-
-            except ValueError:
-                continue
-
-            if idx not in self.devices:
-                continue
-
-            if used > self.peak_used.get(idx, 0):
-                self.peak_used[idx] = used
-
-            self.total_mem[idx] = total
-
-    def _loop(self) -> None:
-        '''Thread loop to poll VRAM usage until stopped.'''
-
-        while not self._stop.is_set():
-            self._read_snapshot()
-            self._stop.wait(self.interval_s)
-
-    def start(self) -> None:
-        '''Starts the polling thread.'''
-
-        self._read_snapshot()
-        self._thread = threading.Thread(target=self._loop, daemon=True)
-        self._thread.start()
-
-    def stop(self) -> None:
-        '''Stops the polling thread and waits for it to finish.'''
-
-        self._stop.set()
-
-        if self._thread is not None:
-            self._thread.join(timeout=2)
-
-        self._read_snapshot()
-
-
-def parse_devices(text: str) -> list[int]:
-    '''Parses a comma-separated list of GPU device indices into a list of integers.
-    Raises ValueError if no valid indices are found.'''
-
-    values = []
-
-    for part in text.split(","):
-        part = part.strip()
-
-        if not part:
-            continue
-
-        values.append(int(part))
-
-    if not values:
-        raise ValueError("At least one GPU device index must be provided")
-
-    return values
-
-
 
 
 def resolve_model_path(model_arg: str) -> Path:
@@ -301,465 +167,6 @@ def load_model_list(path: Path) -> list[tuple[Path, int]]:
         sys.exit(1)
 
     return models
-
-
-def build_command(args: argparse.Namespace, context_size: int, kv_cache_type: str) -> list[str]:
-    '''Builds the command line for llama-bench based on the provided arguments,
-    context size, and KV cache type.
-
-    Default behavior is strict GPU-only fitting: no host spill and no fit-target
-    padding. Host RAM spill is only allowed when the user explicitly opts in.
-    '''
-
-    cmd = [
-        str(args.bench_bin),
-        "-m", str(args.model),
-        "-ngl", str(args.n_gpu_layers),
-        "-sm", args.split_mode,
-        "-p", str(args.n_prompt),
-        "-n", str(args.n_gen),
-        "-d", str(context_size),
-        "-r", str(args.repetitions),
-        "-ctk", kv_cache_type,
-        "-ctv", kv_cache_type,
-        "-fa", args.flash_attn,
-        "-o", "csv",
-    ]
-
-    if args.no_host:
-        cmd.extend(["--no-host", "1"])
-    elif args.fit_target > 0 or args.fit_ctx > 0:
-        cmd.extend(["--fit-target", str(args.fit_target), "--fit-ctx", str(args.fit_ctx)])
-
-    if args.tensor_split:
-        cmd.extend(["-ts", args.tensor_split])
-
-    return cmd
-
-
-def run_one_context(
-    kv_cache_label: str,
-    kv_cache_type: str,
-    phase: str,
-    context_size: int,
-    args: argparse.Namespace,
-    env: dict[str, str],
-    devices: list[int],
-) -> RunResult:
-    '''Runs a single context-size benchmark using llama-bench and
-    returns the result as a RunResult dataclass.'''
-
-    cmd = build_command(args, context_size, kv_cache_type)
-
-    poller = GpuPeakPoller(devices=devices, interval_s=args.poll_interval)
-    t0 = time.perf_counter()
-    poller.start()
-
-    timeout_hit = False
-
-    try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            env=env,
-            cwd=REPO_ROOT,
-            check=False,
-            timeout=args.max_run_seconds,
-        )
-
-    except subprocess.TimeoutExpired as exc:
-        timeout_hit = True
-        stdout = exc.stdout or ""
-        stderr = exc.stderr or ""
-
-        if isinstance(stdout, bytes):
-            stdout = stdout.decode("utf-8", errors="replace")
-
-        if isinstance(stderr, bytes):
-            stderr = stderr.decode("utf-8", errors="replace")
-
-        timeout_line = (
-            f"TIMEOUT: run exceeded --max-run-seconds={args.max_run_seconds} "
-            f"(phase={phase}, ctx={context_size}, kv={kv_cache_type})"
-        )
-        stderr = (stderr + "\n" + timeout_line).strip() + "\n"
-        proc = subprocess.CompletedProcess(
-            args=cmd,
-            returncode=124,
-            stdout=stdout,
-            stderr=stderr,
-        )
-
-    finally:
-        poller.stop()
-
-    elapsed = time.perf_counter() - t0
-    peak_total = sum(poller.peak_used.values())
-
-    pp_ts, pp_stddev_ts, tg_ts, tg_stddev_ts = parse_llama_bench_csv(proc.stdout)
-
-    if timeout_hit:
-        status = "failed"
-
-    elif proc.returncode == 0:
-        status = "ok"
-
-    elif detect_oom_like_failure(proc.returncode, proc.stdout, proc.stderr):
-        status = "failed_oom"
-
-    else:
-        status = "failed"
-
-    return RunResult(
-        kv_cache_label=kv_cache_label,
-        kv_cache_type=kv_cache_type,
-        phase=phase,
-        context_size=context_size,
-        status=status,
-        return_code=proc.returncode,
-        elapsed_s=elapsed,
-        peak_vram_total_mib=peak_total,
-        peak_vram_per_device=poller.peak_used,
-        command=cmd,
-        pp_ts=pp_ts,
-        pp_stddev_ts=pp_stddev_ts,
-        tg_ts=tg_ts,
-        tg_stddev_ts=tg_stddev_ts,
-        stdout=proc.stdout,
-        stderr=proc.stderr,
-    )
-
-
-def write_csv(path: Path, rows: list[RunResult], model: str, devices_text: str) -> None:
-    '''Writes the benchmark results to a CSV file with structured columns.'''
-
-    def make_excerpt(text: str, limit: int = 1200) -> str:
-        '''Returns a compact excerpt preserving both header and tail context.'''
-
-        if len(text) <= limit:
-            return text.replace("\n", "\\n")
-
-        head = text[: limit // 2]
-        tail = text[-(limit // 2):]
-        combined = head + "\n...[truncated]...\n" + tail
-        return combined.replace("\n", "\\n")
-
-    fieldnames = [
-        "timestamp",
-        "model",
-        "gpu_devices",
-        "kv_cache_label",
-        "kv_cache_type",
-        "phase",
-        "context_size",
-        "status",
-        "return_code",
-        "elapsed_s",
-        "peak_vram_total_mib",
-        "peak_vram_per_device",
-        "pp_ts",
-        "pp_stddev_ts",
-        "tg_ts",
-        "tg_stddev_ts",
-        "command",
-        "stdout_excerpt",
-        "stderr_excerpt",
-    ]
-
-    with path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-
-        for row in rows:
-            writer.writerow(
-                {
-                    "timestamp": datetime.now().isoformat(timespec="seconds"),
-                    "model": model,
-                    "gpu_devices": devices_text,
-                    "kv_cache_label": row.kv_cache_label,
-                    "kv_cache_type": row.kv_cache_type,
-                    "phase": row.phase,
-                    "context_size": row.context_size,
-                    "status": row.status,
-                    "return_code": row.return_code,
-                    "elapsed_s": f"{row.elapsed_s:.3f}",
-                    "peak_vram_total_mib": row.peak_vram_total_mib,
-                    "peak_vram_per_device": json.dumps(row.peak_vram_per_device, sort_keys=True),
-                    "pp_ts": "" if row.pp_ts is None else f"{row.pp_ts:.6f}",
-                    "pp_stddev_ts": "" if row.pp_stddev_ts is None else f"{row.pp_stddev_ts:.6f}",
-                    "tg_ts": "" if row.tg_ts is None else f"{row.tg_ts:.6f}",
-                    "tg_stddev_ts": "" if row.tg_stddev_ts is None else f"{row.tg_stddev_ts:.6f}",
-                    "command": " ".join(row.command),
-                    "stdout_excerpt": make_excerpt(row.stdout),
-                    "stderr_excerpt": make_excerpt(row.stderr),
-                }
-            )
-
-
-def append_log(path: Path, row: RunResult, env: dict[str, str]) -> None:
-    '''Appends a single benchmark run result to the log file.'''
-
-    with path.open("a", encoding="utf-8") as f:
-        f.write("\n" + "=" * 88 + "\n")
-        f.write(
-            f"kv_cache={row.kv_cache_label} ({row.kv_cache_type}) "
-            f"phase={row.phase} context_size={row.context_size} status={row.status}\n"
-        )
-        f.write(f"return_code={row.return_code} elapsed_s={row.elapsed_s:.3f}\n")
-        f.write(f"peak_vram_total_mib={row.peak_vram_total_mib}\n")
-        f.write(f"peak_vram_per_device={json.dumps(row.peak_vram_per_device, sort_keys=True)}\n")
-        f.write(
-            f"pp_ts={row.pp_ts} pp_stddev_ts={row.pp_stddev_ts} "
-            f"tg_ts={row.tg_ts} tg_stddev_ts={row.tg_stddev_ts}\n"
-        )
-        f.write(f"CUDA_VISIBLE_DEVICES={env.get('CUDA_VISIBLE_DEVICES', '')}\n")
-        f.write("CMD: " + " ".join(row.command) + "\n")
-
-        if row.stdout:
-            f.write("--- stdout ---\n")
-            f.write(row.stdout)
-
-            if not row.stdout.endswith("\n"):
-                f.write("\n")
-
-        if row.stderr:
-            f.write("--- stderr ---\n")
-            f.write(row.stderr)
-
-            if not row.stderr.endswith("\n"):
-                f.write("\n")
-
-
-def append_warning(log_path: Path, message: str) -> None:
-    '''Appends a warning message to the log file, clearly marked.'''
-
-    with log_path.open("a", encoding="utf-8") as f:
-        f.write("\n" + "!" * 88 + "\n")
-        f.write("WARNING\n")
-        f.write(message + "\n")
-        f.write("!" * 88 + "\n")
-
-
-def write_summary_json(
-    path: Path,
-    *,
-    model: str,
-    gpu_devices: str,
-    coarse_sizes: list[int],
-    score_breakpoints: list[tuple[str, float]],
-    rows: list[RunResult],
-    quant_summaries: list[QuantRunSummary],
-    warnings: list[str],
-) -> None:
-    '''Writes a summary of the benchmark results to a JSON file.'''
-
-    runs: dict[str, dict[str, object]] = {}
-    overall_errors: list[str] = list(warnings)
-    overall_score_candidates: list[tuple[float, str, Optional[int]]] = []
-    breakpoint_dict = score_breakpoints_to_dict(score_breakpoints)
-    runtime_by_kv_cache_s: dict[str, float] = {}
-
-    for summary in quant_summaries:
-        quant_rows = [r for r in rows if r.kv_cache_type == summary.kv_cache_type]
-        run_errors: list[str] = list(summary.warnings)
-        deployment_rows = select_deployment_rows(
-            rows, summary.kv_cache_type, summary.max_success_ctx
-        )
-
-        deployment_pp_ts = mean_optional([r.pp_ts for r in deployment_rows])
-        deployment_tg_ts = mean_optional([r.tg_ts for r in deployment_rows])
-        deployment_score = weighted_harmonic_mean(deployment_pp_ts, deployment_tg_ts)
-        deployment_tier, deployment_tier_threshold = deployment_tier_for_score(
-            deployment_score, score_breakpoints
-        )
-        runtime_total_s = sum(r.elapsed_s for r in quant_rows)
-        runtime_by_context_s = aggregate_runtime_by_context(quant_rows)
-        runtime_by_phase_s = aggregate_runtime_by_phase(quant_rows)
-        runtime_by_kv_cache_s[summary.kv_cache_label] = round(runtime_total_s, 3)
-
-        if deployment_score is not None:
-            overall_score_candidates.append(
-                (deployment_score, summary.kv_cache_label, summary.max_success_ctx)
-            )
-
-        for row in quant_rows:
-            if row.status == "failed":
-                err_line = best_error_line(row.stderr)
-
-                run_errors.append(f"ctx={row.context_size}: {err_line}")
-
-        run_errors = list(dict.fromkeys(run_errors))
-        overall_errors.extend(run_errors)
-
-        runs[summary.kv_cache_label] = {
-            "kv_cache_label": summary.kv_cache_label,
-            "kv_cache_type": summary.kv_cache_type,
-            "max_context": summary.max_success_ctx,
-            "max_context_stable": summary.boundary_stable,
-            "first_fail_ctx": summary.first_fail_ctx,
-            "bisect_fail_ctx": summary.bisect_fail_ctx,
-            "runs_total": len(quant_rows),
-            "runs_ok": sum(1 for r in quant_rows if r.status == "ok"),
-            "runs_failed_oom": sum(1 for r in quant_rows if r.status == "failed_oom"),
-            "runs_failed_other": sum(1 for r in quant_rows if r.status == "failed"),
-            "runtime_total_s": round(runtime_total_s, 3),
-            "runtime_by_context_s": runtime_by_context_s,
-            "runtime_by_phase_s": runtime_by_phase_s,
-            "deployment_score": deployment_score,
-            "deployment_tier": deployment_tier,
-            "deployment_tier_threshold": deployment_tier_threshold,
-            "deployment_score_pp_ts_mean": deployment_pp_ts,
-            "deployment_score_tg_ts_mean": deployment_tg_ts,
-            "deployment_score_source_context": summary.max_success_ctx,
-            "deployment_score_formula": (
-                "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; "
-                "prompt_weight=0.35, generation_weight=0.65)"
-            ),
-            "deployment_score_breakpoints": breakpoint_dict,
-            "errors": run_errors,
-        }
-
-    overall_errors = list(dict.fromkeys(overall_errors))
-
-    overall_summary: dict[str, object] = {
-        "runs_total": len(rows),
-        "runs_ok": sum(1 for r in rows if r.status == "ok"),
-        "runs_failed_oom": sum(1 for r in rows if r.status == "failed_oom"),
-        "runs_failed_other": sum(1 for r in rows if r.status == "failed"),
-        "runtime_total_s": round(sum(r.elapsed_s for r in rows), 3),
-        "runtime_by_kv_cache_s": runtime_by_kv_cache_s,
-        "runtime_by_context_s": aggregate_runtime_by_context(rows),
-        "runtime_by_phase_s": aggregate_runtime_by_phase(rows),
-        "errors": overall_errors,
-    }
-
-    for summary in quant_summaries:
-        overall_summary[f"{summary.kv_cache_label}_max_context"] = summary.max_success_ctx
-        overall_summary[f"{summary.kv_cache_label}_max_context_stable"] = summary.boundary_stable
-
-    if overall_score_candidates:
-        best_score, best_label, best_context = max(
-            overall_score_candidates, key=lambda item: item[0]
-        )
-        best_tier, best_tier_threshold = deployment_tier_for_score(best_score, score_breakpoints)
-        overall_summary["deployment_score"] = best_score
-        overall_summary["deployment_score_kv_cache_label"] = best_label
-        overall_summary["deployment_score_context"] = best_context
-        overall_summary["deployment_tier"] = best_tier
-        overall_summary["deployment_tier_threshold"] = best_tier_threshold
-        overall_summary["deployment_score_formula"] = (
-            "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; "
-            "prompt_weight=0.35, generation_weight=0.65)"
-        )
-    else:
-        overall_summary["deployment_score"] = None
-        overall_summary["deployment_score_kv_cache_label"] = None
-        overall_summary["deployment_score_context"] = None
-        overall_summary["deployment_tier"] = None
-        overall_summary["deployment_tier_threshold"] = None
-        overall_summary["deployment_score_formula"] = (
-            "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; "
-            "prompt_weight=0.35, generation_weight=0.65)"
-        )
-
-    overall_summary["deployment_score_breakpoints"] = breakpoint_dict
-
-    payload = {
-        "timestamp": datetime.now().isoformat(timespec="seconds"),
-        "model": model,
-        "gpu_devices": gpu_devices,
-        "context_sizes": coarse_sizes,
-        "overall_summary": overall_summary,
-        "runs": runs,
-    }
-
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-
-
-def write_plot_png(
-    path: Path,
-    rows: list[RunResult],
-) -> None:
-    '''Generates a scatter plot of context size vs peak VRAM usage,
-    color-coded by KV cache type and status.'''
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    quant_order = ["q4", "q8", "f16"]
-    color_map = {
-        "f16": "#1f77b4",
-        "q8": "#ff7f0e",
-        "q4": "#2ca02c",
-    }
-
-    labels = sorted(
-        {r.kv_cache_label for r in rows},
-        key=lambda x: quant_order.index(x) if x in quant_order else x,
-    )
-
-    for label in labels:
-        color = color_map.get(label, "#7f7f7f")
-        quant_rows = [r for r in rows if r.kv_cache_label == label]
-        ok_rows = sorted(
-            [r for r in quant_rows if r.status == "ok"],
-            key=lambda r: r.context_size,
-        )
-        oom_rows = sorted(
-            [r for r in quant_rows if r.status == "failed_oom"],
-            key=lambda r: r.context_size,
-        )
-
-        if ok_rows:
-            x_ok = [r.context_size for r in ok_rows]
-            y_ok = [r.peak_vram_total_mib for r in ok_rows]
-            ax.scatter(x_ok, y_ok, color=color, s=45, label=f"{label} ok")
-
-        if oom_rows:
-            x_oom = [r.context_size for r in oom_rows]
-            y_oom = [r.peak_vram_total_mib for r in oom_rows]
-            ax.scatter(x_oom, y_oom, color=color, marker="x", s=60, label=f"{label} oom")
-
-    ax.set_xlabel("Context size")
-    ax.set_ylabel("Peak VRAM used (MiB, summed selected GPUs)")
-    ax.set_title("Context size vs peak VRAM by KV cache quantization")
-    ax.grid(True, linestyle="--", alpha=0.4)
-
-    handles, labels = ax.get_legend_handles_labels()
-
-    if handles:
-        ax.legend()
-
-    fig.tight_layout()
-    fig.savefig(path, dpi=300, bbox_inches="tight")
-    plt.close(fig)
-
-
-def service_is_active(service_name: str) -> bool:
-    '''Checks if a systemd service is active by invoking 'systemctl is-active'.'''
-
-    proc = subprocess.run(
-        ["systemctl", "is-active", service_name],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    return proc.returncode == 0 and proc.stdout.strip() == "active"
-
-
-def stop_service(service_name: str) -> None:
-    '''Stops a systemd service by invoking 'systemctl stop'.
-    Raises CalledProcessError on failure.'''
-
-    subprocess.run(["sudo", "systemctl", "stop", service_name], check=True)
-
-
-def start_service(service_name: str) -> None:
-    '''Starts a systemd service by invoking 'systemctl start'.
-    Raises CalledProcessError on failure.'''
-
-    subprocess.run(["sudo", "systemctl", "start", service_name], check=True)
 
 
 def parse_args() -> argparse.Namespace:
@@ -997,9 +404,7 @@ def _run_for_model(
     args.model = model_path  # build_command reads args.model
 
     # Read total available VRAM once; used to decide whether stability verification is needed.
-    _vram_probe = GpuPeakPoller(devices=devices, interval_s=1.0)
-    _vram_probe._read_snapshot()
-    total_vram_mib = sum(_vram_probe.total_mem.values())
+    total_vram_mib = read_total_vram_mib(devices)
     # verify only when within 1 GiB of limit
     verify_vram_threshold_mib = max(0, total_vram_mib - 1024)
 
@@ -1047,67 +452,21 @@ def _run_for_model(
                 f"[{kv_label}] Reached maximum tested context "
                 f"({max_coarse}) successfully; skipping bisection")
 
-            if args.verify_runs > 0:
-                max_coarse_result = next(
-                    (
-                        r for r in reversed(rows)
-                        if r.context_size == max_coarse
-                        and r.kv_cache_type == kv_type
-                        and r.status == "ok"
-                    ),
-                    None,
-                )
-                peak = max_coarse_result.peak_vram_total_mib if max_coarse_result else 0
-                if peak >= verify_vram_threshold_mib:
-                    print(
-                        f"[{kv_label}] Verifying max context={max_coarse} "
-                        f"with {args.verify_runs} run(s) "
-                        f"(peak {peak} MiB within 1 GiB of {total_vram_mib} MiB)"
-                    )
-
-                    verify_failed = False
-
-                    for i in range(args.verify_runs):
-                        print(
-                            f"[{kv_label} verify] ctx={max_coarse} "
-                            f"run={i + 1}/{args.verify_runs}"
-                        )
-
-                        result = run_one_context(
-                            kv_label,
-                            kv_type,
-                            "verify",
-                            max_coarse,
-                            args,
-                            env,
-                            devices
-                        )
-
-                        rows.append(result)
-                        append_log(log_path, result, env)
-
-                        if result.status != "ok":
-                            verify_failed = True
-
-                    boundary_stable = not verify_failed
-
-                    if verify_failed:
-                        msg = (
-                            f"[{kv_label}] Max context {max_coarse} is unstable: "
-                            "at least one verification run failed. "
-                            "A single failure disqualifies this context for production use."
-                        )
-
-                        print(f"WARNING: {msg}")
-                        warnings.append(msg)
-                        quant_warnings.append(msg)
-                        append_warning(log_path, msg)
-                else:
-                    print(
-                        f"[{kv_label}] Skipping stability verification: peak VRAM {peak} MiB "
-                        f"has {total_vram_mib - peak} MiB headroom (threshold 1 GiB)"
-                    )
-                    boundary_stable = True
+            boundary_stable = verify_boundary(
+                kv_label=kv_label,
+                kv_type=kv_type,
+                ctx=max_coarse,
+                label="Max context",
+                args=args,
+                env=env,
+                devices=devices,
+                rows=rows,
+                log_path=log_path,
+                warnings=warnings,
+                quant_warnings=quant_warnings,
+                total_vram_mib=total_vram_mib,
+                verify_vram_threshold_mib=verify_vram_threshold_mib,
+            )
 
         # Phase 2: bisection refinement between last success and first fail
         quant_rows = [row for row in rows if row.kv_cache_type == kv_type]
@@ -1163,67 +522,21 @@ def _run_for_model(
 
                 bisect_high = high
 
-                if args.verify_runs > 0:
-                    low_result = next(
-                        (
-                            r for r in reversed(rows)
-                            if r.context_size == low
-                            and r.kv_cache_type == kv_type
-                            and r.status == "ok"
-                        ),
-                        None,
-                    )
-                    peak = low_result.peak_vram_total_mib if low_result else 0
-                    if peak >= verify_vram_threshold_mib:
-                        print(
-                            f"[{kv_label}] Verifying boundary "
-                            f"context={low} with {args.verify_runs} run(s) "
-                            f"(peak {peak} MiB within 1 GiB of {total_vram_mib} MiB)"
-                        )
-
-                        verify_failed = False
-
-                        for i in range(args.verify_runs):
-                            print(
-                                f"[{kv_label} verify] ctx={low} "
-                                f"run={i + 1}/{args.verify_runs}"
-                            )
-
-                            result = run_one_context(
-                                kv_label,
-                                kv_type,
-                                "verify",
-                                low,
-                                args,
-                                env,
-                                devices
-                            )
-
-                            rows.append(result)
-                            append_log(log_path, result, env)
-
-                            if result.status != "ok":
-                                verify_failed = True
-
-                        boundary_stable = not verify_failed
-
-                        if verify_failed:
-                            msg = (
-                                f"[{kv_label}] Boundary context {low} is unstable: at "
-                                "least one verification run failed. A single failure "
-                                "disqualifies this context for production use."
-                            )
-
-                            print(f"WARNING: {msg}")
-                            warnings.append(msg)
-                            quant_warnings.append(msg)
-                            append_warning(log_path, msg)
-                    else:
-                        print(
-                            f"[{kv_label}] Skipping stability verification: peak VRAM {peak} MiB "
-                            f"has {total_vram_mib - peak} MiB headroom (threshold 1 GiB)"
-                        )
-                        boundary_stable = True
+                boundary_stable = verify_boundary(
+                    kv_label=kv_label,
+                    kv_type=kv_type,
+                    ctx=low,
+                    label="Boundary context",
+                    args=args,
+                    env=env,
+                    devices=devices,
+                    rows=rows,
+                    log_path=log_path,
+                    warnings=warnings,
+                    quant_warnings=quant_warnings,
+                    total_vram_mib=total_vram_mib,
+                    verify_vram_threshold_mib=verify_vram_threshold_mib,
+                )
 
         elif first_fail_ctx is not None and not successful:
             msg = (
@@ -1319,19 +632,9 @@ def main() -> None:
         print("ERROR: --kv-cache-types must include at least one cache type")
         sys.exit(1)
 
-    label_map = {
-        "f16": "f16",
-        "q8_0": "q8",
-        "q8": "q8",
-        "q4_0": "q4",
-        "q4": "q4",
-    }
-
-    kv_runs: list[tuple[str, str]] = []
-
-    for kv_type in kv_type_tokens:
-        label = label_map.get(kv_type, kv_type)
-        kv_runs.append((label, kv_type))
+    kv_runs: list[tuple[str, str]] = [
+        (kv_label_for_type(kv_type), kv_type) for kv_type in kv_type_tokens
+    ]
 
     if args.model and args.model_list:
         print("ERROR: --model and --model-list are mutually exclusive")

@@ -36,7 +36,7 @@ Minimal metadata for what each file and subdirectory is for.
 
 ## Notes
 
-- Context-fit runs write per-run artifacts under `tests/results/context-size/...`.
+- Context-fit runs write per-run artifacts under `tests/results/context_fit/...`.
 - Context-fit artifact names are `results.csv`, `run.log`, `summary.json`, and `plot.png`.
 - Load-test runs write artifacts under `tests/results/load-test/...`.
 - Load-test suites in `tests/config/load_test/*.yaml` are consumed by `tests/load_test.py`.
@@ -46,5 +46,5 @@ Minimal metadata for what each file and subdirectory is for.
 
 | Path | Purpose |
 |---|---|
-| `results/context-size/` | Context-size benchmark outputs grouped by config/profile and run name. |
+| `results/context_fit/` | Context-size benchmark outputs grouped by config/profile and run name. |
 | `results/load-test/` | API load-test outputs grouped by date/case/slots. |

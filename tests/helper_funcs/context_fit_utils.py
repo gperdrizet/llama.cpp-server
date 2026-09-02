@@ -1,9 +1,21 @@
+"""Pure helper functions for the context-fit benchmark: output parsing, failure
+classification, scoring, and runtime aggregation."""
+
 from __future__ import annotations
 
 import csv
 import io
 import re
+import subprocess
 from typing import Optional
+
+KV_LABEL_MAP = {
+    "f16": "f16",
+    "q8_0": "q8",
+    "q8": "q8",
+    "q4_0": "q4",
+    "q4": "q4",
+}
 
 OOM_PATTERNS = [
     re.compile(r"cuda.*out of memory", re.IGNORECASE),
@@ -29,6 +41,7 @@ def normalize_score_breakpoints(
     raw_breakpoints: object,
     default_breakpoints: list[tuple[str, float]],
 ) -> list[tuple[str, float]]:
+    '''Normalizes score breakpoints to a list of (label, min_score) sorted high to low.'''
     if raw_breakpoints is None:
         breakpoints = list(default_breakpoints)
     elif isinstance(raw_breakpoints, dict):
@@ -42,10 +55,12 @@ def normalize_score_breakpoints(
 
 
 def score_breakpoints_to_dict(breakpoints: list[tuple[str, float]]) -> dict[str, float]:
+    '''Converts a list of (label, min_score) breakpoints to a label -> min_score dict.'''
     return {label: minimum_score for label, minimum_score in breakpoints}
 
 
 def detect_oom_like_failure(return_code: int, stdout: str, stderr: str) -> bool:
+    '''Returns True if the output or return code matches known out-of-memory signatures.'''
     combined = f"{stdout}\n{stderr}"
 
     if any(pattern.search(combined) for pattern in OOM_PATTERNS):
@@ -63,6 +78,7 @@ def detect_oom_like_failure(return_code: int, stdout: str, stderr: str) -> bool:
 def parse_llama_bench_csv(
     stdout: str,
 ) -> tuple[Optional[float], Optional[float], Optional[float], Optional[float]]:
+    '''Parses llama-bench CSV output into mean (pp_ts, pp_stddev, tg_ts, tg_stddev).'''
     lines = [line.strip() for line in stdout.splitlines() if line.strip()]
 
     if len(lines) < 2:
@@ -136,6 +152,7 @@ def parse_llama_bench_csv(
 
 
 def round_to_step(value: int, step: int) -> int:
+    '''Rounds value to the nearest multiple of step (no-op when step <= 1).'''
     if step <= 1:
         return value
 
@@ -143,6 +160,7 @@ def round_to_step(value: int, step: int) -> int:
 
 
 def midpoint_in_bracket(low: int, high: int, step: int) -> int:
+    '''Returns a step-aligned midpoint strictly between low and high.'''
     mid = round_to_step((low + high) // 2, step)
 
     if mid <= low:
@@ -155,6 +173,7 @@ def midpoint_in_bracket(low: int, high: int, step: int) -> int:
 
 
 def get_stable_success_contexts(rows: list[object]) -> list[int]:
+    '''Returns sorted contexts that succeeded and never failed at the same size.'''
     ok_ctx = {getattr(r, "context_size") for r in rows if getattr(r, "status") == "ok"}
     failed_ctx = {
         getattr(r, "context_size") for r in rows if getattr(r, "status") in ("failed", "failed_oom")
@@ -164,6 +183,7 @@ def get_stable_success_contexts(rows: list[object]) -> list[int]:
 
 
 def best_error_line(stderr: str) -> str:
+    '''Picks the most informative error line from stderr, skipping known noise.'''
     lines = [line.strip() for line in stderr.splitlines() if line.strip()]
     if not lines:
         return "unknown error"
@@ -206,6 +226,7 @@ def weighted_harmonic_mean(
     prompt_weight: float = 0.35,
     generation_weight: float = 0.65,
 ) -> Optional[float]:
+    '''Returns the prompt/generation weighted harmonic mean, or None if inputs invalid.'''
     if pp_ts is None or tg_ts is None:
         return None
 
@@ -220,6 +241,7 @@ def weighted_harmonic_mean(
 
 
 def mean_optional(values: list[Optional[float]]) -> Optional[float]:
+    '''Returns the mean of the non-None values, or None if there are none.'''
     filtered = [value for value in values if value is not None]
     if not filtered:
         return None
@@ -231,6 +253,7 @@ def deployment_tier_for_score(
     score: Optional[float],
     breakpoints: list[tuple[str, float]],
 ) -> tuple[Optional[str], Optional[float]]:
+    '''Returns the (tier label, threshold) for the highest breakpoint the score meets.'''
     if score is None:
         return None, None
 
@@ -244,6 +267,7 @@ def deployment_tier_for_score(
 def select_deployment_rows(
     rows: list[object], kv_cache_type: str, max_context: Optional[int]
 ) -> list[object]:
+    '''Returns the successful rows at the given KV cache type and max context.'''
     if max_context is None:
         return []
 
@@ -257,6 +281,7 @@ def select_deployment_rows(
 
 
 def aggregate_runtime_by_context(rows: list[object]) -> dict[str, float]:
+    '''Sums elapsed seconds per context size, keyed by context as a string.'''
     totals: dict[int, float] = {}
 
     for row in rows:
@@ -271,6 +296,7 @@ def aggregate_runtime_by_context(rows: list[object]) -> dict[str, float]:
 
 
 def aggregate_runtime_by_phase(rows: list[object]) -> dict[str, float]:
+    '''Sums elapsed seconds per phase (coarse, refine, verify).'''
     totals: dict[str, float] = {}
 
     for row in rows:
@@ -282,3 +308,65 @@ def aggregate_runtime_by_phase(rows: list[object]) -> dict[str, float]:
         phase: round(total_s, 3)
         for phase, total_s in sorted(totals.items())
     }
+
+
+def coarse_sizes_for_max(max_ctx: int) -> list[int]:
+    '''Returns 4 context sizes for the coarse sweep: max//8, max//4, max//2, max.'''
+    return [max_ctx >> 3, max_ctx >> 2, max_ctx >> 1, max_ctx]
+
+
+def parse_devices(text: str) -> list[int]:
+    '''Parses a comma-separated list of GPU device indices into a list of integers.
+    Raises ValueError if no valid indices are found.'''
+
+    values = [int(part.strip()) for part in text.split(",") if part.strip()]
+
+    if not values:
+        raise ValueError("At least one GPU device index must be provided")
+
+    return values
+
+
+def kv_label_for_type(kv_cache_type: str) -> str:
+    '''Maps a KV cache type token to its short label (e.g. q8_0 -> q8).'''
+    return KV_LABEL_MAP.get(kv_cache_type, kv_cache_type)
+
+
+def read_total_vram_mib(devices: list[int]) -> int:
+    '''Returns the summed total VRAM (MiB) of the given devices via nvidia-smi.
+    Returns 0 if nvidia-smi is unavailable or returns no parseable rows.'''
+
+    proc = subprocess.run(
+        [
+            "nvidia-smi",
+            "--query-gpu=index,memory.total",
+            "--format=csv,noheader,nounits",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if proc.returncode != 0:
+        return 0
+
+    total = 0
+
+    for line in proc.stdout.splitlines():
+        parts = [p.strip() for p in line.split(",")]
+
+        if len(parts) != 2:
+            continue
+
+        try:
+            idx = int(parts[0])
+            mem_total = int(parts[1])
+
+        except ValueError:
+            continue
+
+        if idx in devices:
+            total += mem_total
+
+    return total
+

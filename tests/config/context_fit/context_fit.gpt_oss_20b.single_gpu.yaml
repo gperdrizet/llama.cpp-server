@@ -3,7 +3,7 @@ run:
   max_context: 262144                               # Max context for single-model runs (derives coarse sweep)
   gpus: "1"                                         # GPUs to use (CUDA_VISIBLE_DEVICES)
   bench_bin: /opt/llama.cpp/build/bin/llama-bench   # Path to llama-bench binary
-  results_dir: tests/results/context-size/gpt-oss-20b-single-gpu # Directory for results
+  results_dir: tests/results/context_fit/gpt-oss-20b-single-gpu # Directory for results
   run_name: gpt_oss_20b_single_gpu_full             # Optional run name (null => auto-generated)
   n_gpu_layers: -1                                  # Number of model layers on GPU (-1 for all)
   split_mode: layer                                 # Multi-GPU split mode for llama.cpp

@@ -2,7 +2,7 @@ run:
   model_list: tests/config/context_fit/models.csv       # CSV file with: model,max_context
   gpus: "1,2"                                           # GPUs to use (CUDA_VISIBLE_DEVICES)
   bench_bin: /opt/llama.cpp/build/bin/llama-bench       # Path to llama-bench binary
-  results_dir: tests/results/context-size/fast-discovery-f16 # Directory for results
+  results_dir: tests/results/context_fit/fast-discovery-f16 # Directory for results
   run_name: First pass max context discovery run        # Optional run name (null => auto-generated)
   n_gpu_layers: -1                                      # Number of model layers on GPU (-1 for all)
   split_mode: layer                                     # Multi-GPU split mode for llama.cpp

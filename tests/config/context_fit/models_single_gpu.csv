@@ -1,0 +1,9 @@
+model,max_context
+Qwen3.8-27B-UD-IQ4_XS.gguf,262144
+Qwen3.8-27B-UD-Q3_K_XL.gguf,262144
+Qwen3.8-27B-UD-IQ3_S.gguf,262144
+gemma-4-26B-A4B-it-UD-IQ4_XS.gguf,262144
+gemma-4-26B-A4B-it-UD-Q3_K_M.gguf,262144
+GLM-4.7-Flash-UD-IQ3_XXS.gguf,202752
+Mistral-Small-3.2-24B-Instruct-2506-UD-Q3_K_XL.gguf,131072
+gpt-oss-20b-Q4_K_M.gguf,131072

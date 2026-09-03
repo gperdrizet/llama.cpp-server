@@ -1,0 +1,6 @@
+model,cache_type_k,cache_type_v,description
+Qwen3.8-27B-UD-Q4_K_M.gguf,f16,f16,Dual-GPU Qwen 27B Q4_K_M
+gemma-4-31B-it-Q4_K_M.gguf,f16,f16,Dual-GPU gemma 31B Q4_K_M
+GLM-4.7-Flash-Q4_K_M.gguf,f16,f16,Dual-GPU GLM-4.7-Flash Q4_K_M
+Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M.gguf,f16,f16,Dual-GPU Mistral-Small 24B Q4_K_M
+gpt-oss-20b-Q4_K_M.gguf,f16,f16,Dual-GPU gpt-oss-20b Q4_K_M

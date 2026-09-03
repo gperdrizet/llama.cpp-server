@@ -115,6 +115,43 @@ def wait_for_health(url: str, max_retries: int = 30, api_key: str = "") -> bool:
     return False
 
 
+def _sudo_can_run(argv: list[str]) -> tuple[bool, str]:
+    '''Probes a sudo command with the credential cache ignored (-k), so the result
+    reflects a real NOPASSWD grant rather than a warm timestamp. Returns
+    (succeeded, stderr-or-error-text).'''
+    try:
+        result = subprocess.run(
+            ["sudo", "-k", "-n", *argv],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        return False, str(exc)
+
+    return result.returncode == 0, (result.stderr or result.stdout).strip()
+
+
+def preflight_sudo_check(sample_model_path: Optional[str]) -> tuple[bool, str]:
+    '''Confirms, independent of sudo's credential cache, that deploy_service.sh's
+    privileged commands are truly passwordless. A warm cache passes at startup but
+    expires mid-sweep, so only a real NOPASSWD grant survives a long run. Probes one
+    command from each privilege tier the deploy touches: run-as-root systemctl and
+    the run-as-llama model read check. Returns (ok, failing-detail).'''
+    ok, detail = _sudo_can_run(["systemctl", "daemon-reload"])
+    if not ok:
+        return False, f"'sudo systemctl daemon-reload' is not passwordless ({detail})"
+
+    if sample_model_path:
+        ok, detail = _sudo_can_run(["-u", "llama", "test", "-r", sample_model_path])
+        if not ok:
+            return False, f"'sudo -u llama test -r <model>' is not passwordless ({detail})"
+
+    return True, ""
+
+
 def deploy_model(
     model_file: str,
     cache_type_k: str = "f16",
@@ -158,9 +195,10 @@ def deploy_model(
             env_content = re.sub(
                 r'^TENSOR_SPLIT=.*$', 'TENSOR_SPLIT=', env_content, flags=re.MULTILINE
             )
-            # 'layer' split-mode with a single visible device can take a slower code
-            # path than 'none' - use 'none' for single-GPU so the comparison is fair.
-            split_mode = 'none' if ',' not in cuda_device else 'layer'
+            # Single visible device: 'none' avoids the slower multi-GPU code path.
+            # Multiple devices: 'row' matches the deployment (tensor-parallel decode,
+            # ~14% faster generation than 'layer' on the P100s).
+            split_mode = 'none' if ',' not in cuda_device else 'row'
             env_content = re.sub(
                 r'^SPLIT_MODE=.*$', f'SPLIT_MODE={split_mode}',
                 env_content, flags=re.MULTILINE
@@ -656,6 +694,30 @@ def main():
     write_run_config(config_path, models_to_test, args)
     print(f"  Run config: {config_path}")
     print(f"{'='*70}\n")
+
+    # deploy_service.sh runs several privileged commands per model (run-as-root
+    # systemctl/tee, plus a run-as-llama model read check). Verify they are truly
+    # passwordless now - cache-independently - so a run that outlives sudo's
+    # credential cache fails here instead of stalling on a hidden password prompt.
+    model_dir = os.getenv("MODEL_DIR", "").strip()
+    sample_model_path = (
+        str(Path(model_dir) / models_to_test[0][0])
+        if model_dir and models_to_test else None
+    )
+    sudo_ok, sudo_detail = preflight_sudo_check(sample_model_path)
+    if not sudo_ok:
+        print(
+            "ERROR: deployment needs passwordless sudo, and it is not fully configured.\n"
+            f"  Failing check: {sudo_detail}\n"
+            "  deploy_service.sh runs these per model; each needs a NOPASSWD grant\n"
+            "  (a warm sudo cache is not enough - a long run outlives it):\n"
+            "    (root)  systemctl daemon-reload, restart|stop|start llamacpp.service\n"
+            "    (root)  tee /etc/systemd/system/llamacpp.service\n"
+            "    (llama) test -r <MODEL_DIR>/*   <- the tier that blocked the last run\n"
+            "  Edit with 'sudo visudo -f /etc/sudoers.d/llamacpp-benchmark' and add, e.g.:\n"
+            f"    $USER ALL=(llama) NOPASSWD: /usr/bin/test -r {model_dir or '<MODEL_DIR>'}/*"
+        )
+        sys.exit(1)
 
     # Test each model x slot count combination. Results are appended to disk after
     # each condition finishes, and conditions already fully recorded are skipped,

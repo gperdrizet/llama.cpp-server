@@ -241,6 +241,16 @@ Notes:
 - gpt-oss-20b is a 20B model and leaves large headroom (14-16 GiB peak of 32 GiB), so its ceiling is the model's own trained context limit rather than available memory.
 
 
+### Speculative decoding (unsupported for the qwen35 / M-RoPE models)
+
+Speculative decoding does not work for the `Qwen3.8-27B` (`qwen35` architecture) models on the current llama.cpp build (`b4024af6c`, build 9687), by any path:
+
+- A standalone draft (`Qwen3.5-2B`, vocab-compatible) loads and drafts tokens, but the target's verification batch fails with `decode: failed to initialize batch` / `for M-RoPE, it is required that the position satisfies: X < Y`, yielding ~0% acceptance and no speedup.
+- The purpose-built MTP head (`mtp-Qwen3.8-27B-Q4_0.gguf`) segfaults when loaded as a `-md` draft; `llama-speculative-simple` aborts.
+
+Root cause: `qwen35` uses **M-RoPE** (`rope.dimension_sections = [11, 11, 10, 0]`), and this build's speculative batch construction cannot assign the non-contiguous positions M-RoPE requires. This is a llama.cpp limitation, not a configuration problem - the drafts are vocab-compatible and the flags are correct. Re-test after a llama.cpp update that adds M-RoPE support to the speculative path (and MTP support for this architecture). Until then, the bankable generation win is `-sm row` (~+14% tg) plus concurrency/batching.
+
+
 ### Load test
 
 `tests/load_test.py` supports both one-off runs and YAML-defined benchmark suites.

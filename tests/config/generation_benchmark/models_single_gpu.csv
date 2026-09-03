@@ -1,0 +1,9 @@
+model,cache_type_k,cache_type_v,description
+Qwen3.8-27B-UD-IQ4_XS.gguf,f16,f16,Single-GPU Qwen 27B IQ4_XS
+Qwen3.8-27B-UD-Q3_K_XL.gguf,f16,f16,Single-GPU Qwen 27B Q3_K_XL
+Qwen3.8-27B-UD-IQ3_S.gguf,f16,f16,Single-GPU Qwen 27B IQ3_S
+gemma-4-26B-A4B-it-UD-IQ4_XS.gguf,f16,f16,Single-GPU gemma 26B-A4B IQ4_XS
+gemma-4-26B-A4B-it-UD-Q3_K_M.gguf,f16,f16,Single-GPU gemma 26B-A4B Q3_K_M
+GLM-4.7-Flash-UD-IQ3_XXS.gguf,f16,f16,Single-GPU GLM-4.7-Flash IQ3_XXS
+Mistral-Small-3.2-24B-Instruct-2506-UD-Q3_K_XL.gguf,f16,f16,Single-GPU Mistral-Small 24B Q3_K_XL
+gpt-oss-20b-Q4_K_M.gguf,f16,f16,Single-GPU gpt-oss-20b Q4_K_M

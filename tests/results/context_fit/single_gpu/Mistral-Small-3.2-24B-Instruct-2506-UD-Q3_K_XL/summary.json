@@ -1,0 +1,140 @@
+{
+  "timestamp": "2026-09-03T07:21:56",
+  "model": "Mistral-Small-3.2-24B-Instruct-2506-UD-Q3_K_XL.gguf",
+  "gpu_devices": "1",
+  "context_sizes": [
+    16384,
+    32768,
+    65536,
+    131072
+  ],
+  "overall_summary": {
+    "runs_total": 12,
+    "runs_ok": 7,
+    "runs_failed_oom": 2,
+    "runs_failed_other": 3,
+    "runtime_total_s": 1926.278,
+    "runtime_by_kv_cache_s": {
+      "f16": 572.475,
+      "q8": 1353.803
+    },
+    "runtime_by_context_s": {
+      "16384": 290.813,
+      "24576": 399.48,
+      "28672": 5.082,
+      "32768": 279.755,
+      "49152": 935.37,
+      "53248": 5.624,
+      "57344": 5.274,
+      "65536": 4.879
+    },
+    "runtime_by_phase_s": {
+      "coarse": 575.447,
+      "refine": 682.664,
+      "verify": 668.167
+    },
+    "errors": [
+      "ctx=32768: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-UD-Q3_K_XL.gguf'",
+      "ctx=65536: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-UD-Q3_K_XL.gguf'",
+      "ctx=57344: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-UD-Q3_K_XL.gguf'"
+    ],
+    "f16_max_context": 24576,
+    "f16_max_context_stable": true,
+    "q8_max_context": 49152,
+    "q8_max_context_stable": true,
+    "deployment_score": 16.518483823807298,
+    "deployment_score_kv_cache_label": "f16",
+    "deployment_score_context": 24576,
+    "deployment_tier": "interactive",
+    "deployment_tier_threshold": 4.0,
+    "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+    "deployment_score_breakpoints": {
+      "interactive": 4.0,
+      "batch": 0.5,
+      "exclude": 0.0
+    }
+  },
+  "runs": {
+    "f16": {
+      "kv_cache_label": "f16",
+      "kv_cache_type": "f16",
+      "max_context": 24576,
+      "max_context_stable": true,
+      "first_fail_ctx": 32768,
+      "bisect_fail_ctx": 28672,
+      "runs_total": 5,
+      "runs_ok": 3,
+      "runs_failed_oom": 1,
+      "runs_failed_other": 1,
+      "runtime_total_s": 572.475,
+      "runtime_by_context_s": {
+        "16384": 163.023,
+        "24576": 399.48,
+        "28672": 5.082,
+        "32768": 4.889
+      },
+      "runtime_by_phase_s": {
+        "coarse": 167.913,
+        "refine": 204.779,
+        "verify": 199.784
+      },
+      "deployment_score": 16.518483823807298,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 75.9409655,
+      "deployment_score_tg_ts_mean": 11.6217945,
+      "deployment_score_source_context": 24576,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": [
+        "ctx=32768: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-UD-Q3_K_XL.gguf'"
+      ]
+    },
+    "q8": {
+      "kv_cache_label": "q8",
+      "kv_cache_type": "q8_0",
+      "max_context": 49152,
+      "max_context_stable": true,
+      "first_fail_ctx": 65536,
+      "bisect_fail_ctx": 53248,
+      "runs_total": 7,
+      "runs_ok": 4,
+      "runs_failed_oom": 1,
+      "runs_failed_other": 2,
+      "runtime_total_s": 1353.803,
+      "runtime_by_context_s": {
+        "16384": 127.79,
+        "32768": 274.866,
+        "49152": 935.37,
+        "53248": 5.624,
+        "57344": 5.274,
+        "65536": 4.879
+      },
+      "runtime_by_phase_s": {
+        "coarse": 407.535,
+        "refine": 477.885,
+        "verify": 468.384
+      },
+      "deployment_score": 11.696142484938116,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 61.0192725,
+      "deployment_score_tg_ts_mean": 8.149205,
+      "deployment_score_source_context": 49152,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": [
+        "ctx=65536: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-UD-Q3_K_XL.gguf'",
+        "ctx=57344: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Mistral-Small-3.2-24B-Instruct-2506-UD-Q3_K_XL.gguf'"
+      ]
+    }
+  }
+}

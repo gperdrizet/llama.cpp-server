@@ -1,0 +1,28 @@
+run:
+  model_list: tests/config/context_fit/models_single_gpu.csv    # Single-GPU max fit sweep
+  gpus: "1"                                                     # Single GPU to use (CUDA_VISIBLE_DEVICES)
+  bench_bin: /opt/llama.cpp/build/bin/llama-bench              # Path to llama-bench binary
+  results_dir: tests/results/context_fit/single_gpu             # Directory for results
+  run_name: null                                                # Optional run name (null => auto-generated)
+  n_gpu_layers: -1                                              # Number of model layers on GPU (-1 for all)
+  split_mode: layer                                            # Split mode (single GPU: no effective split)
+  tensor_split: "1"                                             # Single device: all weight on the one GPU
+  allow_host: false                                             # Strict GPU-only fit check: no host spill
+  fit_target: 0                                                 # No fit target when host spill is disabled
+  fit_ctx: 0                                                    # No fit context floor when host spill is disabled
+  n_prompt: 128                                                 # Prompt tokens benchmarked per run
+  n_gen: 32                                                     # Generation tokens benchmarked per run
+  repetitions: 1                                                # Single pass for broad sweep discovery
+  flash_attn: "on"                                              # Match --flash-attn on in llamacpp.service
+  poll_interval: 0.10                                           # Seconds between VRAM sampling polls
+  refine_step: 4096                                             # Bisection refinement context step
+  verify_runs: 1                                                # Validate the final max context once
+  max_run_seconds: 10800                                        # Hard timeout per llama-bench run (seconds)
+  kv_cache_types: f16,q8_0                                      # KV cache types to benchmark (comma-separated)
+  service_name: llamacpp.service                                # Service to stop/start around benchmark runs
+  no_manage_service: false                                      # If true, skip service lifecycle management
+
+score_breakpoints: # Minimum score required for each deployment tier
+  interactive: 4.0
+  batch: 0.5
+  exclude: 0.0

@@ -1,0 +1,142 @@
+{
+  "timestamp": "2026-09-02T13:33:47",
+  "model": "Qwen3.8-27B-UD-Q3_K_XL.gguf",
+  "gpu_devices": "1",
+  "context_sizes": [
+    32768,
+    65536,
+    131072,
+    262144
+  ],
+  "overall_summary": {
+    "runs_total": 14,
+    "runs_ok": 9,
+    "runs_failed_oom": 3,
+    "runs_failed_other": 2,
+    "runtime_total_s": 5253.845,
+    "runtime_by_kv_cache_s": {
+      "f16": 1537.866,
+      "q8": 3715.978
+    },
+    "runtime_by_context_s": {
+      "32768": 610.049,
+      "40960": 372.601,
+      "45056": 828.904,
+      "49152": 7.814,
+      "65536": 645.332,
+      "81920": 850.392,
+      "90112": 1917.108,
+      "94208": 7.762,
+      "98304": 6.92,
+      "131072": 6.963
+    },
+    "runtime_by_phase_s": {
+      "coarse": 1262.344,
+      "refine": 2618.594,
+      "verify": 1372.907
+    },
+    "errors": [
+      "ctx=65536: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Qwen3.8-27B-UD-Q3_K_XL.gguf'",
+      "ctx=131072: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Qwen3.8-27B-UD-Q3_K_XL.gguf'"
+    ],
+    "f16_max_context": 45056,
+    "f16_max_context_stable": true,
+    "q8_max_context": 90112,
+    "q8_max_context_stable": true,
+    "deployment_score": 15.310645790553618,
+    "deployment_score_kv_cache_label": "f16",
+    "deployment_score_context": 45056,
+    "deployment_tier": "interactive",
+    "deployment_tier_threshold": 4.0,
+    "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+    "deployment_score_breakpoints": {
+      "interactive": 4.0,
+      "batch": 0.5,
+      "exclude": 0.0
+    }
+  },
+  "runs": {
+    "f16": {
+      "kv_cache_label": "f16",
+      "kv_cache_type": "f16",
+      "max_context": 45056,
+      "max_context_stable": true,
+      "first_fail_ctx": 65536,
+      "bisect_fail_ctx": 49152,
+      "runs_total": 6,
+      "runs_ok": 4,
+      "runs_failed_oom": 1,
+      "runs_failed_other": 1,
+      "runtime_total_s": 1537.866,
+      "runtime_by_context_s": {
+        "32768": 321.361,
+        "40960": 372.601,
+        "45056": 828.904,
+        "49152": 7.814,
+        "65536": 7.186
+      },
+      "runtime_by_phase_s": {
+        "coarse": 328.547,
+        "refine": 794.591,
+        "verify": 414.728
+      },
+      "deployment_score": 15.310645790553618,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 75.30821449999999,
+      "deployment_score_tg_ts_mean": 10.7143215,
+      "deployment_score_source_context": 45056,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": [
+        "ctx=65536: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Qwen3.8-27B-UD-Q3_K_XL.gguf'"
+      ]
+    },
+    "q8": {
+      "kv_cache_label": "q8",
+      "kv_cache_type": "q8_0",
+      "max_context": 90112,
+      "max_context_stable": true,
+      "first_fail_ctx": 131072,
+      "bisect_fail_ctx": 94208,
+      "runs_total": 8,
+      "runs_ok": 5,
+      "runs_failed_oom": 2,
+      "runs_failed_other": 1,
+      "runtime_total_s": 3715.978,
+      "runtime_by_context_s": {
+        "32768": 288.687,
+        "65536": 638.146,
+        "81920": 850.392,
+        "90112": 1917.108,
+        "94208": 7.762,
+        "98304": 6.92,
+        "131072": 6.963
+      },
+      "runtime_by_phase_s": {
+        "coarse": 933.797,
+        "refine": 1824.002,
+        "verify": 958.179
+      },
+      "deployment_score": 11.008670874690457,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 62.084703000000005,
+      "deployment_score_tg_ts_mean": 7.6291055,
+      "deployment_score_source_context": 90112,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": [
+        "ctx=131072: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/Qwen3.8-27B-UD-Q3_K_XL.gguf'"
+      ]
+    }
+  }
+}

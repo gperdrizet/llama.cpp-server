@@ -1,0 +1,155 @@
+{
+  "timestamp": "2026-09-03T06:49:49",
+  "model": "GLM-4.7-Flash-UD-IQ3_XXS.gguf",
+  "gpu_devices": "1",
+  "context_sizes": [
+    25344,
+    50688,
+    101376,
+    202752
+  ],
+  "overall_summary": {
+    "runs_total": 17,
+    "runs_ok": 10,
+    "runs_failed_oom": 1,
+    "runs_failed_other": 6,
+    "runtime_total_s": 16144.964,
+    "runtime_by_kv_cache_s": {
+      "f16": 3070.013,
+      "q8": 13074.952
+    },
+    "runtime_by_context_s": {
+      "25344": 457.801,
+      "50688": 1342.687,
+      "65536": 2123.721,
+      "69632": 6.222,
+      "73728": 6.789,
+      "77824": 6.961,
+      "101376": 2379.402,
+      "114688": 2990.362,
+      "122880": 6809.113,
+      "126976": 7.482,
+      "151552": 7.363,
+      "202752": 7.061
+    },
+    "runtime_by_phase_s": {
+      "coarse": 4186.951,
+      "refine": 7494.373,
+      "verify": 4463.64
+    },
+    "errors": [
+      "ctx=101376: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/GLM-4.7-Flash-UD-IQ3_XXS.gguf'",
+      "ctx=77824: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/GLM-4.7-Flash-UD-IQ3_XXS.gguf'",
+      "ctx=73728: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/GLM-4.7-Flash-UD-IQ3_XXS.gguf'",
+      "ctx=69632: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/GLM-4.7-Flash-UD-IQ3_XXS.gguf'",
+      "ctx=202752: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/GLM-4.7-Flash-UD-IQ3_XXS.gguf'",
+      "ctx=151552: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/GLM-4.7-Flash-UD-IQ3_XXS.gguf'"
+    ],
+    "f16_max_context": 65536,
+    "f16_max_context_stable": true,
+    "q8_max_context": 122880,
+    "q8_max_context_stable": true,
+    "deployment_score": 17.05626511089101,
+    "deployment_score_kv_cache_label": "f16",
+    "deployment_score_context": 65536,
+    "deployment_tier": "interactive",
+    "deployment_tier_threshold": 4.0,
+    "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+    "deployment_score_breakpoints": {
+      "interactive": 4.0,
+      "batch": 0.5,
+      "exclude": 0.0
+    }
+  },
+  "runs": {
+    "f16": {
+      "kv_cache_label": "f16",
+      "kv_cache_type": "f16",
+      "max_context": 65536,
+      "max_context_stable": true,
+      "first_fail_ctx": 101376,
+      "bisect_fail_ctx": 69632,
+      "runs_total": 8,
+      "runs_ok": 4,
+      "runs_failed_oom": 0,
+      "runs_failed_other": 4,
+      "runtime_total_s": 3070.013,
+      "runtime_by_context_s": {
+        "25344": 247.47,
+        "50688": 671.802,
+        "65536": 2123.721,
+        "69632": 6.222,
+        "73728": 6.789,
+        "77824": 6.961,
+        "101376": 7.047
+      },
+      "runtime_by_phase_s": {
+        "coarse": 926.32,
+        "refine": 1082.277,
+        "verify": 1061.416
+      },
+      "deployment_score": 17.05626511089101,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 31.3961835,
+      "deployment_score_tg_ts_mean": 13.6895045,
+      "deployment_score_source_context": 65536,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": [
+        "ctx=101376: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/GLM-4.7-Flash-UD-IQ3_XXS.gguf'",
+        "ctx=77824: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/GLM-4.7-Flash-UD-IQ3_XXS.gguf'",
+        "ctx=73728: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/GLM-4.7-Flash-UD-IQ3_XXS.gguf'",
+        "ctx=69632: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/GLM-4.7-Flash-UD-IQ3_XXS.gguf'"
+      ]
+    },
+    "q8": {
+      "kv_cache_label": "q8",
+      "kv_cache_type": "q8_0",
+      "max_context": 122880,
+      "max_context_stable": true,
+      "first_fail_ctx": 202752,
+      "bisect_fail_ctx": 126976,
+      "runs_total": 9,
+      "runs_ok": 6,
+      "runs_failed_oom": 1,
+      "runs_failed_other": 2,
+      "runtime_total_s": 13074.952,
+      "runtime_by_context_s": {
+        "25344": 210.331,
+        "50688": 670.885,
+        "101376": 2372.355,
+        "114688": 2990.362,
+        "122880": 6809.113,
+        "126976": 7.482,
+        "151552": 7.363,
+        "202752": 7.061
+      },
+      "runtime_by_phase_s": {
+        "coarse": 3260.631,
+        "refine": 6412.097,
+        "verify": 3402.224
+      },
+      "deployment_score": 9.04090774241123,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 18.142862,
+      "deployment_score_tg_ts_mean": 7.118059,
+      "deployment_score_source_context": 122880,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": [
+        "ctx=202752: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/GLM-4.7-Flash-UD-IQ3_XXS.gguf'",
+        "ctx=151552: llama_bench: error: failed to create context with model '/home/siderealyear/llama.cpp/models/GLM-4.7-Flash-UD-IQ3_XXS.gguf'"
+      ]
+    }
+  }
+}

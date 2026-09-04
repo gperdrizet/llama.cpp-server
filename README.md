@@ -163,82 +163,32 @@ The service runs as the unprivileged `llama` user/group and several flags are se
 
 ### Max context size
 
-The maximum context size that will fit within the available GPU memory is determined with `tests/context_fit.py`.
-
-The benchmark is driven by `tests/config/context_fit/context_fit.yaml`, which supplies the default run settings, score breakpoints, and the model list file. The model list itself lives in `tests/config/context_fit/models.csv`; comment out any model you want to skip before the next run. Each model row may also include a per-model `max_context` value, which the runner uses to derive that model's coarse context scan.
-
-The runner has three phases:
-1. **Coarse scan** over four context sizes derived per model as `max//8, max//4, max//2, max`.
-2. **Bisection refinement** around the first failing context, at `--refine-step` granularity.
-3. **Verification** re-runs the candidate max context `--verify-runs` times; any single failure marks that context unstable.
-
-It runs the max-context search once per KV-cache quantization level listed in `--kv-cache-types` (default `q4_0`, `q8_0`, `f16`) and aggregates all results into the same CSV/log/summary/plot artifacts.
-
-- `results.csv`: one row per attempted context (`ok`, `failed_oom`, or `failed`)
-- `run.log`: full command, stdout, stderr, and VRAM summary per run
-- `summary.json`: compact run summary with context boundary estimates and VRAM observations
-- `plot.png`: matplotlib plot combining all KV-cache runs on one chart with color-separated series
-
+`tests/context_fit.py` finds the largest context that stays fully GPU-resident for each model: it scans a coarse set of context sizes, bisects around the first failure, then re-runs the winner `--verify-runs` times to confirm stability - once per KV-cache type (`--kv-cache-types`, default `q4_0,q8_0,f16`). Per-model artifacts (`results.csv`, `run.log`, `summary.json`, `plot.png`) land under `tests/results/context_fit/<run>/`.
 
 ```bash
-# Example: run the full context-fit suite on two P100 GPUs
 .venv/bin/python tests/context_fit.py \
-  --config tests/config/context_fit/context_fit.yaml \
-  --model-list tests/config/context_fit/models.csv
+  --config tests/config/context_fit/context_fit.dual_gpu.yaml
 ```
 
-**Useful options**:
-
-| Option | Purpose |
-|---|---|
-| `--config` | YAML file with run defaults and score breakpoints |
-| `--model` | Single model path or filename under `models/` |
-| `--model-list` | CSV file with one model path and optional per-model max context per line |
-| `--max-context` | Max context for single-model runs; coarse sweep derives from this value |
-| `--gpus` | Physical GPU indexes for `CUDA_VISIBLE_DEVICES` |
-| `--bench-bin` | Path to `llama-bench` |
-| `--results-dir` | Output directory |
-| `--run-name` | Output run label |
-| `--tensor-split` | Tensor split ratio for multi-GPU runs |
-| `--split-mode` | Tensor split mode (`layer` in the current setup) |
-| `--allow-host` | Allow `llama-bench` to spill past GPU VRAM into system RAM; default is off for strict GPU-fit discovery |
-| `--fit-target` / `--fit-ctx` | Only used when `--allow-host` is set; these are not used in the default GPU-only fit pass |
-| `--n-prompt` / `--n-gen` / `--repetitions` | Throughput benchmark settings |
-| `--flash-attn` | Flash attention mode: `on` (default, matches `llamacpp.service`), `off`, or `auto` |
-| `--refine-step` | Granularity for bisection refinement probes |
-| `--verify-runs` | Confirmation runs at the final context |
-| `--max-run-seconds` | Hard timeout for each `llama-bench` invocation |
-| `--kv-cache-types` | Comma-separated KV cache types to run (default: `q4_0,q8_0,f16`) |
-| `--skip-completed` | Resume helper: skip models whose `summary.json` already exists |
-| `--stop-after-model` | Run only N models, then exit cleanly |
-| `--service-name` / `--no-manage-service` | Service lifecycle control around benchmark runs |
+Run `tests/context_fit.py --help` for the full option list; the YAML config holds the defaults for each sweep.
 
 ### Results
 
-The `dual_gpu` sweep (2026-09-01) measured the maximum stable context for five models on two Tesla P100-PCIE-16GB GPUs (32 GiB total), driven by `tests/config/context_fit/context_fit.dual_gpu.yaml`. Artifacts are in `tests/results/context_fit/dual_gpu/`.
+Two Tesla P100-PCIE-16GB (32 GiB total), strict GPU-only fitting, `-sm row`.
 
-Run settings: GPUs `1,2`, `split-mode layer`, `tensor-split 1/1`, KV cache `f16` and `q8_0`, strict GPU-only fit (`allow-host false`, `fit-target 0`), `n_prompt 128`, `n_gen 32`, `repetitions 1`, `refine-step 4096`, `verify-runs 1`.
+**Max context** - largest verified context per model and KV-cache type (dual GPU, Q4_K_M weights):
 
-**Max context** is the largest context that passed the verification run, bounded above by the per-model ceiling in `models_dual_gpu.csv`. Peak VRAM is the summed peak across both GPUs at that context. All boundaries below verified stable, and every model reached the `interactive` deployment tier.
+![Max verified context by model and KV-cache type](assets/context-fit-max-context.png)
 
-| Model | KV cache | Max context | Peak VRAM (GiB) |
-|---|---|---:|---:|
-| Qwen3.8-27B-UD-Q4_K_M | f16 | 208k | 29.8 |
-| Qwen3.8-27B-UD-Q4_K_M | q8_0 | 256k | 28.5 |
-| gemma-4-31B-it-Q4_K_M | f16 | 140k | 31.1 |
-| gemma-4-31B-it-Q4_K_M | q8_0 | 212k | 31.5 |
-| GLM-4.7-Flash-Q4_K_M | f16 | 198k | 29.8 |
-| GLM-4.7-Flash-Q4_K_M | q8_0 | 198k | 25.2 |
-| Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M | f16 | 96k | 30.6 |
-| Mistral-Small-3.2-24B-Instruct-2506-Q4_K_M | q8_0 | 128k | 27.1 |
-| gpt-oss-20b-Q4_K_M | f16 | 128k | 15.7 |
-| gpt-oss-20b-Q4_K_M | q8_0 | 128k | 14.5 |
+`q8_0` KV buys extra context on the VRAM-bound models (Qwen, gemma, Mistral); GLM and gpt-oss hit their configured ceilings first, so both KV types land at the same value.
 
-Notes:
+**Generation rate** - steady-state tokens/s as context grows, single stream (`slots=1`):
 
-- Quantizing the KV cache to `q8_0` extended the reachable context for three of the five models (Qwen `+48k`, gemma `+72k`, Mistral `+32k`) at lower peak VRAM.
-- GLM-4.7-Flash and gpt-oss-20b reached the same context under both KV types because they were capped by their configured ceilings in `models_dual_gpu.csv` (198k and 128k), not by VRAM.
-- gpt-oss-20b is a 20B model and leaves large headroom (14-16 GiB peak of 32 GiB), so its ceiling is the model's own trained context limit rather than available memory.
+![Generation rate vs context, dual GPU](assets/generation-rate-dual-gpu.png)
+
+![Generation rate vs context, single GPU](assets/generation-rate-single-gpu.png)
+
+Dense 27-31B models sit at ~11-14 tok/s and barely move with quant choice: they are memory-bandwidth-bound, and on Pascal (no INT8/tensor cores) a smaller I-quant reads fewer bytes but costs more to dequantize, so it nets out flat. The MoE models (gpt-oss-20b, gemma-26B-A4B) run 3-5x faster because only a few experts are active per token. All rates taper with depth as attention over the KV cache grows.
 
 
 ### Speculative decoding (unsupported for the qwen35 / M-RoPE models)

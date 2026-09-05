@@ -247,6 +247,7 @@ def generate(
     max_tokens: int = DEFAULT_MAX_TOKENS,
     url: str = DEFAULT_URL,
     api_key: str = "",
+    cache_prompt: bool = True,
 ) -> dict:
     """
     Send a single generation request and return latency, token counts, and rates.
@@ -265,6 +266,7 @@ def generate(
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": max_tokens,
         "temperature": 1.0,
+        "cache_prompt": cache_prompt,
     }
 
     start = time.time()
@@ -294,6 +296,8 @@ def generate(
                 "tok_per_sec": tok_per_sec,
                 "pp_rate": timings.get("prompt_per_second"),
                 "tg_rate": timings.get("predicted_per_second"),
+                "prompt_ms": timings.get("prompt_ms"),
+                "predicted_ms": timings.get("predicted_ms"),
                 "success": True,
             }
     except urllib.error.HTTPError as e:
@@ -317,7 +321,7 @@ def generate(
 CSV_FIELDNAMES = [
     "model", "cache_k", "cache_v", "slot_count", "context_size",
     "repetition", "latency", "tokens", "prompt_tokens", "tok_per_sec",
-    "pp_rate", "tg_rate", "success",
+    "pp_rate", "tg_rate", "prompt_ms", "predicted_ms", "success",
     "error", "timestamp", "gpu_resident", "layers_offloaded", "layers_total",
     "cpu_buffer_mib", "wrong_gpu",
 ]
@@ -484,6 +488,7 @@ def test_condition(
     repetitions: int,
     api_key: str = "",
     cuda_device: Optional[str] = None,
+    cache_prompt: bool = True,
 ) -> list[dict]:
     """
     Test a single condition: model + cache + slot count.
@@ -545,7 +550,7 @@ def test_condition(
         # Run repetitions
         for rep in range(repetitions):
             prompt = truncated_context + "\n\nBriefly describe the key concepts mentioned above."
-            result = generate(prompt, url=DEFAULT_URL, api_key=api_key)
+            result = generate(prompt, url=DEFAULT_URL, api_key=api_key, cache_prompt=cache_prompt)
 
             result.update({
                 "model": model,
@@ -648,6 +653,14 @@ def main():
         default=None,
         help="Override CUDA_DEVICE in .env, e.g. '1' for single-GPU or '1,2' for dual-GPU. "
              "Leave unset to use whatever is already configured in .env.",
+    )
+
+    parser.add_argument(
+        "--no-prompt-cache",
+        action="store_true",
+        help="Send cache_prompt=false so every request reprocesses the full prompt. "
+             "Needed for a clean prompt-processing rate at each depth - otherwise the "
+             "server serves cached prefixes and pp_rate reflects only the uncached delta.",
     )
 
     args = parser.parse_args()
@@ -753,6 +766,7 @@ def main():
                 args.repetitions,
                 args.api_key,
                 args.cuda_device,
+                cache_prompt=not args.no_prompt_cache,
             )
 
             if results:

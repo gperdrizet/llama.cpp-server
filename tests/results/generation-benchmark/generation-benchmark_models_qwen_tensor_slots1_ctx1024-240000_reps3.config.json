@@ -1,0 +1,36 @@
+{
+  "created": "2026-09-04T22:44:07",
+  "last_updated": "2026-09-04T22:44:07",
+  "config_csv": "tests/config/generation_benchmark/models_qwen_tensor.csv",
+  "model_override": null,
+  "models": [
+    {
+      "model": "Qwen3.8-27B-UD-Q4_K_M.gguf",
+      "cache_type_k": "f16",
+      "cache_type_v": "f16"
+    },
+    {
+      "model": "Qwen3.8-27B-UD-Q4_K_M.gguf",
+      "cache_type_k": "q8_0",
+      "cache_type_v": "q8_0"
+    }
+  ],
+  "slot_counts": [
+    1
+  ],
+  "context_sizes": [
+    1024,
+    2048,
+    4096,
+    8192,
+    16384,
+    32768,
+    65536,
+    131072,
+    240000
+  ],
+  "repetitions": 3,
+  "cuda_device": null,
+  "url": "http://localhost:8502",
+  "max_tokens": 128
+}

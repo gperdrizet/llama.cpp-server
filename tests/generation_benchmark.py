@@ -249,8 +249,10 @@ def generate(
     api_key: str = "",
 ) -> dict:
     """
-    Send a single generation request and return latency, token count, and tok/s.
-    Returns latency (full round-trip), number of tokens generated, and tok/s rate.
+    Send a single generation request and return latency, token counts, and rates.
+    Includes the server's own per-phase timings (prompt_per_second as pp_rate,
+    predicted_per_second as tg_rate) when present, which separate prompt processing
+    from decode - unlike tok_per_sec, which is completion tokens over total latency.
     """
     headers = {
         "Content-Type": "application/json",
@@ -277,14 +279,21 @@ def generate(
             data = json.loads(resp.read())
             latency = time.time() - start
 
-            # Extract token count from response
-            tokens_generated = data.get("usage", {}).get("completion_tokens", 0)
+            usage = data.get("usage", {})
+            tokens_generated = usage.get("completion_tokens", 0)
             tok_per_sec = tokens_generated / latency if latency > 0 else 0
+
+            # llama-server's own per-phase rates separate prompt processing from
+            # decode, which the blended tok_per_sec (completion/total) cannot.
+            timings = data.get("timings") or {}
 
             return {
                 "latency": latency,
                 "tokens": tokens_generated,
+                "prompt_tokens": usage.get("prompt_tokens"),
                 "tok_per_sec": tok_per_sec,
+                "pp_rate": timings.get("prompt_per_second"),
+                "tg_rate": timings.get("predicted_per_second"),
                 "success": True,
             }
     except urllib.error.HTTPError as e:
@@ -307,7 +316,8 @@ def generate(
 
 CSV_FIELDNAMES = [
     "model", "cache_k", "cache_v", "slot_count", "context_size",
-    "repetition", "latency", "tokens", "tok_per_sec", "success",
+    "repetition", "latency", "tokens", "prompt_tokens", "tok_per_sec",
+    "pp_rate", "tg_rate", "success",
     "error", "timestamp", "gpu_resident", "layers_offloaded", "layers_total",
     "cpu_buffer_mib", "wrong_gpu",
 ]
@@ -766,29 +776,55 @@ def main():
         # context depth; reps 2+ hit the cached prefix (--cache-ram), so they isolate
         # steady-state decode throughput. Report both since they answer different questions.
         grouped = defaultdict(list)
+        pp_rates: dict = defaultdict(list)
+        tg_rates: dict = defaultdict(list)
+
+        def _num(value):
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return None
 
         for r in all_results:
-            if r.get("success") == "True":
-                key = (r["model"], r["cache_k"], r["cache_v"], r["slot_count"], r["context_size"])
-                grouped[key].append((int(r["repetition"]), float(r["tok_per_sec"])))
+            if r.get("success") != "True":
+                continue
+            key = (r["model"], r["cache_k"], r["cache_v"], r["slot_count"], r["context_size"])
+            grouped[key].append((int(r["repetition"]), float(r["tok_per_sec"])))
+            tg = _num(r.get("tg_rate"))
+            if tg is not None:
+                tg_rates[key].append(tg)
+            pp, prompt_toks = _num(r.get("pp_rate")), _num(r.get("prompt_tokens"))
+            # pp rate is only meaningful when real prompt tokens were processed (uncached prefill)
+            if pp is not None and prompt_toks and prompt_toks > 0:
+                pp_rates[key].append(pp)
 
+        have_rates = bool(tg_rates) or bool(pp_rates)
+        rate_hdr = f" {'pp t/s':>9s} {'tg t/s':>9s}" if have_rates else ""
         print(
-            f"{'model':40s} {'cfg':30s} {'cold(1st)':>10s} " + 
-            f"{'steady mean':>12s} {'steady ±':>10s}"
+            f"{'model':40s} {'cfg':30s} {'cold(1st)':>10s} "
+            f"{'steady mean':>12s} {'steady ±':>10s}{rate_hdr}"
         )
 
         def _sort_key(kv):
             model, cache_k, cache_v, slots, ctx = kv[0]
             return (model, cache_k, cache_v, int(slots), int(ctx))
 
-        for (model, cache_k, cache_v, slots, ctx), reps in sorted(grouped.items(), key=_sort_key):
+        for key, reps in sorted(grouped.items(), key=_sort_key):
+            model, cache_k, cache_v, slots, ctx = key
             reps.sort()
             cold_rate = reps[0][1] if reps else 0
             steady_rates = [v for n, v in reps if n != 1]
             mean_rate = statistics.mean(steady_rates) if steady_rates else 0
             stdev = statistics.stdev(steady_rates) if len(steady_rates) > 1 else 0
             cfg = f"slots={slots} ctx={ctx} cache={cache_k}/{cache_v}"
-            print(f"{model:40s} {cfg:30s} {cold_rate:10.2f} {mean_rate:12.2f} {stdev:10.2f}")
+            extra = ""
+            if have_rates:
+                pp = statistics.mean(pp_rates[key]) if pp_rates.get(key) else None
+                tg = statistics.mean(tg_rates[key]) if tg_rates.get(key) else None
+                pp_s = f"{pp:9.1f}" if pp is not None else f"{'-':>9s}"
+                tg_s = f"{tg:9.1f}" if tg is not None else f"{'-':>9s}"
+                extra = f" {pp_s} {tg_s}"
+            print(f"{model:40s} {cfg:30s} {cold_rate:10.2f} {mean_rate:12.2f} {stdev:10.2f}{extra}")
 
         # Flag any model/slot condition where the model was not fully GPU-resident -
         # those rows' timings reflect partial CPU offload, not pure GPU throughput.

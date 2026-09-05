@@ -166,8 +166,8 @@ fi
 # SPLIT_MODE is optional (default: layer). Use 'none' for true single-GPU deployments -
 # 'layer' with only one visible device can take a different, slower code path.
 SPLIT_MODE="${SPLIT_MODE:-layer}"
-if ! [[ "$SPLIT_MODE" =~ ^(none|layer|row)$ ]]; then
-    echo "ERROR: SPLIT_MODE must be one of none|layer|row (got: '$SPLIT_MODE')" >&2
+if ! [[ "$SPLIT_MODE" =~ ^(none|layer|row|tensor)$ ]]; then
+    echo "ERROR: SPLIT_MODE must be one of none|layer|row|tensor (got: '$SPLIT_MODE')" >&2
     exit 1
 fi
 

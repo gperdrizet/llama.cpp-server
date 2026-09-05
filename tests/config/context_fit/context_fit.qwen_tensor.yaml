@@ -1,0 +1,29 @@
+run:
+  model: Qwen3.8-27B-UD-Q4_K_M.gguf                            # Tentative deployment target
+  max_context: 262144                                          # Ceiling for the coarse sweep
+  gpus: "1,2"                                                  # GPUs to use (CUDA_VISIBLE_DEVICES)
+  bench_bin: /opt/llama.cpp/build/bin/llama-bench             # Path to llama-bench binary
+  results_dir: tests/results/context_fit/qwen_tensor          # Directory for results
+  run_name: qwen_tensor_f16                                    # Output run label
+  n_gpu_layers: -1                                             # All layers on GPU
+  split_mode: tensor                                          # Tensor-parallel: splits weights AND KV across GPUs
+  tensor_split: "1/1"                                          # Even split across the two P100s (llama-bench uses '/')
+  allow_host: false                                            # Strict GPU-only fit check: no host spill
+  fit_target: 0                                                # No fit target when host spill is disabled
+  fit_ctx: 0                                                   # No fit context floor when host spill is disabled
+  n_prompt: 512                                                # Prompt tokens per probe (larger = cleaner pp rate)
+  n_gen: 32                                                    # Generation tokens benchmarked per run
+  repetitions: 1                                               # Single pass (matches prior sweeps; keeps runtime ~1.5h)
+  flash_attn: "on"                                             # Match --flash-attn on in llamacpp.service
+  poll_interval: 0.10                                          # Seconds between VRAM sampling polls
+  refine_step: 4096                                            # Bisection refinement context step
+  verify_runs: 1                                               # Validate the final max context once
+  max_run_seconds: 10800                                       # Hard timeout per llama-bench run (seconds)
+  kv_cache_types: f16                                          # f16 KV only
+  service_name: llamacpp.service                               # Service to stop/start around benchmark runs
+  no_manage_service: false                                     # If true, skip service lifecycle management
+
+score_breakpoints: # Minimum score required for each deployment tier
+  interactive: 4.0
+  batch: 0.5
+  exclude: 0.0

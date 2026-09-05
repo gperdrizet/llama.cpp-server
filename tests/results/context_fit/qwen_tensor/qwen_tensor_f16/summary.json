@@ -1,0 +1,95 @@
+{
+  "timestamp": "2026-09-04T17:39:05",
+  "model": "Qwen3.8-27B-UD-Q4_K_M.gguf",
+  "gpu_devices": "1,2",
+  "context_sizes": [
+    32768,
+    65536,
+    131072,
+    262144
+  ],
+  "overall_summary": {
+    "runs_total": 10,
+    "runs_ok": 7,
+    "runs_failed_oom": 3,
+    "runs_failed_other": 0,
+    "runtime_total_s": 9627.212,
+    "runtime_by_kv_cache_s": {
+      "f16": 9627.212
+    },
+    "runtime_by_context_s": {
+      "32768": 187.057,
+      "65536": 408.39,
+      "131072": 926.035,
+      "196608": 1628.591,
+      "229376": 2007.683,
+      "245760": 4441.411,
+      "249856": 10.094,
+      "253952": 8.81,
+      "262144": 9.142
+    },
+    "runtime_by_phase_s": {
+      "coarse": 1530.624,
+      "refine": 5875.968,
+      "verify": 2220.62
+    },
+    "errors": [],
+    "f16_max_context": 245760,
+    "f16_max_context_stable": true,
+    "deployment_score": 16.729709478178858,
+    "deployment_score_kv_cache_label": "f16",
+    "deployment_score_context": 245760,
+    "deployment_tier": "interactive",
+    "deployment_tier_threshold": 4.0,
+    "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+    "deployment_score_breakpoints": {
+      "interactive": 4.0,
+      "batch": 0.5,
+      "exclude": 0.0
+    }
+  },
+  "runs": {
+    "f16": {
+      "kv_cache_label": "f16",
+      "kv_cache_type": "f16",
+      "max_context": 245760,
+      "max_context_stable": true,
+      "first_fail_ctx": 262144,
+      "bisect_fail_ctx": 249856,
+      "runs_total": 10,
+      "runs_ok": 7,
+      "runs_failed_oom": 3,
+      "runs_failed_other": 0,
+      "runtime_total_s": 9627.212,
+      "runtime_by_context_s": {
+        "32768": 187.057,
+        "65536": 408.39,
+        "131072": 926.035,
+        "196608": 1628.591,
+        "229376": 2007.683,
+        "245760": 4441.411,
+        "249856": 10.094,
+        "253952": 8.81,
+        "262144": 9.142
+      },
+      "runtime_by_phase_s": {
+        "coarse": 1530.624,
+        "refine": 5875.968,
+        "verify": 2220.62
+      },
+      "deployment_score": 16.729709478178858,
+      "deployment_tier": "interactive",
+      "deployment_tier_threshold": 4.0,
+      "deployment_score_pp_ts_mean": 74.564784,
+      "deployment_score_tg_ts_mean": 11.8010175,
+      "deployment_score_source_context": 245760,
+      "deployment_score_formula": "weighted_harmonic_mean(pp_ts_mean, tg_ts_mean; prompt_weight=0.35, generation_weight=0.65)",
+      "deployment_score_breakpoints": {
+        "interactive": 4.0,
+        "batch": 0.5,
+        "exclude": 0.0
+      },
+      "errors": []
+    }
+  }
+}

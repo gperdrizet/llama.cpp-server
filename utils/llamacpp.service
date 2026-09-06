@@ -18,6 +18,8 @@ WorkingDirectory=SUB_LLAMA_PATH_HERE
 
 # split-mode/fit-target/fit-ctx pin the context-fit benchmark's memory-fit margin.
 # These P100s are headless (no display/desktop load), so a small headroom suffices.
+# Sampling follows Unsloth's Qwen3.8-27B thinking-mode guide (temp 1.0, top-p 0.95,
+# top-k 20, min-p 0.0); --chat-template-kwargs reasoning_effort sets thinking depth.
 ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
 ExecStart=SUB_LLAMA_PATH_HERE/build/bin/llama-server \
     -m SUB_MODEL_DIR_HERE/SUB_MODEL_FILE_HERE \
@@ -36,6 +38,7 @@ ExecStart=SUB_LLAMA_PATH_HERE/build/bin/llama-server \
     --fit-target 256 \
     --fit-ctx SUB_CTX_SIZE_HERE \
     --temp 1.0 \
+    --top-p 0.95 \
     --top-k 20 \
     --min-p 0.0 \
     --chat-template-kwargs '{"reasoning_effort":"medium"}' \

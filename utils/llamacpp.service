@@ -30,6 +30,7 @@ ExecStart=SUB_LLAMA_PATH_HERE/build/bin/llama-server \
     --tensor-split SUB_TENSOR_SPLIT_HERE \
     --ctx-size SUB_CTX_SIZE_HERE \
     --parallel SUB_SLOTS_HERE \
+    --kv-unified \
     --threads SUB_THREADS_HERE \
     --threads-batch SUB_THREADS_HERE \
     --spec-type SUB_SPEC_TYPE_HERE \

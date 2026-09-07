@@ -171,6 +171,13 @@ if ! [[ "$SPLIT_MODE" =~ ^(none|layer|row|tensor)$ ]]; then
     exit 1
 fi
 
+# KV_UNIFIED is optional (empty/false = split KV per slot; true = one shared KV pool).
+KV_UNIFIED="${KV_UNIFIED:-}"
+if [[ -n "$KV_UNIFIED" ]] && ! [[ "$KV_UNIFIED" =~ ^(true|false|1|0)$ ]]; then
+    echo "ERROR: KV_UNIFIED must be empty, true, false, 1, or 0 (got: '$KV_UNIFIED')" >&2
+    exit 1
+fi
+
 # CPU_AFFINITY is optional (empty = no pinning, all cores allowed).
 CPU_AFFINITY="${CPU_AFFINITY:-}"
 if [[ -n "$CPU_AFFINITY" ]] && ! [[ "$CPU_AFFINITY" =~ ^[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$ ]]; then
@@ -270,6 +277,11 @@ fi
 # Strip --model-draft line if no value was configured
 if [[ -z "$SPEC_DRAFT_MODEL" ]]; then
     RENDERED="$(echo "$RENDERED" | sed '/--model-draft /d')"
+fi
+
+# Strip --kv-unified line unless explicitly enabled (default: split KV per slot)
+if ! [[ "$KV_UNIFIED" =~ ^(true|1)$ ]]; then
+    RENDERED="$(echo "$RENDERED" | sed '/--kv-unified/d')"
 fi
 
 echo "Deploying $TEMPLATE → $DEST"

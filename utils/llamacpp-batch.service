@@ -1,0 +1,71 @@
+[Unit]
+Description=llama.cpp inference server (batch throughput instance)
+Documentation=https://github.com/ggml-org/llama.cpp
+After=network-online.target nvidia-persistenced.service
+Wants=network-online.target nvidia-persistenced.service
+
+[Service]
+Type=simple
+User=llama
+Environment=CUDA_DEVICE_ORDER=PCI_BUS_ID
+Environment=CUDA_VISIBLE_DEVICES=SUB_CUDA_DEVICE_HERE
+# Verbosity 4 prints the "load_tensors: offloaded X/Y layers to GPU" line, which
+# is the only reliable way to confirm whether --fit silently sent layers to CPU.
+Environment=LLAMA_ARG_LOG_VERBOSITY=4
+Group=llama
+CPUAffinity=SUB_CPU_AFFINITY_HERE
+WorkingDirectory=SUB_LLAMA_PATH_HERE
+
+# Tuned for overnight batch throughput (many short requests), not interactive
+# latency: ctx-size sized to ~4x the observed max sequence length (prompt +
+# generation) rather than the model's full 131072, so more of the "fit" VRAM
+# budget goes to --parallel slots instead of unused KV headroom (KV pool size
+# scales with ctx-size, not slot count, under --kv-unified). temp/top-p/top-k/
+# min-p tuned low-variance for extraction, not creative "thinking mode" sampling.
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
+ExecStart=SUB_LLAMA_PATH_HERE/build/bin/llama-server \
+    -m SUB_MODEL_DIR_HERE/gpt-oss-20b-Q4_K_M.gguf \
+    --cache-type-k f16 \
+    --cache-type-v f16 \
+    --n-gpu-layers -1 \
+    --split-mode none \
+    --ctx-size 32768 \
+    --parallel 8 \
+    --kv-unified \
+    --threads 12 \
+    --threads-batch 12 \
+    --flash-attn on \
+    --fit-target 256 \
+    --fit-ctx 32768 \
+    --temp 0.2 \
+    --top-p 1.0 \
+    --top-k 0 \
+    --min-p 0.0 \
+    --jinja \
+    --host 0.0.0.0 \
+    --port SUB_PORT_HERE \
+    --api-key SUB_API_KEY_HERE \
+    --metrics \
+    --log-timestamps \
+    --log-prefix
+
+# Restart policy
+Restart=on-failure
+RestartSec=10
+StartLimitInterval=300
+StartLimitBurst=5
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadOnlyPaths=SUB_LLAMA_PATH_HERE SUB_MODEL_DIR_HERE
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=llama-server-batchSUB_INSTANCE_HERE
+
+[Install]
+WantedBy=multi-user.target

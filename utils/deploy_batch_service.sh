@@ -3,11 +3,14 @@
 #
 # Deploys one or both utils/llamacpp-batch.service instances (one per compute
 # GPU) to /etc/systemd/system/llamacpp-batch<N>.service, for overnight/batch
-# throughput jobs on gpt-oss-20b. Deployment performance flags (ctx-size,
-# --parallel, sampling, etc.) are hardcoded in the template to the values
-# verified best for batch throughput on this hardware - see utils/llamacpp-batch.service
-# for the tuning rationale. Only per-instance values (GPU, port, CPU affinity)
-# are substituted here.
+# throughput jobs. Deployment performance flags (sampling, batch/ubatch size,
+# etc.) are hardcoded in the template to the values verified best for batch
+# throughput on this hardware - see utils/llamacpp-batch.service for the tuning
+# rationale. Per-instance values (GPU, port, CPU affinity, model file,
+# ctx-size, parallel) are substituted here - each instance can serve a
+# different model with its own context/parallelism, set via
+# BATCH1_MODEL_FILE / BATCH2_MODEL_FILE and BATCH1_CTX_SIZE / BATCH1_PARALLEL /
+# BATCH2_CTX_SIZE / BATCH2_PARALLEL in .env.
 #
 # Reuses API_KEY and LLAMA_PATH/MODEL_DIR from the main .env (same secret,
 # same repo paths as the production single-instance deployment).
@@ -77,28 +80,49 @@ if [[ -z "${MODEL_DIR:-}" || "$MODEL_DIR" == "your_model_dir_here" ]]; then
     exit 1
 fi
 
-MODEL_PATH="${MODEL_DIR%/}/gpt-oss-20b-Q4_K_M.gguf"
-if [[ ! -f "$MODEL_PATH" ]]; then
-    echo "ERROR: Model file not found: $MODEL_PATH" >&2
-    exit 1
-fi
-
 if ! id -u llama &>/dev/null; then
     echo "ERROR: System user 'llama' does not exist." >&2
     exit 1
 fi
 
-if ! sudo -u llama test -r "$MODEL_PATH"; then
-    echo "ERROR: User 'llama' cannot read model file: $MODEL_PATH" >&2
-    exit 1
-fi
-
 # ---------------------------------------------------------------------------
-# Per-instance settings: GPU index, CPU core range, port
+# Per-instance settings: GPU index, CPU core range, port, model file
 # ---------------------------------------------------------------------------
 declare -A GPU_FOR=( [1]=1 [2]=2 )
 declare -A CPU_AFFINITY_FOR=( [1]="0-11" [2]="12-23" )
 declare -A PORT_FOR=( [1]=8503 [2]=8504 )
+declare -A MODEL_FILE_FOR=( [1]="${BATCH1_MODEL_FILE:-}" [2]="${BATCH2_MODEL_FILE:-}" )
+declare -A CTX_SIZE_FOR=( [1]="${BATCH1_CTX_SIZE:-}" [2]="${BATCH2_CTX_SIZE:-}" )
+declare -A PARALLEL_FOR=( [1]="${BATCH1_PARALLEL:-}" [2]="${BATCH2_PARALLEL:-}" )
+
+for N in "${INSTANCES[@]}"; do
+    MODEL_FILE="${MODEL_FILE_FOR[$N]}"
+    if [[ -z "$MODEL_FILE" || "$MODEL_FILE" == "model_file_here.gguf" ]]; then
+        echo "ERROR: BATCH${N}_MODEL_FILE is not set (or still a placeholder) in $ENV_FILE" >&2
+        exit 1
+    fi
+
+    MODEL_PATH="${MODEL_DIR%/}/${MODEL_FILE}"
+    if [[ ! -f "$MODEL_PATH" ]]; then
+        echo "ERROR: Model file not found: $MODEL_PATH" >&2
+        exit 1
+    fi
+
+    if ! sudo -u llama test -r "$MODEL_PATH"; then
+        echo "ERROR: User 'llama' cannot read model file: $MODEL_PATH" >&2
+        exit 1
+    fi
+
+    if [[ -z "${CTX_SIZE_FOR[$N]}" || "${CTX_SIZE_FOR[$N]}" == "ctx_size_here" ]]; then
+        echo "ERROR: BATCH${N}_CTX_SIZE is not set (or still a placeholder) in $ENV_FILE" >&2
+        exit 1
+    fi
+
+    if [[ -z "${PARALLEL_FOR[$N]}" || "${PARALLEL_FOR[$N]}" == "parallel_here" ]]; then
+        echo "ERROR: BATCH${N}_PARALLEL is not set (or still a placeholder) in $ENV_FILE" >&2
+        exit 1
+    fi
+done
 
 for N in "${INSTANCES[@]}"; do
     DEST="/etc/systemd/system/llamacpp-batch${N}.service"
@@ -107,13 +131,16 @@ for N in "${INSTANCES[@]}"; do
         -e "s/SUB_API_KEY_HERE/${API_KEY}/" \
         -e "s|SUB_LLAMA_PATH_HERE|${LLAMA_PATH}|g" \
         -e "s|SUB_MODEL_DIR_HERE|${MODEL_DIR}|g" \
+        -e "s|SUB_MODEL_FILE_HERE|${MODEL_FILE_FOR[$N]}|g" \
         -e "s/SUB_CUDA_DEVICE_HERE/${GPU_FOR[$N]}/" \
         -e "s/SUB_CPU_AFFINITY_HERE/${CPU_AFFINITY_FOR[$N]}/" \
         -e "s/SUB_PORT_HERE/${PORT_FOR[$N]}/" \
+        -e "s/SUB_CTX_SIZE_HERE/${CTX_SIZE_FOR[$N]}/" \
+        -e "s/SUB_PARALLEL_HERE/${PARALLEL_FOR[$N]}/" \
         -e "s/SUB_INSTANCE_HERE/${N}/" \
         "$TEMPLATE")"
 
-    echo "Deploying $TEMPLATE → $DEST (GPU ${GPU_FOR[$N]}, port ${PORT_FOR[$N]})"
+    echo "Deploying $TEMPLATE → $DEST (GPU ${GPU_FOR[$N]}, port ${PORT_FOR[$N]}, model ${MODEL_FILE_FOR[$N]}, ctx ${CTX_SIZE_FOR[$N]}, parallel ${PARALLEL_FOR[$N]})"
     echo "$RENDERED" | sudo tee "$DEST" > /dev/null
 done
 

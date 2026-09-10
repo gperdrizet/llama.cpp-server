@@ -17,26 +17,29 @@ CPUAffinity=SUB_CPU_AFFINITY_HERE
 WorkingDirectory=SUB_LLAMA_PATH_HERE
 
 # Tuned for overnight batch throughput (many short requests), not interactive
-# latency: ctx-size sized to ~4x the observed max sequence length (prompt +
-# generation) rather than the model's full 131072, so more of the "fit" VRAM
-# budget goes to --parallel slots instead of unused KV headroom (KV pool size
-# scales with ctx-size, not slot count, under --kv-unified). temp/top-p/top-k/
-# min-p tuned low-variance for extraction, not creative "thinking mode" sampling.
+# latency: ctx-size sized to comfortably cover the observed max sequence length
+# (prompt + generation, ~7.5k tokens) rather than the model's full 131072, and
+# explicit batch/ubatch size + cont-batching to keep decode steps packed across
+# slots. temp/top-p/top-k/min-p tuned low-variance for extraction, not creative
+# "thinking mode" sampling.
 ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
 ExecStart=SUB_LLAMA_PATH_HERE/build/bin/llama-server \
-    -m SUB_MODEL_DIR_HERE/gpt-oss-20b-Q4_K_M.gguf \
+    -m SUB_MODEL_DIR_HERE/SUB_MODEL_FILE_HERE \
     --cache-type-k f16 \
     --cache-type-v f16 \
-    --n-gpu-layers -1 \
+    --n-gpu-layers 999 \
     --split-mode none \
-    --ctx-size 32768 \
-    --parallel 8 \
+    --ctx-size SUB_CTX_SIZE_HERE \
+    --parallel SUB_PARALLEL_HERE \
+    --cont-batching \
+    --batch-size 512 \
+    --ubatch-size 512 \
     --kv-unified \
     --threads 12 \
     --threads-batch 12 \
     --flash-attn on \
     --fit-target 256 \
-    --fit-ctx 32768 \
+    --fit-ctx 16384 \
     --temp 0.2 \
     --top-p 1.0 \
     --top-k 0 \
@@ -47,7 +50,8 @@ ExecStart=SUB_LLAMA_PATH_HERE/build/bin/llama-server \
     --api-key SUB_API_KEY_HERE \
     --metrics \
     --log-timestamps \
-    --log-prefix
+    --log-prefix \
+    --cache-ram -1
 
 # Restart policy
 Restart=on-failure

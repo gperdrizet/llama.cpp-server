@@ -16,9 +16,12 @@
 # same repo paths as the production single-instance deployment).
 #
 # Usage:
-#   ./utils/deploy_batch_service.sh <1|2|both> [--restart]
+#   ./utils/deploy_batch_service.sh <1|2|both> [--restart|--stop]
 #
 #   --restart   Also restart the service(s) after deploying (default: daemon-reload only)
+#   --stop      Stop the instance(s) and exit (no deploy). Use this before starting the
+#               production deployment - the batch and production instances contend for
+#               the same GPUs and are not meant to run at the same time.
 
 set -euo pipefail
 
@@ -26,13 +29,14 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEMPLATE="$REPO_ROOT/utils/llamacpp-batch.service"
 ENV_FILE="$REPO_ROOT/.env"
 DO_RESTART=false
+DO_STOP=false
 
 # ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
 INSTANCE_ARG="${1:-}"
 if [[ -z "$INSTANCE_ARG" ]]; then
-    echo "Usage: $0 <1|2|both> [--restart]" >&2
+    echo "Usage: $0 <1|2|both> [--restart|--stop]" >&2
     exit 1
 fi
 shift || true
@@ -40,6 +44,7 @@ shift || true
 for arg in "$@"; do
     case "$arg" in
         --restart) DO_RESTART=true ;;
+        --stop) DO_STOP=true ;;
         *) echo "Unknown argument: $arg" >&2; exit 1 ;;
     esac
 done
@@ -50,6 +55,17 @@ case "$INSTANCE_ARG" in
     both) INSTANCES=(1 2) ;;
     *) echo "ERROR: instance must be 1, 2, or both (got: '$INSTANCE_ARG')" >&2; exit 1 ;;
 esac
+
+if [[ "$DO_STOP" == true ]]; then
+    for N in "${INSTANCES[@]}"; do
+        echo "Running: systemctl stop llamacpp-batch${N}.service"
+        sudo systemctl stop "llamacpp-batch${N}.service"
+        sudo systemctl reset-failed "llamacpp-batch${N}.service" || true
+    done
+    echo "Stopped. Status:"
+    for N in "${INSTANCES[@]}"; do systemctl status "llamacpp-batch${N}.service" --no-pager -l || true; done
+    exit 0
+fi
 
 # ---------------------------------------------------------------------------
 # Load .env (only need API_KEY, LLAMA_PATH, MODEL_DIR from it)
@@ -150,6 +166,9 @@ sudo systemctl daemon-reload
 if [[ "$DO_RESTART" == true ]]; then
     for N in "${INSTANCES[@]}"; do
         echo "Running: systemctl restart llamacpp-batch${N}.service"
+        # Clears any StartLimitBurst lockout left over from a prior crash loop. May fail
+        # harmlessly if the unit isn't currently loaded (e.g. right after --stop).
+        sudo systemctl reset-failed "llamacpp-batch${N}.service" || true
         sudo systemctl restart "llamacpp-batch${N}.service"
     done
     echo "Service(s) restarted. Status:"

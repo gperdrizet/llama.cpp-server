@@ -5,9 +5,12 @@
 # under llama user, substituting values from .env into the service file.
 #
 # Usage:
-#   ./utils/deploy_service.sh [--restart]
+#   ./utils/deploy_service.sh [--restart|--stop]
 #
 #   --restart   Also restart the service after deploying (default: daemon-reload only)
+#   --stop      Stop the service and exit (no deploy). Use this before starting the
+#               batch deployment - the batch and production instances contend for the
+#               same GPUs and are not meant to run at the same time.
 
 set -euo pipefail
 
@@ -16,6 +19,7 @@ TEMPLATE="$REPO_ROOT/utils/llamacpp.service"
 ENV_FILE="$REPO_ROOT/.env"
 DEST="/etc/systemd/system/llamacpp.service"
 DO_RESTART=false
+DO_STOP=false
 
 # ---------------------------------------------------------------------------
 # Argument parsing
@@ -23,9 +27,19 @@ DO_RESTART=false
 for arg in "$@"; do
     case "$arg" in
         --restart) DO_RESTART=true ;;
+        --stop) DO_STOP=true ;;
         *) echo "Unknown argument: $arg" >&2; exit 1 ;;
     esac
 done
+
+if [[ "$DO_STOP" == true ]]; then
+    echo "Running: systemctl stop llamacpp.service"
+    sudo systemctl stop llamacpp.service
+    sudo systemctl reset-failed llamacpp.service || true
+    echo "Stopped. Status:"
+    systemctl status llamacpp.service --no-pager -l || true
+    exit 0
+fi
 
 # ---------------------------------------------------------------------------
 # Load .env
@@ -292,6 +306,10 @@ sudo systemctl daemon-reload
 
 if [[ "$DO_RESTART" == true ]]; then
     echo "Running: systemctl restart llamacpp.service"
+    # Clears any StartLimitBurst lockout left over from a prior crash loop (e.g. GPU
+    # memory not yet freed by another instance) so this restart isn't refused outright.
+    # May fail harmlessly if the unit isn't currently loaded (e.g. right after --stop).
+    sudo systemctl reset-failed llamacpp.service || true
     sudo systemctl restart llamacpp.service
     echo "Service restarted. Status:"
     systemctl status llamacpp.service --no-pager -l

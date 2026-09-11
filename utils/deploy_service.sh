@@ -35,7 +35,7 @@ done
 if [[ "$DO_STOP" == true ]]; then
     echo "Running: systemctl stop llamacpp.service"
     sudo systemctl stop llamacpp.service
-    sudo systemctl reset-failed llamacpp.service || true
+    sudo systemctl reset-failed llamacpp.service 2>/dev/null || true
     echo "Stopped. Status:"
     systemctl status llamacpp.service --no-pager -l || true
     exit 0
@@ -309,7 +309,7 @@ if [[ "$DO_RESTART" == true ]]; then
     # Clears any StartLimitBurst lockout left over from a prior crash loop (e.g. GPU
     # memory not yet freed by another instance) so this restart isn't refused outright.
     # May fail harmlessly if the unit isn't currently loaded (e.g. right after --stop).
-    sudo systemctl reset-failed llamacpp.service || true
+    sudo systemctl reset-failed llamacpp.service 2>/dev/null || true
     sudo systemctl restart llamacpp.service
     echo "Service restarted. Status:"
     systemctl status llamacpp.service --no-pager -l

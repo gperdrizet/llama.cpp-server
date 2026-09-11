@@ -60,7 +60,7 @@ if [[ "$DO_STOP" == true ]]; then
     for N in "${INSTANCES[@]}"; do
         echo "Running: systemctl stop llamacpp-batch${N}.service"
         sudo systemctl stop "llamacpp-batch${N}.service"
-        sudo systemctl reset-failed "llamacpp-batch${N}.service" || true
+        sudo systemctl reset-failed "llamacpp-batch${N}.service" 2>/dev/null || true
     done
     echo "Stopped. Status:"
     for N in "${INSTANCES[@]}"; do systemctl status "llamacpp-batch${N}.service" --no-pager -l || true; done
@@ -168,7 +168,7 @@ if [[ "$DO_RESTART" == true ]]; then
         echo "Running: systemctl restart llamacpp-batch${N}.service"
         # Clears any StartLimitBurst lockout left over from a prior crash loop. May fail
         # harmlessly if the unit isn't currently loaded (e.g. right after --stop).
-        sudo systemctl reset-failed "llamacpp-batch${N}.service" || true
+        sudo systemctl reset-failed "llamacpp-batch${N}.service" 2>/dev/null || true
         sudo systemctl restart "llamacpp-batch${N}.service"
     done
     echo "Service(s) restarted. Status:"

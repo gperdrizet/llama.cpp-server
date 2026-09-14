@@ -8,7 +8,7 @@
 
 This repository documents and centralizes the configuration of a `llama.cpp` inference server running as a systemd service on a dedicated model server. The server exposes a local OpenAI-compatible API and supports multiple concurrent projects.
 
-> **Public API gateway**: [promptlyapi.com](https://promptlyapi.com/register), providing authentication, token metering, billing, and an admin panel for indie devs and hobbyists on a budget - 100k free tokens for new registrations.
+> **Public API gateway**: [promptlyapi.com](https://promptlyapi.com/register), providing authentication, token metering, billing, and an admin panel for indie devs and hobbyists on a budget - 1m free tokens for new registrations.
 
 
 ## Table of contents
@@ -28,8 +28,8 @@ This repository documents and centralizes the configuration of a `llama.cpp` inf
 The server exposes an OpenAI-compatible API.
 
 ```bash
-# Chat completion — direct (internal / local network)
-curl http://localhost:8502/v1/chat/completions \
+# Chat completion - direct (internal / local network)
+curl http://localhost:8503/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <api-key>" \
   -d '{
@@ -38,7 +38,7 @@ curl http://localhost:8502/v1/chat/completions \
   }'
 
 # Chat completion — external (through gateway)
-curl https://model.perdrizet.org/v1/chat/completions \
+curl https://promptlyapi.com/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <gateway-issued-key>" \
   -d '{
@@ -51,7 +51,7 @@ curl http://localhost:8502/health
 ```
 
 When configuring clients (LangChain, LlamaIndex, OpenWebUI, etc.), set:
-- **Base URL**: `http://<model-server-ip>:8502/v1` (internal) or `https://model.perdrizet.org/v1` (external via gateway)
+- **Base URL**: `http://localhost:8503/v1` (internal) or `https://promptlyapi.com/v1` (external via gateway)
 - **API Key**: value from the unit file (internal) or a gateway-issued key (external)
 
 

@@ -36,7 +36,7 @@ elif [ "$TARGET" == "agents" ]; then
     echo "Launching dynamic personal agent router..."
     sudo systemctl start agent-router
     sudo systemctl start llama-embed
-    echo "Llama embed service started on 8501 (localhost only)."
+    echo "Llama embed service started on 8082 (localhost only)."
     echo "On-demand router listening on 8502 -> 8503."
 
 elif [ "$TARGET" == "none" ]; then

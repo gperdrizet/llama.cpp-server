@@ -1,0 +1,51 @@
+#!/bin/bash
+# switch-llama-profile - swap the nginx gateway between the two llama.cpp
+# deployment profiles and start the selected backend.
+#
+#   agents  personal agent router (dynamic multi-model, 8502 -> 8503)
+#   pool    dual-replica student pool (8502 -> 8083/8084)
+#   none    no active profile (8502 -> none)
+#
+# Only one profile should be active at a time: both share the same GPUs.
+TARGET=$1
+
+clear_vram() {
+    echo "Purging all active inference engines out of VRAM..."
+    sudo systemctl stop agent-router 2>/dev/null
+    sudo systemctl stop "llama-pool@*" 2>/dev/null
+    sudo killall llama-server 2>/dev/null
+    sleep 2
+}
+
+if [ "$TARGET" == "pool" ]; then
+    clear_vram
+    echo "Swapping NGINX gateway to dual-replica pool..."
+    sudo ln -sf /etc/nginx/llama-profiles/pool.conf /etc/nginx/llama-profiles/active-profile.conf
+    sudo systemctl restart nginx
+
+    echo "Launching pool replicas on ports 8083 and 8084..."
+    sudo systemctl start llama-pool@replica0 llama-pool@replica1
+    echo "Pool replicas listening on 8502 -> [8083, 8084]."
+
+elif [ "$TARGET" == "agents" ]; then
+    clear_vram
+    echo "Swapping NGINX gateway to personal agent router..."
+    sudo ln -sf /etc/nginx/llama-profiles/agent-router.conf /etc/nginx/llama-profiles/active-profile.conf
+    sudo systemctl restart nginx
+
+    echo "Launching dynamic personal agent router..."
+    sudo systemctl start agent-router
+    sudo systemctl start llama-embed
+    echo "Llama embed service started on 8501 (localhost only)."
+    echo "On-demand router listening on 8502 -> 8503."
+
+elif [ "$TARGET" == "none" ]; then
+    clear_vram
+    echo "Swapping NGINX gateway to no active profile..."
+    sudo ln -sf /etc/nginx/llama-profiles/none.conf /etc/nginx/llama-profiles/active-profile.conf
+    sudo systemctl restart nginx
+    echo "No active profile is now set."
+
+else
+    echo "Usage: switch-llama-profile [pool|agents|none]"
+fi

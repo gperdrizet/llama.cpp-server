@@ -7,50 +7,15 @@ Wants=network-online.target nvidia-persistenced.service
 [Service]
 Type=simple
 User=llama
-Environment=CUDA_DEVICE_ORDER=PCI_BUS_ID
-Environment=CUDA_VISIBLE_DEVICES=SUB_CUDA_DEVICE_HERE
-# Verbosity 4 prints the "load_tensors: offloaded X/Y layers to GPU" line, which
-# is the only reliable way to confirm whether --fit silently sent layers to CPU.
-Environment=LLAMA_ARG_LOG_VERBOSITY=4
 Group=llama
-CPUAffinity=SUB_CPU_AFFINITY_HERE
 WorkingDirectory=SUB_LLAMA_PATH_HERE
 
-# split-mode/fit-target/fit-ctx pin the context-fit benchmark's memory-fit margin.
-# These P100s are headless (no display/desktop load), so a small headroom suffices.
-# Sampling follows Unsloth's Qwen3.8-27B thinking-mode guide (temp 1.0, top-p 0.95,
-# top-k 20, min-p 0.0); --chat-template-kwargs reasoning_effort sets thinking depth.
-ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
-ExecStart=SUB_LLAMA_PATH_HERE/build/bin/llama-server \
-    -m SUB_MODEL_DIR_HERE/SUB_MODEL_FILE_HERE \
-    --cache-type-k SUB_KV_CACHE_TYPE_HERE \
-    --cache-type-v SUB_KV_CACHE_TYPE_HERE \
-    --n-gpu-layers SUB_GPU_LAYERS_HERE \
-    --split-mode SUB_SPLIT_MODE_HERE \
-    --tensor-split SUB_TENSOR_SPLIT_HERE \
-    --ctx-size SUB_CTX_SIZE_HERE \
-    --parallel SUB_SLOTS_HERE \
-    --kv-unified \
-    --threads SUB_THREADS_HERE \
-    --threads-batch SUB_THREADS_HERE \
-    --spec-type SUB_SPEC_TYPE_HERE \
-    --model-draft SUB_SPEC_DRAFT_MODEL_HERE \
-    --flash-attn on \
-    --fit-target 256 \
-    --fit-ctx SUB_CTX_SIZE_HERE \
-    --temp 1.0 \
-    --top-p 0.95 \
-    --top-k 20 \
-    --min-p 0.0 \
-    --chat-template-kwargs '{"reasoning_effort":"medium"}' \
-    --jinja \
-    --host 0.0.0.0 \
-    --port 8502 \
-    --api-key SUB_API_KEY_HERE \
-    --metrics \
-    --log-timestamps \
-    --log-prefix \
-    --cache-ram SUB_PROMPT_CACHE_SIZE_HERE
+# Fix CUDA device numbers so they match output from nvidia-smi
+Environment=CUDA_DEVICE_ORDER=PCI_BUS_ID
+Environment=CUDA_VISIBLE_DEVICES=SUB_CUDA_DEVICE_HERE
+
+# Pin to specific CPU cores, if desired
+CPUAffinity=SUB_CPU_AFFINITY_HERE
 
 # Restart policy
 Restart=on-failure
@@ -64,11 +29,56 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
 ReadOnlyPaths=SUB_LLAMA_PATH_HERE SUB_MODEL_DIR_HERE
+ReadWritePaths=/var/log/llama
 
 # Logging
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=llama-server
+LogsDirectory=llama
+
+# Elevate internal logger tracking targets
+Environment="LLAMA_LOG_LEVEL=DEBUG"
+Environment="GGML_LOG_LEVEL=DEBUG"
+
+# split-mode/fit-target/fit-ctx pin the context-fit benchmark's memory-fit margin.
+# These P100s are headless (no display/desktop load), so a small headroom suffices.
+# Sampling follows Unsloth's Qwen3.8-27B thinking-mode guide (temp 1.0, top-p 0.95,
+# top-k 20, min-p 0.0); --chat-template-kwargs reasoning_effort sets thinking depth.
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
+ExecStart=SUB_LLAMA_PATH_HERE/build/bin/llama-server \
+    -m SUB_MODEL_DIR_HERE/SUB_MODEL_FILE_HERE \
+    -a 'gpt-oss-20b' \
+    --cache-type-k SUB_KV_CACHE_TYPE_HERE \
+    --n-gpu-layers SUB_GPU_LAYERS_HERE \
+    --split-mode SUB_SPLIT_MODE_HERE \
+    --tensor-split SUB_TENSOR_SPLIT_HERE \
+    --ctx-size SUB_CTX_SIZE_HERE \
+    --parallel SUB_SLOTS_HERE \
+    --threads SUB_THREADS_HERE \
+    --threads-batch SUB_THREADS_HERE \
+    --spec-type SUB_SPEC_TYPE_HERE \
+    --spec-draft-n-max 3 \
+    --model-draft SUB_SPEC_DRAFT_MODEL_HERE \
+    --flash-attn on \
+    --batch-size 2048 \
+    --ubatch-size 2048 \
+    --temp 1.0 \
+    --top-p 0.95 \
+    --top-k 20 \
+    --min-p 0.0 \
+    --jinja \
+    --host :: \
+    --port 8502 \
+    --api-key SUB_API_KEY_HERE \
+    --metrics \
+    --cache-ram SUB_PROMPT_CACHE_SIZE_HERE \
+    --cache-idle-slots \
+    --log-file /var/log/llama/server.log \
+    --log-jsonl \
+    --chat-template-kwargs '{"reasoning_effort":"low"}' \
+    --reasoning-budget 16384 \
+    --reasoning-budget-message "... Thinking time limit reached. Stop reasoning and provide the final response now."
 
 [Install]
 WantedBy=multi-user.target

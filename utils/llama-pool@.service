@@ -1,0 +1,52 @@
+[Unit]
+Description=Llama.cpp Student Pool Instance %I (dual-replica)
+Documentation=https://github.com/ggml-org/llama.cpp
+After=network-online.target nvidia-persistenced.service
+Wants=network-online.target nvidia-persistenced.service
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=llama
+Group=llama
+WorkingDirectory=/opt/llama.cpp
+
+# Fix CUDA device numbers so they match output from nvidia-smi
+Environment=CUDA_DEVICE_ORDER=PCI_BUS_ID
+Environment=CUDA_VISIBLE_DEVICES=0,1
+
+# Shared + per-instance parameters (non-secret); the API key line ($SECURITY)
+# comes from the root-only secrets file.
+EnvironmentFile=/etc/llama/llama-pool-global
+EnvironmentFile=/etc/llama/llama-pool-instances
+EnvironmentFile=/etc/llama/llama-secrets.env
+
+# Restart policy: the pool must always be back for students
+Restart=always
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadOnlyPaths=/opt/llama.cpp /home/siderealyear/llama.cpp/models
+ReadWritePaths=/var/log/llama
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=llama-server
+LogsDirectory=llama
+
+# Elevate internal logger tracking targets
+Environment="LLAMA_LOG_LEVEL=DEBUG"
+Environment="GGML_LOG_LEVEL=DEBUG"
+
+# Wait for the GPU before starting
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
+ExecStart=/opt/llama.cpp/build/bin/llama-server $MODEL_PATH $MODEL_ALIAS $SERVER_LIMITS $OPTIMIZATIONS $SECURITY $ARGS_%I
+
+[Install]
+WantedBy=multi-user.target

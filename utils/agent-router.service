@@ -1,0 +1,69 @@
+[Unit]
+Description=Llama.cpp Personal Agent Router (Dynamic VRAM)
+Documentation=https://github.com/ggml-org/llama.cpp
+After=network-online.target nvidia-persistenced.service
+Wants=network-online.target nvidia-persistenced.service
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=llama
+Group=llama
+WorkingDirectory=/opt/llama.cpp
+
+# API key is loaded from the root-only secrets file (see llama-secrets.env.example)
+EnvironmentFile=/etc/llama/llama-secrets.env
+
+# Fix CUDA device numbers so they match output from nvidia-smi
+Environment=CUDA_DEVICE_ORDER=PCI_BUS_ID
+Environment=CUDA_VISIBLE_DEVICES=0,1
+
+# Pin to specific CPU cores, if desired
+CPUAffinity=12-23
+
+# Restart policy
+Restart=on-failure
+RestartSec=10
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadOnlyPaths=/opt/llama.cpp /home/siderealyear/llama.cpp/models
+ReadWritePaths=/var/log/llama
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=llama-server
+LogsDirectory=llama
+
+# Elevate internal logger tracking targets
+Environment="LLAMA_LOG_LEVEL=DEBUG"
+Environment="GGML_LOG_LEVEL=DEBUG"
+
+# Start the llama.cpp server
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
+ExecStart=/opt/llama.cpp/build/bin/llama-server \
+    --models-preset /etc/llama/agent-router.ini \
+    --models-max 1 \
+    --parallel 1 \
+    --threads 12 \
+    --threads-batch 12 \
+    --flash-attn on \
+    --batch-size 1048 \
+    --ubatch-size 1048 \
+    --jinja \
+    --host 127.0.0.1 \
+    --port 8503 \
+    --api-key ${LLAMA_ROUTER_KEY} \
+    --metrics \
+    --cache-ram -1 \
+    --cache-idle-slots \
+    --log-file /var/log/llama/server.log \
+    --log-jsonl
+
+[Install]
+WantedBy=multi-user.target

@@ -1,6 +1,9 @@
 # Environment - contains real API key, never commit
 .env
 
+# Secrets - real API keys for router/pool, never commit
+llama-secrets.env
+
 # Python
 __pycache__/
 .venv/

@@ -1,0 +1,3 @@
+# Unique configurations per GPU node
+ARGS_replica0=--port 8083 --tensor-split 1,0
+ARGS_replica1=--port 8084 --tensor-split 0,1

@@ -32,6 +32,7 @@ echo ">> Installing unit files"
 sudo install -m 644 "$UTILS/agent-router.service" /etc/systemd/system/agent-router.service
 sudo install -m 644 "$UTILS/llama-pool@.service"  /etc/systemd/system/llama-pool@.service
 sudo install -m 644 "$UTILS/llama-embed.service"  /etc/systemd/system/llama-embed.service
+sudo install -m 644 "$UTILS/llama-flash-next.service" /etc/systemd/system/llama-flash-next.service
 
 echo ">> Installing non-secret config"
 sudo install -d -m 755 -o root -g root "$ETC_LLAMA"

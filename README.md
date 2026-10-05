@@ -1,260 +1,209 @@
-# llama.cpp inference server
+# llama.cpp-server
 
-[![llama.cpp](https://img.shields.io/badge/llama.cpp-inference-6B7280?logo=meta&logoColor=white)](https://github.com/ggml-org/llama.cpp)
-[![CUDA](https://img.shields.io/badge/CUDA-P100%2016GB-76B900?logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-toolkit)
-[![Python](https://img.shields.io/badge/python-3.12-blue?logo=python&logoColor=white)](https://www.python.org/)
-[![OpenAI compatible](https://img.shields.io/badge/API-OpenAI%20compatible-412991?logo=openai&logoColor=white)](https://platform.openai.com/docs/api-reference)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+Multi-profile `llama.cpp` inference deployment for **pyrite**: two 16 GB Tesla P100s, 24 CPU cores, 251 GB RAM, 2.7 TB NVMe fronted bcache scratch. One OpenAI-compatible API on a single port (8502), fronted by nginx and backed by whichever profile you select:
 
-This repository documents and centralizes the configuration of a `llama.cpp` inference server running as a systemd service on a dedicated model server. The server exposes a local OpenAI-compatible API and supports multiple concurrent projects.
+- **agents**: a dynamic personal agent router that loads one of several models on demand into shared GPU memory
+- **pool**: a dual-replica multiuser pool, one `llama-server` per GPU, always hot
 
-> **Public API gateway**: [promptlyapi.com](https://promptlyapi.com/register), providing authentication, token metering, billing, and an admin panel for indie devs and hobbyists on a budget - 1m free tokens for new registrations.
+Two CPU-only sidecars are independent of the profile: a resident embedding server (8082) and an opt-in 125 B MoE for long-horizon coding (8085).
 
+> **Public API gateway**: [promptlyapi.com](https://promptlyapi.com/register): authentication, token metering, billing, and an admin panel for indie devs and hobbyists on a budget. 1 M free tokens for new registrations.
 
-## Table of contents
+## What is running
 
-- [API usage](#api-usage)
-- [Deployment](#deployment)
-- [Systemd service](#systemd-service)
-- [Testing](#testing)
-  - [Max context size](#max-context-size)
-  - [Results](#results)
-  - [Load test](#load-test)
-  - [Analysis notebook](#analysis-notebook)
+| Service | Port | Model | Where | Purpose |
+|---|---|---|---|---|
+| nginx gateway | **8502** (0.0.0.0) | — | `/etc/nginx/llama-profiles/` | Single public port; routes to the active profile |
+| `agent-router` | 8503 (loopback) | any preset model | systemd unit | On-demand multi-model router (profile: `agents`) |
+| `llama-pool@replica0/1` | 8083 / 8084 | `gpt-oss-20b` | systemd template | Student pool, 4 slots/replica (profile: `pool`) |
+| `llama-embed` | 8082 (loopback) | `bge-m3-Q8_0` | systemd unit | CPU-only embedding server, always available |
+| `llama-flash-next` | 8085 (loopback) | `Qwen3.8-Flash-Next-Q8_0` (125 B MoE, 178 GB) | systemd unit | CPU-only long-horizon coding; start manually |
 
+All inference runs as the unprivileged `llama` user with `ProtectSystem=strict` / `ProtectHome=read-only` / `ReadOnlyPaths` hardening.
 
-## API usage
+```
+                    ┌───────────────┐
+ clients ── 8502 ──►│ nginx (pyrite)│──► active-profile.conf (symlink)
+                    └───────────────┘             │
+               ┌───────────────────┬──────────────┴───┐
+               ▼                   ▼                  ▼
+        agents profile        pool profile       none profile
+        127.0.0.1:8503        8083 + 8084    127.0.0.1:1 (discard)
+              │
+       ┌──────┴──────────┬──────────────────┐
+       ▼                 ▼                  ▼
+  Qwen3.8-27B       gpt-oss-20b      Qwen2.5-Coder-7B
+  (tensor-split,    (pinned CUDA0)   (pinned CUDA1)
+   both GPUs)
 
-The server exposes an OpenAI-compatible API.
-
-```bash
-# Chat completion - direct (internal / local network)
-curl http://localhost:8503/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <api-key>" \
-  -d '{
-    "model": "gpt-oss-20b-mxfp4",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'
-
-# Chat completion — external (through gateway)
-curl https://promptlyapi.com/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <gateway-issued-key>" \
-  -d '{
-    "model": "gpt-oss-20b-mxfp4",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'
-
-# Health check
-curl http://localhost:8502/health
+  sidecars (independent of profile):
+  - 8082 bge-m3 embeddings (CPU)
+  - 8085 Qwen3.8-Flash-Next (CPU, opt-in)
 ```
 
-When configuring clients (LangChain, LlamaIndex, OpenWebUI, etc.), set:
-- **Base URL**: `http://localhost:8503/v1` (internal) or `https://promptlyapi.com/v1` (external via gateway)
-- **API Key**: value from the unit file (internal) or a gateway-issued key (external)
+## Repository layout
 
-
-## Deployment
-
-### Prerequisites
-
-The service runs as the `llama` system user. Create it once before deploying:
-
-```bash
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin llama
-```
-
-### Deploy
-
-The unit file template lives in `utils/llamacpp.service`. Deploy it with:
-
-```bash
-# Copy and fill in the env file
-cp .env.template .env
-
-# Deploy and immediately restart the service
-bash utils/deploy_service.sh --restart
-```
-
-`deploy_service.sh` substitutes `SUB_API_KEY_HERE`, etc from `.env`, copies the result to `/etc/systemd/system/llamacpp.service`, and runs `systemctl daemon-reload`.
-
-> **Note:** `.env` contains the real API key - do not commit it. It is listed in `.gitignore`.
-
-Model files are not included in this repository. Download them separately with `huggingface-cli` or `wget` into the repository's `models/` path.
-
-In this setup, `models/` is a symlink to storage under `/mnt/fast_scratch`. Keep `MODEL_DIR` set to `<repo>/models` in `.env` so service configuration stays repo-relative.
-
-When deploying from benchmark-derived context sizes, keep server KV-cache quantization aligned with benchmark settings. Set `KV_CACHE_TYPE` in `.env` (for example `q4_0`) so `llama-server` uses the same K/V cache type. Mismatched cache type (for example default `f16`) can cause startup OOM even when context-fit benchmarks succeeded.
-
-Because the service runs as user `llama` and `ProtectHome=read-only` is enabled, the full path to model files must be traversable/readable by `llama` (including parent directories). If needed, grant access with ACLs, for example:
-
-```bash
-setfacl -m u:llama:x /home/<user>
-setfacl -m u:llama:rx <repo>
-setfacl -m u:llama:rx /mnt/fast_scratch/llama-models
-```
-
-
-### Service management
-
-```bash
-# Status
-systemctl status llamacpp.service
-
-# Start / stop / restart
-sudo systemctl start llamacpp.service
-sudo systemctl stop llamacpp.service
-sudo systemctl restart llamacpp.service
-
-# Apply unit file changes
-sudo systemctl daemon-reload && sudo systemctl restart llamacpp.service
-
-# Enable / disable autostart on boot
-sudo systemctl enable llamacpp.service
-sudo systemctl disable llamacpp.service
-```
-
-### Logs
-
-All log output goes to the systemd journal tagged with `llama-server`:
-
-```bash
-# Follow live logs
-journalctl -u llamacpp.service -f
-
-# Show logs since last system boot
-journalctl -u llamacpp.service -b
-
-# Show last 100 lines (full, not ellipsized)
-journalctl -u llamacpp.service -n 100 --no-pager -l
-
-# Filter by time range
-journalctl -u llamacpp.service --since "2026-04-24 00:00" --until "2026-04-24 12:00"
-```
-
-### Restart policy
-
-By default, the service will restart on failure with the following settings.
-
-| Setting | Value | Meaning |
-|---|---|---|
-| `Restart` | `on-failure` | Restart if the process exits non-zero or is killed by a signal |
-| `RestartSec` | `10` | Wait 10 seconds before restarting |
-| `StartLimitInterval` | `300` | Rolling window for the burst limit |
-| `StartLimitBurst` | `5` | Stop retrying after 5 failures within 5 minutes |
-
-**CUDA probe:** Before starting, the service polls `nvidia-smi -L` for up to 30 seconds to confirm the GPU is available. This guards against `nvidia-persistenced` race conditions on boot. If the GPU isn't ready, the service fails immediately rather than silently falling back to CPU inference.
-
-### Security hardening
-
-The service runs as the unprivileged `llama` user/group and several flags are set in the unit file to protect the host system.
-
-| Directive | Effect |
+| Path | What |
 |---|---|
-| `NoNewPrivileges=true` | Prevents privilege escalation via setuid/setgid |
-| `PrivateTmp=true` | Isolated `/tmp` namespace |
-| `ProtectSystem=strict` | Filesystem mounted read-only except listed paths |
-| `ProtectHome=read-only` | `/home`, `/root`, `/run/user` are visible read-only to the process |
-| `ReadOnlyPaths=/opt/llama.cpp <repo>/models` | Both the install tree and model directory are read-only (model files are memory-mapped for reading only) |
+| `utils/` | Everything deploy.sh installs: unit files, router preset (`agent-router.ini`), pool config, secrets template, profile switcher |
+| `models/` | **Symlink** → `/mnt/fast_scratch/llama-models` (fast bcache). Never in git. See [Fast storage](#fast-storage-for-model-files) |
+| `tests/` | Benchmark runners (context-fit, load test, generation benchmark) + configs; see `tests/README.md` |
+| `notebooks/` | Result analysis (`load_test_results.ipynb`) |
+| `legacy/` | Old single-server deployment (`llamacpp.service` + `deploy_service.sh`); kept for reference, not deployed |
+| `/opt/llama.cpp/build/bin/` | Prebuilt binaries (`llama-server`, `llama-cli`, …) — not part of this repo |
+| `/etc/llama/` | Runtime config (owned by root): `agent-router.ini`, `llama-pool-*`, `llama-secrets.env` (0600) |
+| `/usr/local/bin/switch-llama-profile` | Profile switcher installed by deploy.sh |
 
+## Quick start
 
-## Testing
-
-### Max context size
-
-`tests/context_fit.py` finds the largest context that stays fully GPU-resident for each model: it scans a coarse set of context sizes, bisects around the first failure, then re-runs the winner `--verify-runs` times to confirm stability - once per KV-cache type (`--kv-cache-types`, default `q4_0,q8_0,f16`). Per-model artifacts (`results.csv`, `run.log`, `summary.json`, `plot.png`) land under `tests/results/context_fit/<run>/`.
-
-```bash
-.venv/bin/python tests/context_fit.py \
-  --config tests/config/context_fit/context_fit.dual_gpu.yaml
-```
-
-Run `tests/context_fit.py --help` for the full option list; the YAML config holds the defaults for each sweep.
-
-### Results
-
-Two Tesla P100-PCIE-16GB (32 GiB total), strict GPU-only fitting, `-sm row`.
-
-**Max context** - largest verified context per model and KV-cache type (dual GPU, Q4_K_M weights):
-
-![Max verified context by model and KV-cache type](assets/context-fit-max-context.png)
-
-`q8_0` KV buys extra context on the VRAM-bound models (Qwen, gemma, Mistral); GLM and gpt-oss hit their configured ceilings first, so both KV types land at the same value.
-
-**Generation rate** - steady-state tokens/s as context grows, single stream (`slots=1`):
-
-![Generation rate vs context, dual GPU](assets/generation-rate-dual-gpu.png)
-
-![Generation rate vs context, single GPU](assets/generation-rate-single-gpu.png)
-
-Dense 27-31B models sit at ~11-14 tok/s and barely move with quant choice: they are memory-bandwidth-bound, and on Pascal (no INT8/tensor cores) a smaller I-quant reads fewer bytes but costs more to dequantize, so it nets out flat. The MoE models (gpt-oss-20b, gemma-26B-A4B) run 3-5x faster because only a few experts are active per token. All rates taper with depth as attention over the KV cache grows.
-
-
-### Speculative decoding (unsupported for the qwen35 / M-RoPE models)
-
-Speculative decoding does not work for the `Qwen3.8-27B` (`qwen35` architecture) models on the current llama.cpp build (`b4024af6c`, build 9687), by any path:
-
-- A standalone draft (`Qwen3.5-2B`, vocab-compatible) loads and drafts tokens, but the target's verification batch fails with `decode: failed to initialize batch` / `for M-RoPE, it is required that the position satisfies: X < Y`, yielding ~0% acceptance and no speedup.
-- The purpose-built MTP head (`mtp-Qwen3.8-27B-Q4_0.gguf`) segfaults when loaded as a `-md` draft; `llama-speculative-simple` aborts.
-
-Root cause: `qwen35` uses **M-RoPE** (`rope.dimension_sections = [11, 11, 10, 0]`), and this build's speculative batch construction cannot assign the non-contiguous positions M-RoPE requires. This is a llama.cpp limitation, not a configuration problem - the drafts are vocab-compatible and the flags are correct. Re-test after a llama.cpp update that adds M-RoPE support to the speculative path (and MTP support for this architecture). Until then, the bankable generation win is `-sm row` (~+14% tg) plus concurrency/batching.
-
-
-### Load test
-
-`tests/load_test.py` supports both one-off runs and YAML-defined benchmark suites.
-
-Single run mode measures end-to-end response latency against the running `llamacpp.service` as a function of concurrent callers. Unlike the standalone benchmark runner, which bypasses the server binary, this exercises the full HTTP stack and is useful for tuning `--parallel` slot count.
+Prerequisites (once, per machine): the `llama` system user (`sudo useradd --system --no-create-home --shell /usr/sbin/nologin llama`), a built llama.cpp tree at `/opt/llama.cpp` (current: `0.5.0-dev`, build 11206, CUDA enabled), nginx, and the fast storage mount (`/mnt/fast_scratch`).
 
 ```bash
-# Run with defaults (concurrency levels 1 2 4 8 16 32, 3 repetitions each)
-.venv/bin/python tests/load_test.py
+# 1. Clone this repo (anywhere; the units reference the models symlink by absolute path)
+git clone git@github.com:gperdrizet/llama.cpp-server.git
 
-# Custom concurrency levels and repetitions
-.venv/bin/python tests/load_test.py --levels 1 2 4 8 --requests 5
+# 2. Point models/ at fast storage (see below if it isn't already a symlink)
+ln -s /mnt/fast_scratch/llama-models $PWD/models
 
-# Enable streaming (also measures time-to-first-token)
-.venv/bin/python tests/load_test.py --stream
+# 3. Deploy: installs units, /etc/llama config, and the switcher.
+#    First run scaffolds /etc/llama/llama-secrets.env from the template and stops.
+bash utils/deploy.sh
+
+# 4. Fill in the keys (see Secrets) and re-run deploy to finish:
+sudo nano /etc/llama/llama-secrets.env
+bash utils/deploy.sh
+
+# 5. Pick the profile you want running:
+sudo bash utils/switch-llama-profile agents    # personal router + embed
+# sudo bash utils/switch-llama-profile pool    # student pool
+# sudo bash utils/switch-llama-profile none    # GPUs free
+
+# 6. Verify
+curl -s http://127.0.0.1:8502/health
 ```
 
-#### Suite mode (YAML, recommended)
+`deploy.sh` never starts, stops, or restarts services — only the switcher does that. It also never overwrites an existing secrets file.
 
-Use `--suite-config` to run a sequence of load-test experiments defined in YAML.
+## Profiles and switching
+
+**Only one profile at a time**. Both share the same GPUs. `none` is the right choice when you want the P100s for something else; `agents` additionally starts the embed sidecar.
+
+```
+switch-llama-profile [agents|pool|none]`
+```
+
+Re-points the nginx symlink (`/etc/nginx/llama-profiles/active-profile.conf`), restarts nginx, clears VRAM, and starts the selected backend.
+
+## Adding a new model
+
+### Router model (GPU, on-demand)
+
+1. Download the `.gguf` into `models/`.
+2. Add a section to `utils/agent-router.ini` (deploys to `/etc/llama/agent-router.ini`):
+
+   ```ini
+   [MyNewModel]
+   alias                = MyNewModel          # the name clients request
+   model                = /home/siderealyear/llama.cpp/models/MyNew-Model-Q4_K_M.gguf
+   ctx-size             = 131072
+   device               = CUDA1               # pin to one GPU…
+   # …or split across both:
+   # split-mode         = tensor
+   ```
+
+   `[*]` holds defaults for all sections: `n-gpu-layers = -1` (all layers on GPU) and `sleep-idle-seconds = 300` (auto-unload after 5 min of silence). Reasoning models can add `spec-type = draft-mtp`, `spec-draft-n-max`, `reasoning-budget`, and `chat-template-kwargs` (see the `Qwen3.8-27B` section).
+
+3. Redeploy and restart. **The router reads the preset only at startup**; an edited-but-unrestarted router silently keeps the old model list:
+
+   ```bash
+   bash utils/deploy.sh
+   sudo bash utils/switch-llama-profile agents
+   ```
+
+4. Verify with a real request (auth required):
+
+   ```bash
+   curl -s http://127.0.0.1:8503/v1/chat/completions \
+     -H "Authorization: Bearer <LLAMA_ROUTER_KEY>" -H "Content-Type: application/json" \
+     -d '{"model":"MyNewModel","messages":[{"role":"user","content":"hi"}],"max_tokens":16}'
+   ```
+
+Constraints: `--models-max 1` means **one model resident at a time** — a new request evicts the previous one and pays its load time (a few seconds for ~16 GB Q4). Pick ctx-size to fit 16–32 GB VRAM; `sleep-idle-seconds` reclaims VRAM automatically.
+
+### Pool model
+
+`llama-pool@.service` is a systemd template: each replica instance expands `$MODEL_PATH $MODEL_ALIAS $SERVER_LIMITS $OPTIMIZATIONS $SECURITY $ARGS_<instance>` from the three `/etc/llama/llama-pool-*` files. Currently two replicas, one per GPU (`--tensor-split 1,0` / `0,1`), 4 slots each, `Restart=always`.
+
+Edit `utils/llama-pool-global` (shared: `MODEL_PATH`, `MODEL_ALIAS`, `SERVER_LIMITS`, `OPTIMIZATIONS`) and/or `utils/llama-pool-instances` (per-replica `ARGS_replicaN`), re-deploy, then `switch-llama-profile pool`.
+
+### Standalone service (dedicated port, e.g. CPU-only)
+
+Copy `utils/llama-flash-next.service` as a template: change the `Description`, `--model`, `--alias`, and `--port` (pick a free one), then add one line to `utils/deploy.sh`'s unit-install block and re-deploy. Use `Environment=CUDA_VISIBLE_DEVICES=` and `--n-gpu-layers 0` for CPU-only so the GPUs stay free.
+
+## Secrets
+
+`/etc/llama/llama-secrets.env` is **root-only (0600)** and is a **systemd EnvironmentFile, not a shell script** — do not `source` it. It holds:
+
+```
+LLAMA_ROUTER_KEY=<key>            # referenced as ${LLAMA_ROUTER_KEY} by agent-router.service
+SECURITY=--api-key <key> --host 127.0.0.1   # expanded as $SECURITY by llama-pool@.service
+```
+
+The `SECURITY` line is the gotcha: valid for systemd, but bash parses `SECURITY=--api-key` as an assignment prefix and tries to *execute* the key. If you need the key in a script, extract it: `grep -E '^LLAMA_ROUTER_KEY=' /etc/llama/llama-secrets.env | cut -d= -f2-`. After editing the file, restart affected services — systemd re-reads EnvironmentFiles only at unit start.
+
+## Operations
 
 ```bash
-# Run a suite
-.venv/bin/python tests/load_test.py --suite-config tests/config/load_test/load-test-GTP-OSS-20B.yaml
-
-# Preview actions without redeploying or sending requests
-.venv/bin/python tests/load_test.py --suite-config tests/config/load_test/load-test-GTP-OSS-20B.yaml --dry-run
+systemctl status agent-router llama-embed llama-flash-next "llama-pool@*"
+journalctl -u agent-router -f                 # or -u llama-pool@replica0, etc.
+journalctl -u agent-router --since "10:00"    # time-range
+nvidia-smi                                     # VRAM per GPU
+curl -s http://127.0.0.1:8502/health          # gateway
 ```
 
-In suite mode, each case can set model/deployment settings (`model`, `slots`, `ctx_size`, `gpu_layers`, `cuda_device`, `tensor_split`, `prompt_cache_size`) and test settings (`levels`, `requests`, `max_tokens`, `stream`, `url`).
+Useful log lines (router, `SyslogIdentifier=llama-server`):
+- `slot print_timing: … prompt processing, n_tokens = N, … t = X s / Y tokens per second` — prefill rate
+- `slot print_timing: … n_gen = N, tg = X t/s, tg_3s = Y t/s` — generation rate (sustained / 3-second window)
+- `load_model: loading model '…'` and `slot release: … stop processing` — load/evict lifecycle
 
-For each case the runner:
-1. Updates `.env` with case-specific server settings.
-2. Calls `utils/deploy_service.sh --restart`.
-3. Runs the load test.
-4. Writes results to `tests/results/YYYY-MM-DD_<case-label>_slotsN/load_test.csv`.
+## Fast storage for model files
 
-The `.env` file is restored to its original contents when the suite finishes.
+Model weights are memory-mapped, so first-touch page-in speed is limited by disk. Keep them on the bcache, not the system root:
 
-> **Note:** If `.env` points to a public URL behind nginx rate limits, set per-case `url: http://localhost:8502` for on-server benchmarking.
+```bash
+sudo mkdir -p /mnt/fast_scratch/llama-models
+ln -s /mnt/fast_scratch/llama-models <repo>/models     # repo-local, gitignored
+```
 
-**Key options:**
+Then make the path traversable by the `llama` service user (the units run with `ProtectHome=read-only`, so plain permissions on `/home/...` are not enough):
 
-| Option | Default | Description |
-|---|---|---|
-| `--suite-config FILE` | _(none)_ | Run YAML-defined suite with automated redeploy between cases |
-| `--url` | `$BASE_URL` or `$LLAMA_BASE_URL` or `http://localhost:8502` | Server base URL |
-| `--api-key` | `$API_KEY` or `$LLAMA_API_KEY` | Bearer token |
-| `--levels N [N ...]` | `1 2 4 8 16 32` | Concurrency levels to test |
-| `--requests N` | `3` | Repetitions per level |
-| `--slots N` | `$SLOTS` or `$LLAMA_SLOTS` or `1` | Slot count recorded in CSV |
-| `--stream` | off | Streaming mode (enables TTFT measurement) |
-| `--model-label` | _(empty)_ | Model identifier recorded in CSV |
-| `--ctx-size N` | _(none)_ | Context size recorded in CSV |
-| `--output FILE` | `tests/results/load_test_YYYY-mm-dd_HH-MM.csv` | Output path (single-run mode) |
+```bash
+sudo setfacl -m u:llama:x /home/<user>
+sudo setfacl -m u:llama:rx <repo>
+sudo setfacl -m u:llama:rx /mnt/fast_scratch/llama-models
+```
 
-Use `notebooks/load_test_results.ipynb` to analyze suite outputs across configurations.
+Notes:
+- Download models into `models/` with `huggingface-cli` or `wget`; the repo stores none of them (`.gitignore` excludes `models`).
+- All unit files reference models through the repo path (`/home/<user>/llama.cpp/models/...`), so moving the *target* of the symlink requires no unit edits — just restart the affected services.
+- Check headroom before big downloads: `df -h /mnt/fast_scratch` (this box's bcache runs near full).
+
+## Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| `401 Invalid API Key` | Client key ≠ key in the running router's environment. Compare with `sudo tr '\0' '\n' < /proc/$(systemctl show -p MainPID --value agent-router)/environ \| grep ^LLAMA_ROUTER_KEY=`; mismatch after a secrets edit means the router needs a restart. Trailing whitespace/CRLF in the env file also causes this. |
+| `500 model name=X failed to load` for the *wrong* model name | The running router has a stale preset (ini edited, router not restarted) — section headers matter: keys without a `[Section]` line merge into the previous section. Restart via the switcher. |
+| `model name=X is not found` | Alias not in the loaded preset — check `/etc/llama/agent-router.ini` spelling vs the request's `model` field, then restart. |
+| Model load failure on a new quant | Build may not support the format (e.g. some ternary/experimental quants). Check the `llama-server` journal around the request for the loader error. |
+| VRAM OOM at startup | ctx-size × KV cache + weights must fit. Lower `ctx-size`, or keep `n-gpu-layers = -1` so nothing leaks to CPU. |
+| Generation much slower than expected | CPU-only sidecars (8085) are ~0.3–0.4 tok/s warm on this box — by design. For GPU models, confirm the model isn't mid-reload (see load lines above). |
+| bcache nearly full | `df -h /mnt/fast_scratch`; prune old quants before downloading new ones. |
+
+## Benchmarks
+
+Runners live in `tests/` (see `tests/README.md`): `context_fit.py` (largest GPU-resident context per model/KV type), `load_test.py` (end-to-end latency vs concurrency, incl. YAML suite mode), and `generation_benchmark.py`. Outputs land under `tests/results/...`; analysis in `notebooks/load_test_results.ipynb`.
+
+> Benchmark numbers in this repo are being re-run against the current build; treat existing plots in `assets/` as provisional until then.
+
+Known limitation (re-test after upstream updates): speculative decoding with MTP draft model does not work for the `qwen35`/M-RoPE family (Qwen3.8-27B) on the current build. The MTP draft model loads but verification fails.

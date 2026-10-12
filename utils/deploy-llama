@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# utils/deploy.sh
+# utils/deploy-llama
 #
 # Deploys the llama.cpp backend (agent router + student pool) from this repo:
 #   - unit files      -> /etc/systemd/system/
@@ -16,7 +16,7 @@
 #   sudo bash utils/switch-llama-profile pool     # dual-replica student pool
 #
 # Usage:
-#   bash utils/deploy.sh
+#   bash utils/deploy-llama
 #
 set -euo pipefail
 

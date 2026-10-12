@@ -1,6 +1,7 @@
 # Universal settings shared by all pool replicas (non-secret).
 # The API key line (SECURITY=...) lives in /etc/llama/llama-secrets.env.
-MODEL_PATH=--model /home/siderealyear/llama.cpp/models/gpt-oss-20b-Q4_K_M.gguf
-MODEL_ALIAS=--alias gpt-oss-20b
+MODEL_PATH=--model /home/siderealyear/llama.cpp/models/gemma-4-E2B-it-BF16.gguf
+MODEL_ALIAS=--alias gemma-4
 SERVER_LIMITS=--ctx-size 131072 -np 4
 OPTIMIZATIONS=--flash-attn true
+SPECULATIVE_DECODE=--model-draft /home/siderealyear/llama.cpp/models/mtp-gemma-4-E2B-it-BF16.gguf --spec-type draft-mtp --spec-draft-n-max 4

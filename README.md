@@ -9,7 +9,7 @@ Two CPU-only sidecars are independent of the profile: a resident embedding serve
 
 > **Public API gateway**: [promptlyapi.com](https://promptlyapi.com/register): authentication, token metering, billing, and an admin panel for indie devs and hobbyists on a budget. 1 M free tokens for new registrations.
 
-## What is running
+## Services
 
 | Service | Port | Model | Where | Purpose |
 |---|---|---|---|---|
@@ -22,13 +22,13 @@ Two CPU-only sidecars are independent of the profile: a resident embedding serve
 All inference runs as the unprivileged `llama` user with `ProtectSystem=strict` / `ProtectHome=read-only` / `ReadOnlyPaths` hardening.
 
 ```
-                    ┌───────────────┐
- clients ── 8502 ──►│ nginx (pyrite)│──► active-profile.conf (symlink)
-                    └───────────────┘             │
-               ┌───────────────────┬──────────────┴───┐
-               ▼                   ▼                  ▼
+                    ┌────────────────┐
+ clients ── 8502 ──►│ nginx (pyrite) │──► active-profile.conf (symlink)
+                    └────────────────┘             │
+               ┌───────────────────┬───────────────┴───┐
+               ▼                   ▼                   ▼
         agents profile        pool profile       none profile
-        127.0.0.1:8503        8083 + 8084    127.0.0.1:1 (discard)
+             8503              8083 + 8084        1 (discard)
               │
        ┌──────┴──────────┬──────────────────┐
        ▼                 ▼                  ▼
@@ -56,33 +56,76 @@ All inference runs as the unprivileged `llama` user with `ProtectSystem=strict` 
 
 ## Quick start
 
-Prerequisites (once, per machine): the `llama` system user (`sudo useradd --system --no-create-home --shell /usr/sbin/nologin llama`), a built llama.cpp tree at `/opt/llama.cpp` (current: `0.5.0-dev`, build 11206, CUDA enabled), nginx, and the fast storage mount (`/mnt/fast_scratch`).
+### Prerequisites
+
+CUDA, Nvidia CUDA toolkit, NVIDIA Collective Communications Library and Nginx.
+
+### Build llama.cpp
+
+See the [llama.cpp build docs](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md) for detailed instructions. Steps below are for Ubuntu 24.04, tested working 2026-10-07 with [v0.6.0](https://github.com/ggml-org/llama.cpp/releases/tag/v0.6.0) (commit d812350).
+
+Shallow clone the desired version:
 
 ```bash
-# 1. Clone this repo (anywhere; the units reference the models symlink by absolute path)
+cd /tmp
+git clone --branch v0.6.0 --depth 1 https://github.com/ggml-org/llama.cpp
+sudo mv ./llama.cpp /opt/
+```
+
+Compile for CUDA with NCCL for inter-card communication in tensor split mode:
+
+```bash
+cmake -B build -DGGML_CUDA=ON -DGGML_CUDA_NCCL=ON
+cmake --build build --config Release -j$(nproc)
+```
+
+Create a non-login user for the llama.cpp process to run under:
+
+```bash
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin llama
+```
+
+## Set-up systemd profiles & nginx (this repo)
+
+Clone the repo anywhere you like:
+```bash
 git clone git@github.com:gperdrizet/llama.cpp-server.git
+```
 
-# 2. Point models/ at fast storage (see below if it isn't already a symlink)
+Link the models directory to fast storage (if desired):
+
+```bash
 ln -s /mnt/fast_scratch/llama-models $PWD/models
+```
 
-# 3. Deploy: installs units, /etc/llama config, and the switcher.
-#    First run scaffolds /etc/llama/llama-secrets.env from the template and stops.
+Use the provide script to deploy: installs units, /etc/llama config, and the switcher. First run scaffolds /etc/llama/llama-secrets.env from the template and stops.
+
+```bash
 bash utils/deploy.sh
+```
 
-# 4. Fill in the keys (see Secrets) and re-run deploy to finish:
+Fill in the keys (see Secrets) and re-run deploy to finish:
+
+```bash
 sudo nano /etc/llama/llama-secrets.env
 bash utils/deploy.sh
+```
 
-# 5. Pick the profile you want running:
-sudo bash utils/switch-llama-profile agents    # personal router + embed
-# sudo bash utils/switch-llama-profile pool    # student pool
-# sudo bash utils/switch-llama-profile none    # GPUs free
+Pick the profile you want running:
 
-# 6. Verify
+```bash
+switch-llama-profile agents     # personal router + embed
+switch-llama-profile pool       # student pool
+utils/switch-llama-profile none # GPUs free
+```
+
+Verify:
+
+```bash
 curl -s http://127.0.0.1:8502/health
 ```
 
-`deploy.sh` never starts, stops, or restarts services — only the switcher does that. It also never overwrites an existing secrets file.
+`deploy-llama.sh` never starts, stops, or restarts services; only the switcher does that. It also never overwrites an existing secrets file.
 
 ## Profiles and switching
 
@@ -116,7 +159,7 @@ Re-points the nginx symlink (`/etc/nginx/llama-profiles/active-profile.conf`), r
 3. Redeploy and restart. **The router reads the preset only at startup**; an edited-but-unrestarted router silently keeps the old model list:
 
    ```bash
-   bash utils/deploy.sh
+   deploy-llama
    sudo bash utils/switch-llama-profile agents
    ```
 
@@ -202,8 +245,25 @@ Notes:
 
 ## Benchmarks
 
-Runners live in `tests/` (see `tests/README.md`): `context_fit.py` (largest GPU-resident context per model/KV type), `load_test.py` (end-to-end latency vs concurrency, incl. YAML suite mode), and `generation_benchmark.py`. Outputs land under `tests/results/...`; analysis in `notebooks/load_test_results.ipynb`.
+Current router deployment profile was benchmarked with `tests/router_benchmark.py`:
 
-> Benchmark numbers in this repo are being re-run against the current build; treat existing plots in `assets/` as provisional until then.
 
-Known limitation (re-test after upstream updates): speculative decoding with MTP draft model does not work for the `qwen35`/M-RoPE family (Qwen3.8-27B) on the current build. The MTP draft model loads but verification fails.
+```
+========================================================================================================
+SUMMARY
+========================================================================================================
+model                         run   ok     ttft_s   pp_tok_s   tg_tok_s   gpu0_mib   gpu1_mib    ram_mib
+--------------------------------------------------------------------------------------------------------
+Qwen3.5-9B-Q4_K_M             cold  yes     16.87      461.5       31.1      13913          3      17868
+Qwen3.5-9B-Q4_K_M             hot   yes      7.17      504.2       41.0      13913          3      18312
+Qwen3.8-27B-UD-Q4_K_M         cold  yes     67.49      357.1       27.6      12525      12525      18195
+Qwen3.8-27B-UD-Q4_K_M         hot   yes      9.67      383.5       28.1      12525      12525      19320
+Qwen3.8-Flash-Next-Q8_0       cold  yes    464.68      133.3        7.0      14689      15637     146771
+Qwen3.8-Flash-Next-Q8_0       hot   yes     22.44      156.1        6.9      14689      15637     147127
+gemma4-31B-it-Q4_K_M          cold  yes     58.01      243.6       19.4      15673      15673      19480
+gemma4-31B-it-Q4_K_M          hot   yes     15.91      254.7       19.7      15675      15675      23252
+Qwen3-Coder-30B-A3B-it-Q4_K_M cold  yes     46.33      721.6       34.6      15801      15801      17278
+Qwen3-Coder-30B-A3B-it-Q4_K_M hot   yes      4.97      736.2       35.2      15801      15801      17524
+Qwen3-Coder-Next-Q8_0         cold  yes    298.22      272.6        8.9       5457       4839      97858
+Qwen3-Coder-Next-Q8_0         hot   yes     12.54      278.9        9.7       5457       4839      98083
+```

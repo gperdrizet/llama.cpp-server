@@ -20,7 +20,16 @@ Environment=CUDA_DEVICE_ORDER=PCI_BUS_ID
 Environment=CUDA_VISIBLE_DEVICES=0,1
 
 # Pin to specific CPU cores, if desired
-CPUAffinity=12-23
+# Widened to the full machine (was 12-23) so Flash-Next, now hosted here,
+# can match its old standalone CPU access.
+CPUAffinity=0-23
+
+# Elevated scheduling priority, migrated from the old standalone
+# llama-flash-next.service — only one router model is ever active at a
+# time (--models-max 1), so this just lets whichever model is currently
+# running win CPU contention against everything else on the box.
+Nice=-15
+CPUWeight=10000
 
 # Restart policy
 Restart=on-failure
@@ -39,6 +48,8 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=llama-server
 LogsDirectory=llama
+Environment="LLAMA_LOG_PREFIX=false"
+Environment="LLAMA_LOG_TIMESTAMPS=false"
 
 # Elevate internal logger tracking targets
 Environment="LLAMA_LOG_LEVEL=DEBUG"
@@ -49,12 +60,9 @@ ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1
 ExecStart=/opt/llama.cpp/build/bin/llama-server \
     --models-preset /etc/llama/agent-router.ini \
     --models-max 1 \
-    --parallel 1 \
     --threads 12 \
     --threads-batch 12 \
     --flash-attn on \
-    --batch-size 1048 \
-    --ubatch-size 1048 \
     --jinja \
     --host 127.0.0.1 \
     --port 8503 \
@@ -62,8 +70,7 @@ ExecStart=/opt/llama.cpp/build/bin/llama-server \
     --metrics \
     --cache-ram -1 \
     --cache-idle-slots \
-    --log-file /var/log/llama/server.log \
-    --log-jsonl
+    --log-file /var/log/llama/server.log
 
 [Install]
 WantedBy=multi-user.target

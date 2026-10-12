@@ -74,7 +74,7 @@ if load_dotenv is not None:
 
 DEFAULT_INI = REPO_ROOT / "utils" / "agent-router.ini"
 DEFAULT_URL = os.getenv("LLAMA_ROUTER_URL", "http://localhost:8503")
-DEFAULT_API_KEY = os.getenv("LLAMA_ROUTER_KEY", "")
+DEFAULT_API_KEY = os.getenv("API_KEY", "")
 RESULTS_DIR = REPO_ROOT / "tests" / "results" / "router-benchmark"
 
 DEFAULT_MAX_TOKENS = 128

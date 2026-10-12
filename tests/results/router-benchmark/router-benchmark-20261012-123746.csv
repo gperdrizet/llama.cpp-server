@@ -1,0 +1,3 @@
+section,request_model,run,timestamp,success,error,ttft_s,wall_s,prompt_n,prompt_ms,prompt_per_second,predicted_n,predicted_ms,predicted_per_second,gpu0_used_mib_before,gpu0_used_mib_after,gpu1_used_mib_before,gpu1_used_mib_after,ram_used_mib_before,ram_used_mib_after
+qwen-coder,qwen-coder,cold,2026-10-12T12:37:39,True,,66.46916319197044,69.1719985299278,3402,4718.582,720.979311157462,97,2702.124,35.52760717124751,14691,15801,15639,15801,145328,16123
+qwen-coder,qwen-coder,hot,2026-10-12T12:37:46,True,,4.943240273045376,7.3943369560875,3389,4590.687,738.2337327724588,88,2450.549,35.50224867978564,14691,15801,15639,15801,145328,16459

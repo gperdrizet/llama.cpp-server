@@ -249,21 +249,21 @@ Current router deployment profile was benchmarked with `tests/router_benchmark.p
 
 
 ```
-========================================================================================================
-SUMMARY
-========================================================================================================
-model                         run   ok     ttft_s   pp_tok_s   tg_tok_s   gpu0_mib   gpu1_mib    ram_mib
---------------------------------------------------------------------------------------------------------
-Qwen3.5-9B-Q4_K_M             cold  yes     16.87      461.5       31.1      13913          3      17868
-Qwen3.5-9B-Q4_K_M             hot   yes      7.17      504.2       41.0      13913          3      18312
-Qwen3.8-27B-UD-Q4_K_M         cold  yes     67.49      357.1       27.6      12525      12525      18195
-Qwen3.8-27B-UD-Q4_K_M         hot   yes      9.67      383.5       28.1      12525      12525      19320
-Qwen3.8-Flash-Next-Q8_0       cold  yes    464.68      133.3        7.0      14689      15637     146771
-Qwen3.8-Flash-Next-Q8_0       hot   yes     22.44      156.1        6.9      14689      15637     147127
-gemma4-31B-it-Q4_K_M          cold  yes     58.01      243.6       19.4      15673      15673      19480
-gemma4-31B-it-Q4_K_M          hot   yes     15.91      254.7       19.7      15675      15675      23252
-Qwen3-Coder-30B-A3B-it-Q4_K_M cold  yes     46.33      721.6       34.6      15801      15801      17278
-Qwen3-Coder-30B-A3B-it-Q4_K_M hot   yes      4.97      736.2       35.2      15801      15801      17524
-Qwen3-Coder-Next-Q8_0         cold  yes    298.22      272.6        8.9       5457       4839      97858
-Qwen3-Coder-Next-Q8_0         hot   yes     12.54      278.9        9.7       5457       4839      98083
+========================================================================================
+model                         run   ok   ttft_s   pp_tok_s  tg_tok_s  gpu0_mib  gpu1_mib
+----------------------------------------------------------------------------------------
+gemma4-31B-it                 cold  yes   58.0     244.4      20.4      15.7      15.7
+gemma4-31B-it                 hot   yes   15.8     255.8      21.9      15.7      15.7
+Qwen3.5-9B                    cold  yes   13.4     540.8      27.7      13.9       0.0
+Qwen3.5-9B                    hot   yes    5.5     671.2      38.0      13.9       0.0
+Qwen3.8-27B                   cold  yes   18.0     381.5      31.2      15.2      15.2
+Qwen3.8-27B                   hot   yes    9.3     393.7      34.1      15.2      15.2
+Qwen3.8-Flash-Next            cold  yes  170.7      94.2       7.0       7.6      15.0
+Qwen3.8-Flash-Next            hot   yes   26.6     131.0       7.4       7.6      15.0
+Qwen3-Coder-30B-A3B-Instruct  cold  yes   28.0     724.3      35.4      15.8      15.8
+Qwen3-Coder-30B-A3B-Instruct  hot   yes    4.9     738.0      35.8      15.8      15.8
+Qwen3-Coder-Next              cold  yes  290.2     243.7       6.2      12.2      15.1
+Qwen3-Coder-Next              hot   yes   12.6     278.2       8.7      12.2      15.1
 ```
+
+All models are Unsloth Q4_K_M except Qwen3-Coder-Next (Q8_0).

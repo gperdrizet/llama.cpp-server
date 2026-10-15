@@ -19,6 +19,9 @@ EnvironmentFile=/etc/llama/llama-secrets.env
 Environment=CUDA_DEVICE_ORDER=PCI_BUS_ID
 Environment=CUDA_VISIBLE_DEVICES=0,1
 
+# Unlock memory limit
+LimitMEMLOCK=infinity
+
 # Pin to specific CPU cores, if desired
 # Widened to the full machine (was 12-23) so Flash-Next, now hosted here,
 # can match its old standalone CPU access.

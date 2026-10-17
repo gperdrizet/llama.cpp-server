@@ -156,7 +156,7 @@ Re-points the nginx symlink (`/etc/nginx/llama-profiles/active-profile.conf`), r
 
    `[*]` holds defaults for all sections: `n-gpu-layers = -1` (all layers on GPU) and `sleep-idle-seconds = 300` (auto-unload after 5 min of silence). Reasoning models can add `spec-type = draft-mtp`, `spec-draft-n-max`, `reasoning-budget`, and `chat-template-kwargs` (see the `Qwen3.8-27B` section).
 
-3. Redeploy and restart. **The router reads the preset only at startup**; an edited-but-unrestarted router silently keeps the old model list:
+3. Redeploy and restart. **The router reads the preset only at startup**; an edited-but-not-restarted router silently keeps the old model list:
 
    ```bash
    deploy-llama
@@ -197,17 +197,12 @@ The `SECURITY` line is the gotcha: valid for systemd, but bash parses `SECURITY=
 ## Operations
 
 ```bash
-systemctl status agent-router llama-embed llama-flash-next "llama-pool@*"
 journalctl -u agent-router -f                 # or -u llama-pool@replica0, etc.
 journalctl -u agent-router --since "10:00"    # time-range
-nvidia-smi                                     # VRAM per GPU
+nvidia-smi                                    # VRAM per GPU
 curl -s http://127.0.0.1:8502/health          # gateway
 ```
 
-Useful log lines (router, `SyslogIdentifier=llama-server`):
-- `slot print_timing: … prompt processing, n_tokens = N, … t = X s / Y tokens per second` — prefill rate
-- `slot print_timing: … n_gen = N, tg = X t/s, tg_3s = Y t/s` — generation rate (sustained / 3-second window)
-- `load_model: loading model '…'` and `slot release: … stop processing` — load/evict lifecycle
 
 ## Fast storage for model files
 
@@ -233,6 +228,16 @@ Notes:
 
 ## Troubleshooting
 
+### Note about Qwen3.5+ chat templates
+
+The stock chat template rejects the `developer` tags used by many harnesses (Claude Code, etc.). This is a known issue, see issue [here](https://github.com/ggml-org/llama.cpp/issues/27107). Use this [patched template](https://gist.githubusercontent.com/sudoingX/c2facf7d8f7608c65c1024ef3b22d431/raw/033fe789a538d230edd2b433b9dc6ce3ba16bf0e/qwen3.5_chat_template.jinja) instead:
+
+```bash
+curl -o qwen_chat.jinja https://gist.githubusercontent.com/sudoingX/c2facf7d8f7608c65c1024ef3b22d431/raw/033fe789a538d230edd2b433b9dc6ce3ba16bf0e/qwen3.5_chat_template.jinja
+```
+
+Then add it to effected models with `--chat-template-file /path/to/qwen_chat.jinja`. Note: it is supposedly also possible to fix the issue by passing `--chat-template chatml` but apparently this silently disables thinking. Using the patched template perserves thinking behavior and allows it to be controlled with `--chat-template-kwargs '{"reasoning_effort":"medium"}'`. Newer llama.cpp builds also accept `--reasoning-effort medium` etc.
+
 | Symptom | Cause / fix |
 |---|---|
 | `401 Invalid API Key` | Client key ≠ key in the running router's environment. Compare with `sudo tr '\0' '\n' < /proc/$(systemctl show -p MainPID --value agent-router)/environ \| grep ^LLAMA_ROUTER_KEY=`; mismatch after a secrets edit means the router needs a restart. Trailing whitespace/CRLF in the env file also causes this. |
@@ -240,7 +245,6 @@ Notes:
 | `model name=X is not found` | Alias not in the loaded preset — check `/etc/llama/agent-router.ini` spelling vs the request's `model` field, then restart. |
 | Model load failure on a new quant | Build may not support the format (e.g. some ternary/experimental quants). Check the `llama-server` journal around the request for the loader error. |
 | VRAM OOM at startup | ctx-size × KV cache + weights must fit. Lower `ctx-size`, or keep `n-gpu-layers = -1` so nothing leaks to CPU. |
-| Generation much slower than expected | CPU-only sidecars (8085) are ~0.3–0.4 tok/s warm on this box — by design. For GPU models, confirm the model isn't mid-reload (see load lines above). |
 | bcache nearly full | `df -h /mnt/fast_scratch`; prune old quants before downloading new ones. |
 
 ## Benchmarks
@@ -265,5 +269,3 @@ Qwen3-Coder-30B-A3B-Instruct  hot   yes    4.9     738.0      35.8      15.8    
 Qwen3-Coder-Next              cold  yes  290.2     243.7       6.2      12.2      15.1
 Qwen3-Coder-Next              hot   yes   12.6     278.2       8.7      12.2      15.1
 ```
-
-All models are Unsloth Q4_K_M except Qwen3-Coder-Next (Q8_0).

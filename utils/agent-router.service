@@ -70,6 +70,7 @@ ExecStart=/opt/llama.cpp/build/bin/llama-server \
     --host 127.0.0.1 \
     --port 8503 \
     --api-key ${LLAMA_ROUTER_KEY} \
+    --cors-origins 100.64.0.2 \
     --metrics \
     --cache-ram -1 \
     --cache-idle-slots \

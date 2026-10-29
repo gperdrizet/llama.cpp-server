@@ -46,7 +46,7 @@ Environment="GGML_LOG_LEVEL=DEBUG"
 
 # Wait for the GPU before starting
 ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
-ExecStart=/opt/llama.cpp/build/bin/llama-server $MODEL_PATH $MODEL_ALIAS $SERVER_LIMITS $OPTIMIZATIONS $SECURITY $ARGS_%I
+ExecStart=/opt/llama.cpp/build/bin/llama-server $MODEL_PATH $MODEL_ALIAS $SERVER_LIMITS $OPTIMIZATIONS $REASONING #SPECULATIVE_DECODE $SECURITY $ARGS_%I
 
 [Install]
 WantedBy=multi-user.target

@@ -1,7 +1,8 @@
 # Universal settings shared by all pool replicas (non-secret).
 # The API key line (SECURITY=...) lives in /etc/llama/llama-secrets.env.
-MODEL_PATH=--model /home/siderealyear/llama.cpp/models/Qwen3.5-4B-Q5_K_M.gguf
-MODEL_ALIAS=--alias qwen
-SERVER_LIMITS=--ctx-size 65536 -np 2 --batch-size 4098 --ubatch-size 2048
+MODEL_PATH=--model /home/siderealyear/llama.cpp/models/Qwen3.8-27B-UD-IQ2_S.gguf
+MODEL_ALIAS=--alias Qwen3.8-27B
+SERVER_LIMITS=--ctx-size 131072 --parallel 4 --kv_unified --batch-size 4098 --ubatch-size 2048
 OPTIMIZATIONS=--flash-attn true
-SPECULATIVE_DECODE=--model-draft /home/siderealyear/llama.cpp/models/Qwen3.5-4B-DFlash.Q8_0.gguf --spec-type draft-dflash
+REASONING=--chat-template-file /home/siderealyear/llama.cpp/utils/qwen_chat.jinja --reasoning-budget 16384 --chat-template-kwargs = {"reasoning_effort":"low"} --no-reasoning-preserve true
+SPECULATIVE_DECODE=--model-draft /home/siderealyear/llama.cpp/models/mtp-Qwen3.8-27B-Q4_0.gguf --spec-type draft-mtp

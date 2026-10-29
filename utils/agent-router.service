@@ -63,6 +63,7 @@ ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1
 ExecStart=/opt/llama.cpp/build/bin/llama-server \
     --models-preset /etc/llama/agent-router.ini \
     --models-max 1 \
+    --lazy-mode off \
     --threads 12 \
     --threads-batch 12 \
     --flash-attn on \
@@ -74,6 +75,9 @@ ExecStart=/opt/llama.cpp/build/bin/llama-server \
     --metrics \
     --cache-ram -1 \
     --cache-idle-slots \
+    --no-log-timestamps \
+    --no-log-prefix \
+    -lv 4 \
     --log-file /var/log/llama/server.log
 
 [Install]

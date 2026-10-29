@@ -11,5 +11,8 @@ __pycache__/
 # Editor / OS
 .vscode/
 
+# Claude Code (may contain local settings/permissions)
+.claude/
+
 # Data
 models

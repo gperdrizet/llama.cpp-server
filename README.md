@@ -32,9 +32,13 @@ All inference runs as the unprivileged `llama` user with `ProtectSystem=strict` 
               │
        ┌──────┴──────────┬──────────────────┐
        ▼                 ▼                  ▼
-  Qwen3.8-27B       gpt-oss-20b      Qwen2.5-Coder-7B
-  (tensor-split,    (pinned CUDA0)   (pinned CUDA1)
-   both GPUs)
+   default           Qwen3.8-27B      Qwen3.5-9B
+  (pinned alias,    (tensor-split,   (pinned CUDA0)
+   mirrors 27B)     both GPUs)
+
+  9 aliases in utils/agent-router.ini: default, Qwen3.5-9B,
+  Gemma4-31B, Qwen3.8-27B, Muse-Glimmer-30B, Qwen3.8-Flash-Next,
+  GLM-5.3-Flash, Qwen3-Coder-30B-A3B, Qwen3-Coder-Next
 
   sidecars (independent of profile):
   - 8082 bge-m3 embeddings (CPU)
@@ -62,13 +66,13 @@ CUDA, Nvidia CUDA toolkit, NVIDIA Collective Communications Library and Nginx.
 
 ### Build llama.cpp
 
-See the [llama.cpp build docs](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md) for detailed instructions. Steps below are for Ubuntu 24.04, tested working 2026-10-07 with [v0.6.0](https://github.com/ggml-org/llama.cpp/releases/tag/v0.6.0) (commit d812350).
+See the [llama.cpp build docs](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md) for detailed instructions. Steps below are for Ubuntu 24.04, tested working 2026-10-07 with [v0.7.0](https://github.com/ggml-org/llama.cpp/releases/tag/v0.7.0) (commit 620d222).
 
 Shallow clone the desired version:
 
 ```bash
 cd /tmp
-git clone --branch v0.6.0 --depth 1 https://github.com/ggml-org/llama.cpp
+git clone --branch v0.7.0 --depth 1 https://github.com/ggml-org/llama.cpp
 sudo mv ./llama.cpp /opt/
 ```
 
@@ -173,6 +177,8 @@ Re-points the nginx symlink (`/etc/nginx/llama-profiles/active-profile.conf`), r
 
 Constraints: `--models-max 1` means **one model resident at a time** — a new request evicts the previous one and pays its load time (a few seconds for ~16 GB Q4). Pick ctx-size to fit 16–32 GB VRAM; `sleep-idle-seconds` reclaims VRAM automatically.
 
+The preset also defines a pinned `default` alias (currently mirroring `Qwen3.8-27B`) — the model served to clients that omit the `model` field. Re-point it in `utils/agent-router.ini` and redeploy to change the default.
+
 ### Pool model
 
 `llama-pool@.service` is a systemd template: each replica instance expands `$MODEL_PATH $MODEL_ALIAS $SERVER_LIMITS $OPTIMIZATIONS $SECURITY $ARGS_<instance>` from the three `/etc/llama/llama-pool-*` files. Currently two replicas, one per GPU (`--tensor-split 1,0` / `0,1`), 4 slots each, `Restart=always`.
@@ -253,19 +259,23 @@ Current router deployment profile was benchmarked with `tests/router_benchmark.p
 
 
 ```
-========================================================================================
-model                         run   ok   ttft_s   pp_tok_s  tg_tok_s  gpu0_mib  gpu1_mib
-----------------------------------------------------------------------------------------
-gemma4-31B-it                 cold  yes   58.0     244.4      20.4      15.7      15.7
-gemma4-31B-it                 hot   yes   15.8     255.8      21.9      15.7      15.7
-Qwen3.5-9B                    cold  yes   13.4     540.8      27.7      13.9       0.0
-Qwen3.5-9B                    hot   yes    5.5     671.2      38.0      13.9       0.0
-Qwen3.8-27B                   cold  yes   18.0     381.5      31.2      15.2      15.2
-Qwen3.8-27B                   hot   yes    9.3     393.7      34.1      15.2      15.2
-Qwen3.8-Flash-Next            cold  yes  170.7      94.2       7.0       7.6      15.0
-Qwen3.8-Flash-Next            hot   yes   26.6     131.0       7.4       7.6      15.0
-Qwen3-Coder-30B-A3B-Instruct  cold  yes   28.0     724.3      35.4      15.8      15.8
-Qwen3-Coder-30B-A3B-Instruct  hot   yes    4.9     738.0      35.8      15.8      15.8
-Qwen3-Coder-Next              cold  yes  290.2     243.7       6.2      12.2      15.1
-Qwen3-Coder-Next              hot   yes   12.6     278.2       8.7      12.2      15.1
+=========================================================================================
+model                run     ttft_s   pp_tok_s   tg_tok_s   gpu0_mib   gpu1_mib   ram_mib
+-----------------------------------------------------------------------------------------
+Qwen3.5-9B           cold     25.7     558.0       29.6      13093        261      10930
+Qwen3.5-9B           hot       5.4     685.6       27.4      13093        261      11344
+Gemma4-31B           cold     50.2     252.1       21.9      15021      15021      11099
+Gemma4-31B           hot      14.4     264.2       23.5      15021      15021      13530
+Qwen3.8-27B          cold     46.6     357.7       29.6      14555      14555      11440
+Qwen3.8-27B          hot       9.2     397.8       27.9      14557      14557      11975
+Muse-Glimmer-30B     cold     64.0     294.8       24.7      13057      13057      11742
+Muse-Glimmer-30B     hot       9.7     363.8       25.8      13057      13057      12134
+Qwen3.8-Flash-Next   cold    385.5      85.2       10.6       7075      14629     118170
+Qwen3.8-Flash-Next   hot      39.1      88.7       10.2       7075      14629     118686
+GLM-5.3-Flash        cold    713.4      47.7        3.8      10167      11991     194157
+GLM-5.3-Flash        hot      70.5      48.6        3.9      10167      11991     194620
+Qwen3-Coder-30B-A3B  cold     81.5     713.8       31.3      14017      14017       8780
+Qwen3-Coder-30B-A3B  hot       4.9     727.8       31.3      14017      14017       9096
+Qwen3-Coder-Next     cold    143.8     231.9       10.2      12633      13617      60300
+Qwen3-Coder-Next     hot      13.9     250.5       10.0      12633      13617      60559
 ```

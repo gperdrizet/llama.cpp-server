@@ -23,14 +23,9 @@ Environment=CUDA_VISIBLE_DEVICES=0,1
 LimitMEMLOCK=infinity
 
 # Pin to specific CPU cores, if desired
-# Widened to the full machine (was 12-23) so Flash-Next, now hosted here,
-# can match its old standalone CPU access.
 CPUAffinity=0-23
 
-# Elevated scheduling priority, migrated from the old standalone
-# llama-flash-next.service — only one router model is ever active at a
-# time (--models-max 1), so this just lets whichever model is currently
-# running win CPU contention against everything else on the box.
+# Elevated scheduling priority
 Nice=-15
 CPUWeight=10000
 
@@ -62,7 +57,7 @@ Environment="GGML_LOG_LEVEL=DEBUG"
 ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
 ExecStart=/opt/llama.cpp/build/bin/llama-server \
     --models-preset /etc/llama/agent-router.ini \
-    --models-max 1 \
+    --models-max 2 \
     --lazy-mode off \
     --threads 12 \
     --threads-batch 12 \
@@ -75,6 +70,7 @@ ExecStart=/opt/llama.cpp/build/bin/llama-server \
     --metrics \
     --cache-ram -1 \
     --cache-idle-slots \
+    --no-context-shift \
     --no-log-timestamps \
     --no-log-prefix \
     -lv 4 \

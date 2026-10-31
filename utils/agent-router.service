@@ -57,7 +57,7 @@ Environment="GGML_LOG_LEVEL=DEBUG"
 ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do nvidia-smi -L > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'
 ExecStart=/opt/llama.cpp/build/bin/llama-server \
     --models-preset /etc/llama/agent-router.ini \
-    --models-max 2 \
+    --models-max 1 \
     --lazy-mode off \
     --threads 12 \
     --threads-batch 12 \

@@ -16,3 +16,8 @@ __pycache__/
 
 # Data
 models
+
+# Ansible stuff
+*.retry
+*.log
+.ansible/

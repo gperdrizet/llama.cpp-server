@@ -1,0 +1,19 @@
+run_litellm: true
+models_max: 1                                     # Swaps models instead of stacking them
+expose_llama_port_to_lan: false                   # LiteLLM communicates internally over Docker network
+preset_file_src: "pyrite.ini"                     # Llama.cpp presets per model
+host_models_dir: "/mnt/fast_scratch/llama-models" # Location of model files
+has_custom_template: true                         # Load custom chat template
+template_file_src: "qwen_chat.jinja"              # Patched chat template for Qwen3+ models
+llama_docker_image: "ghcr.io/ggml-org/llama.cpp:server-cuda"
+
+# The master routing directory LiteLLM will use to direct requests
+managed_models:
+
+  # Local models running on pyrite
+  - { name: "Qwen3.8-27B",        url: "http://llama-cuda:8080/v1" }
+  - { name: "Qwen3.8-Flash-Next", url: "http://llama-cuda:8080/v1" }
+
+  # Remote models running on ethics-gradient
+  - { name: "Qwen2.5-Coder-7B",   url: "http://100.64.0.5:8080/v1"}
+  - { name: "BGE-M3",             url: "http://100.64.0.5:8080/v1",is_embedding: true}

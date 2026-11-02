@@ -1,0 +1,18 @@
+{
+  "model_list": [
+  {% for model in managed_models %}
+    {
+      "model_name": "{{ model.name }}",
+      "litellm_params": {
+        "model": "{{ model.name }}",
+        "api_base": "{{ model.url }}",
+        "api_key": "none",
+        "custom_llm_provider": "openai"
+      }
+    }{% if not loop.last %},{% endif %}
+  {% endfor %}
+  ],
+  "router_settings": {
+    "routing_strategy": "latency-based-routing"
+  }
+}

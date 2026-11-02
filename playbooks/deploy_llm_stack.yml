@@ -1,0 +1,139 @@
+- name: Deploy Distributed GPU LLM Cluster Across LAN
+  hosts: llm_nodes
+  become: false
+  tasks:
+
+
+    #=========================================#
+    # --- Target system environment check --- #
+    #=========================================#
+    # Check target machine for required directories and create them if missing
+    #
+    # Checks:
+    #
+    # - Llama.cpp configuration files directory: /opt/llama/config exists
+    # - LiteLLM configuration directory:  /opt/litellm exists
+    - name: Ensure standard system application directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/llama/config
+        - /opt/litellm
+
+
+    #=========================================#
+    # --- CONFIGURATION PROVISIONING -------- #
+    #=========================================#
+    # Copy machine specific files from this repo to the target system
+    #
+    # Handles:
+    #
+    # - Llama.cpp router presets file -> /opt/llama/config/config.ini
+    # - Custom Jinja chat template -> /opt/llama/config/template.jinja
+    # - LiteLLM configuration -> /opt/litellm/config.json
+  
+    - name: Copy llama.cpp configuration file
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../llama_router_presets/{{ preset_file_src }}"
+        dest: /opt/llama/config/presets.ini
+        mode: '0644'
+      register: llama_config
+
+    - name: Copy chat template
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../chat_templates/{{ template_file_src }}"
+        dest: /opt/llama/config/template.jinja
+        mode: '0644'
+      register: jinja_config
+      when: has_custom_template | default(false) | bool
+
+    - name: Copy LiteLLM configuration
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/litellm_config.json.j2"
+        dest: /opt/litellm/config.json
+        mode: '0644'
+      register: litellm_config
+      when: run_litellm | default(false) | bool
+
+    # Add Docker network
+    - name: Create isolated internal network bridge
+      community.docker.docker_network:
+        name: llm-network
+
+
+    #=========================================#
+    # --- LLAMA.CPP DOCKER DEPLOYMENT --------#
+    #=========================================#
+    # Starts the llama.cpp container on target system
+    #
+    # Handles: ports, volumes, GPU passthrough and llama.cpp args
+
+    - name: Start llama.cpp container
+      community.docker.docker_container:
+        name: llama-cuda
+        state: started
+        image: "{{ llama_docker_image }}" # Get image from host_vars machine config file
+        restart_policy: unless-stopped    # Always restart container
+        shm_size: '2GB'                   # Ingests a dedicated shared memory buffer
+        ipc_mode: host                    # Unlocks direct host inter-GPU communication lanes
+        networks: [{name: llm-network}]   # Use the Docker network from above
+
+        # Automatically recreate the container if configuration changes
+        recreate: "{{ llama_config.changed or (jinja_config.changed | default(false)) or ansible_docker_recreate | default(false) }}"
+
+        # Use port 8080 for machines that expose the llama.cpp service to the LAN
+        ports: "{{ ['8080:8080'] if expose_llama_port_to_lan | bool else omit }}"
+
+        # Mount volumes for models and configuration
+        volumes:
+          - "{{ host_models_dir }}:/models"
+          - "/opt/llama/config:/config"
+
+        # Use all GPUs
+        device_requests:
+          - driver: nvidia
+            count: -1
+            capabilities: [['gpu']]
+        
+        # Command-line arguments for llama.cpp container
+        command:
+          - "--host"
+          - "0.0.0.0"
+          - "--port"
+          - "8080"
+          - "--models-preset"
+          - "/config/presets.ini"
+          - "--models-max"
+          - "{{ models_max | string }}"
+
+
+    #=========================================#
+    # --- LITELLM DOCKER DEPLOYMENT ----------#
+    #=========================================#
+    - name: Start Centralized LiteLLM Router
+      community.docker.docker_container:
+        name: litellm-router
+        image: ghcr.io/berriai/litellm:main-latest
+        state: started
+        restart_policy: unless-stopped
+        recreate: "{{ litellm_config.changed if litellm_config.changed is defined else false }}"
+        networks: [{name: llm-network}]
+
+        # LiteLLM router listens on 8506
+        ports:
+          - "8506:8506"
+
+        # Mount configuration file for LiteLLM router
+        volumes:
+          - "/opt/litellm/config.json:/app/config.json"
+
+        # Allow weak or unset master key for LiteLLM router
+        env:
+          LITELLM_DANGEROUSLY_PERMIT_WEAK_OR_UNSET_MASTER_KEY: "true"
+
+        # Start command for LiteLLM router
+        command: "--config /app/config.json --port 8506 --host 0.0.0.0"
+
+      when: run_litellm | default(false) | bool

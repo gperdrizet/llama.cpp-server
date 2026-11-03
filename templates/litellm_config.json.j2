@@ -7,12 +7,17 @@
         "model": "{{ model.name }}",
         "api_base": "{{ model.url }}",
         "api_key": "none",
-        "custom_llm_provider": "openai"
+        "custom_llm_provider": "openai",
+        "request_timeout": {{ model.request_timeout | default(request_timeout_default) }},
+        "num_retries": {{ model.num_retries | default(0) }}
       }
     }{% if not loop.last %},{% endif %}
   {% endfor %}
   ],
   "router_settings": {
-    "routing_strategy": "latency-based-routing"
+    "routing_strategy": "latency-based-routing",
+    "request_timeout": {{ request_timeout_default }},
+    "num_retries": 0,
+    "cooldown_time": 0
   }
 }

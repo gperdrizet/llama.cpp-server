@@ -1,5 +1,6 @@
 run_litellm: false
 models_max: 2                                     # Holds up to two models in VRAM concurrently
+request_timeout_default: 1800                     # Extended request timeout for slow models
 expose_llama_port_to_lan: true                    # Exposes port 8080 so pyrite's LiteLLM can reach it
 preset_file_src: "ethics_gradient.ini"            # Llama.cpp presets per model
 host_models_dir: "/mnt/fast_scratch/llama-models" # Location of model files

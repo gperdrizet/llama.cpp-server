@@ -1,5 +1,6 @@
 run_litellm: true
 models_max: 1                                     # Swaps models instead of stacking them
+request_timeout_default: 1800                     # Extended request timeout for slow models
 expose_llama_port_to_lan: false                   # LiteLLM communicates internally over Docker network
 preset_file_src: "pyrite.ini"                     # Llama.cpp presets per model
 host_models_dir: "/mnt/fast_scratch/llama-models" # Location of model files

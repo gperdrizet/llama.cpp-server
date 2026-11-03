@@ -21,3 +21,6 @@ models
 *.retry
 *.log
 .ansible/
+
+# Old
+legacy/

@@ -1,281 +1,170 @@
 # llama.cpp-server
 
-Multi-profile `llama.cpp` inference deployment for **pyrite**: two 16 GB Tesla P100s, 24 CPU cores, 251 GB RAM, 2.7 TB NVMe fronted bcache scratch. One OpenAI-compatible API on a single port (8502), fronted by nginx and backed by whichever profile you select:
+Distributed `llama.cpp` inference deployment, managed by **Ansible + Docker** with
+**LiteLLM** as the unified router. Serves a mixed fleet of local and remote models
+through one OpenAI-compatible API.
 
-- **agents**: a dynamic personal agent router that loads one of several models on demand into shared GPU memory
-- **pool**: a dual-replica multiuser pool, one `llama-server` per GPU, always hot
+## Topology
 
-Two CPU-only sidecars are independent of the profile: a resident embedding server (8082) and an opt-in 125 B MoE for long-horizon coding (8085).
+Two machines on a Tailscale LAN:
 
-> **Public API gateway**: [promptlyapi.com](https://promptlyapi.com/register): authentication, token metering, billing, and an admin panel for indie devs and hobbyists on a budget. 1 M free tokens for new registrations.
-
-## Services
-
-| Service | Port | Model | Where | Purpose |
-|---|---|---|---|---|
-| nginx gateway | **8502** (0.0.0.0) | — | `/etc/nginx/llama-profiles/` | Single public port; routes to the active profile |
-| `agent-router` | 8503 (loopback) | any preset model | systemd unit | On-demand multi-model router (profile: `agents`) |
-| `llama-pool@replica0/1` | 8083 / 8084 | `gpt-oss-20b` | systemd template | Student pool, 4 slots/replica (profile: `pool`) |
-| `llama-embed` | 8082 (loopback) | `bge-m3-Q8_0` | systemd unit | CPU-only embedding server, always available |
-| `llama-flash-next` | 8085 (loopback) | `Qwen3.8-Flash-Next-Q8_0` (125 B MoE, 178 GB) | systemd unit | CPU-only long-horizon coding; start manually |
-
-All inference runs as the unprivileged `llama` user with `ProtectSystem=strict` / `ProtectHome=read-only` / `ReadOnlyPaths` hardening.
+| Node | Tailscale IP | Hardware | Role |
+|---|---|---|---|
+| **pyrite** | 100.64.0.2 | 2× Tesla P100 16 GB, 24 cores, 251 GB RAM, bcache NVMe scratch | Local models + LiteLLM router + nginx front |
+| **ethics-gradient** | 100.64.0.5 | 1× CUDA GPU | Remote models (coder + embeddings) |
 
 ```
-                    ┌────────────────┐
- clients ── 8502 ──►│ nginx (pyrite) │──► active-profile.conf (symlink)
-                    └────────────────┘             │
-               ┌───────────────────┬───────────────┴───┐
-               ▼                   ▼                   ▼
-        agents profile        pool profile       none profile
-             8503              8083 + 8084        1 (discard)
-              │
-       ┌──────┴──────────┬──────────────────┐
-       ▼                 ▼                  ▼
-   default           Qwen3.8-27B      Qwen3.5-9B
-  (pinned alias,    (tensor-split,   (pinned CUDA0)
-   mirrors 27B)     both GPUs)
-
-  9 aliases in utils/agent-router.ini: default, Qwen3.5-9B,
-  Gemma4-31B, Qwen3.8-27B, Muse-Glimmer-30B, Qwen3.8-Flash-Next,
-  GLM-5.3-Flash, Qwen3-Coder-30B-A3B, Qwen3-Coder-Next
-
-  sidecars (independent of profile):
-  - 8082 bge-m3 embeddings (CPU)
-  - 8085 Qwen3.8-Flash-Next (CPU, opt-in)
+                        ┌─────────────────────────────── pyrite ───────────────────────────────┐
+ clients ── HTTPS ──► promptlyapi.com ──► gatekeeper ──► nginx :8502 ──► litellm-router :8506 │
+                                                                     (auth, metering)     │      │
+                                                        local models ┌────────────────────┘      │
+                                                        (Docker net) │                           │
+                                                        ┌────────────┴─────────┐                 │
+                                                        ▼                      │                 │
+                                                  llama-cuda :8080             │                 │
+                                                  (2× P100, Qwen3.8-27B +      │                 │
+                                                   Qwen3.8-Flash-Next)         │                 │
+                        ┌─────────────────── ethics-gradient ────────────────┐  │                │
+                        │ llama-cuda :8080 (LAN-exposed)                     │◄─┘                │
+                        │ Qwen2.5-Coder-7B, BGE-M3 (embeddings)              │                    │
+                        └────────────────────────────────────────────────────┘                    │
+                        └─────────────────────────────────────────────────────────────────────────┘
 ```
+
+- **nginx (`:8502`)** — public entry point. Proxies everything to LiteLLM and exposes a
+  fast `/healthz` (LiteLLM `/health/readiness`); the deep `/health` endpoint probes all
+  models and is intentionally *not* the public probe.
+- **LiteLLM (`:8506`)** — the only router. Owns the model list (see `inventory/host_vars/pyrite.yml`,
+  `managed_models`), latency-based routing, and model selection. No per-profile switching exists.
+- **llama.cpp (`llama-cuda` container)** — one per node, `ghcr.io/ggml-org/llama.cpp:server-cuda`,
+  started with `--models-preset`. Holds `models_max` models resident; a new request evicts and
+  reloads.
+
+### Models
+
+| Model | Node | Preset | Notes |
+|---|---|---|---|
+| `Qwen3.8-27B` | pyrite | `[Qwen3.8-27B]` in `llama_router_presets/pyrite.ini` | Dual-GPU tensor split, MTP speculative decode, 128K ctx, low reasoning effort |
+| `Qwen3.8-Flash-Next` | pyrite | `[Qwen3.8-Flash-Next]` | 125B MoE, 40 layers on GPU + `cpu-moe` offload with mlock, slow cold load (~400 s) |
+| `Qwen2.5-Coder-7B` | ethics-gradient | `[Qwen2.5-Coder-7B]` in `llama_router_presets/ethics_gradient.ini` | Instruct model; used for fast utility/classifier workloads |
+| `BGE-M3` | ethics-gradient | `[BGE-M3]` | Embeddings (`/v1/embeddings`) |
+
+Both presets use q8_0 KV caches. Model files live in `/mnt/fast_scratch/llama-models` on each
+node (pyrite: bcache, check free space before big downloads), mounted into the container at `/models`.
 
 ## Repository layout
 
 | Path | What |
 |---|---|
-| `utils/` | Everything deploy.sh installs: unit files, router preset (`agent-router.ini`), pool config, secrets template, profile switcher |
-| `models/` | **Symlink** → `/mnt/fast_scratch/llama-models` (fast bcache). Never in git. See [Fast storage](#fast-storage-for-model-files) |
-| `tests/` | Benchmark runners (context-fit, load test, generation benchmark) + configs; see `tests/README.md` |
-| `notebooks/` | Result analysis (`load_test_results.ipynb`) |
-| `legacy/` | Old single-server deployment (`llamacpp.service` + `deploy_service.sh`); kept for reference, not deployed |
-| `/opt/llama.cpp/build/bin/` | Prebuilt binaries (`llama-server`, `llama-cli`, …) — not part of this repo |
-| `/etc/llama/` | Runtime config (owned by root): `agent-router.ini`, `llama-pool-*`, `llama-secrets.env` (0600) |
-| `/usr/local/bin/switch-llama-profile` | Profile switcher installed by deploy.sh |
+| `playbooks/deploy_llm_stack.yml` | Deploys the `llama-cuda` container (and LiteLLM where enabled) per node: presets, chat template, network, GPU passthrough, volumes |
+| `playbooks/deploy_nginx_gateway.yml` | One-time cutover playbook: backs up and replaces the nginx public gateway, removes old profile machinery, validates + graceful reload |
+| `nginx/llama-gateway` | The public gateway site (`:8502 → :8506`, `/healthz`) |
+| `ansible.cfg` | Points at `inventory/hosts.ini` |
+| `inventory/hosts.ini` | Node list (pyrite local, ethics-gradient over SSH/Tailscale) |
+| `inventory/host_vars/*.yml` | Per-node config: preset source, `models_max`, LAN exposure, image, LiteLLM `managed_models` |
+| `llama_router_presets/*.ini` | llama.cpp `--models-preset` files per node |
+| `chat_templates/qwen_chat.jinja` | Patched Qwen chat template (accepts `developer` role) |
+| `templates/litellm_config.json.j2` | LiteLLM `config.json` template |
+| `tests/` | Benchmark runners + configs (see `tests/README.md`; update pending) |
+| `legacy/` | Old systemd/nginx deployment, **reference only** — do not deploy from it |
+| `models/` | **Symlink** → `/mnt/fast_scratch/llama-models` (gitignored) |
 
-## Quick start
+## Deployment
 
-### Prerequisites
+Prereqs on each node: Docker, NVIDIA container runtime (GPU passthrough), Ansible with
+`community.docker` (pyrite only, for the `docker_*` modules). `inventory/hosts.ini` targets
+pyrite locally and ethics-gradient over SSH on the Tailscale IP.
 
-CUDA, Nvidia CUDA toolkit, NVIDIA Collective Communications Library and Nginx.
-
-### Build llama.cpp
-
-See the [llama.cpp build docs](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md) for detailed instructions. Steps below are for Ubuntu 24.04, tested working 2026-10-07 with [v0.7.0](https://github.com/ggml-org/llama.cpp/releases/tag/v0.7.0) (commit 620d222).
-
-Shallow clone the desired version:
-
-```bash
-cd /tmp
-git clone --branch v0.7.0 --depth 1 https://github.com/ggml-org/llama.cpp
-sudo mv ./llama.cpp /opt/
-```
-
-Compile for CUDA with NCCL for inter-card communication in tensor split mode:
+Deploy a node (idempotent; recreates the `llama-cuda` container only when its preset or
+chat template changed, or when `ansible_docker_recreate: true` is passed):
 
 ```bash
-cmake -B build -DGGML_CUDA=ON -DGGML_CUDA_NCCL=ON
-cmake --build build --config Release -j$(nproc)
+ansible-playbook playbooks/deploy_llm_stack.yml --limit pyrite
+ansible-playbook playbooks/deploy_llm_stack.yml --limit ethics-gradient
 ```
 
-Create a non-login user for the llama.cpp process to run under:
+The playbook:
+1. Copies the node's preset from `llama_router_presets/` → `/opt/llama/config/presets.ini`
+   (and the chat template → `/config/template.jinja` when `has_custom_template`).
+2. Renders `templates/litellm_config.json.j2` → `/opt/litellm/config.json` (pyrite only).
+3. Creates the internal `llm-network` bridge.
+4. Starts `llama-cuda` with all GPUs, `shm 2 GB`, host IPC (P2P lanes), `restart_policy: unless-stopped`.
+   Port 8080 is published to the LAN only when `expose_llama_port_to_lan` (ethics-gradient).
+5. Starts `litellm-router` (pyrite only) on `:8506` with no master key (`LITELLM_DANGEROUSLY_PERMIT_WEAK_OR_UNSET_MASTER_KEY`).
 
-```bash
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin llama
-```
+### Adding / changing a model
 
-## Set-up systemd profiles & nginx (this repo)
+1. Add a section to the node's preset in `llama_router_presets/` (model path, ctx, device split,
+   speculative decode, …).
+2. If it must be routable, add it to `managed_models` in that node's `host_vars` (the entry is
+   what LiteLLM's `model_list` is built from — exact name casing matters, both for the LiteLLM
+   alias and for the GGUF filename it references in the preset).
+3. Re-run the playbook for that node — a changed preset redeploys the container; a changed
+   `host_vars` re-renders the LiteLLM config, which recreates the router.
 
-Clone the repo anywhere you like:
-```bash
-git clone git@github.com:gperdrizet/llama.cpp-server.git
-```
-
-Link the models directory to fast storage (if desired):
-
-```bash
-ln -s /mnt/fast_scratch/llama-models $PWD/models
-```
-
-Use the provide script to deploy: installs units, /etc/llama config, and the switcher. First run scaffolds /etc/llama/llama-secrets.env from the template and stops.
-
-```bash
-bash utils/deploy.sh
-```
-
-Fill in the keys (see Secrets) and re-run deploy to finish:
-
-```bash
-sudo nano /etc/llama/llama-secrets.env
-bash utils/deploy.sh
-```
-
-Pick the profile you want running:
-
-```bash
-switch-llama-profile agents     # personal router + embed
-switch-llama-profile pool       # student pool
-utils/switch-llama-profile none # GPUs free
-```
-
-Verify:
-
-```bash
-curl -s http://127.0.0.1:8502/health
-```
-
-`deploy-llama.sh` never starts, stops, or restarts services; only the switcher does that. It also never overwrites an existing secrets file.
-
-## Profiles and switching
-
-**Only one profile at a time**. Both share the same GPUs. `none` is the right choice when you want the P100s for something else; `agents` additionally starts the embed sidecar.
-
-```
-switch-llama-profile [agents|pool|none]`
-```
-
-Re-points the nginx symlink (`/etc/nginx/llama-profiles/active-profile.conf`), restarts nginx, clears VRAM, and starts the selected backend.
-
-## Adding a new model
-
-### Router model (GPU, on-demand)
-
-1. Download the `.gguf` into `models/`.
-2. Add a section to `utils/agent-router.ini` (deploys to `/etc/llama/agent-router.ini`):
-
-   ```ini
-   [MyNewModel]
-   alias                = MyNewModel          # the name clients request
-   model                = /home/siderealyear/llama.cpp/models/MyNew-Model-Q4_K_M.gguf
-   ctx-size             = 131072
-   device               = CUDA1               # pin to one GPU…
-   # …or split across both:
-   # split-mode         = tensor
-   ```
-
-   `[*]` holds defaults for all sections: `n-gpu-layers = -1` (all layers on GPU) and `sleep-idle-seconds = 300` (auto-unload after 5 min of silence). Reasoning models can add `spec-type = draft-mtp`, `spec-draft-n-max`, `reasoning-budget`, and `chat-template-kwargs` (see the `Qwen3.8-27B` section).
-
-3. Redeploy and restart. **The router reads the preset only at startup**; an edited-but-not-restarted router silently keeps the old model list:
-
-   ```bash
-   deploy-llama
-   sudo bash utils/switch-llama-profile agents
-   ```
-
-4. Verify with a real request (auth required):
-
-   ```bash
-   curl -s http://127.0.0.1:8503/v1/chat/completions \
-     -H "Authorization: Bearer <LLAMA_ROUTER_KEY>" -H "Content-Type: application/json" \
-     -d '{"model":"MyNewModel","messages":[{"role":"user","content":"hi"}],"max_tokens":16}'
-   ```
-
-Constraints: `--models-max 1` means **one model resident at a time** — a new request evicts the previous one and pays its load time (a few seconds for ~16 GB Q4). Pick ctx-size to fit 16–32 GB VRAM; `sleep-idle-seconds` reclaims VRAM automatically.
-
-The preset also defines a pinned `default` alias (currently mirroring `Qwen3.8-27B`) — the model served to clients that omit the `model` field. Re-point it in `utils/agent-router.ini` and redeploy to change the default.
-
-### Pool model
-
-`llama-pool@.service` is a systemd template: each replica instance expands `$MODEL_PATH $MODEL_ALIAS $SERVER_LIMITS $OPTIMIZATIONS $SECURITY $ARGS_<instance>` from the three `/etc/llama/llama-pool-*` files. Currently two replicas, one per GPU (`--tensor-split 1,0` / `0,1`), 4 slots each, `Restart=always`.
-
-Edit `utils/llama-pool-global` (shared: `MODEL_PATH`, `MODEL_ALIAS`, `SERVER_LIMITS`, `OPTIMIZATIONS`) and/or `utils/llama-pool-instances` (per-replica `ARGS_replicaN`), re-deploy, then `switch-llama-profile pool`.
-
-### Standalone service (dedicated port, e.g. CPU-only)
-
-Copy `utils/llama-flash-next.service` as a template: change the `Description`, `--model`, `--alias`, and `--port` (pick a free one), then add one line to `utils/deploy.sh`'s unit-install block and re-deploy. Use `Environment=CUDA_VISIBLE_DEVICES=` and `--n-gpu-layers 0` for CPU-only so the GPUs stay free.
-
-## Secrets
-
-`/etc/llama/llama-secrets.env` is **root-only (0600)** and is a **systemd EnvironmentFile, not a shell script** — do not `source` it. It holds:
-
-```
-LLAMA_ROUTER_KEY=<key>            # referenced as ${LLAMA_ROUTER_KEY} by agent-router.service
-SECURITY=--api-key <key> --host 127.0.0.1   # expanded as $SECURITY by llama-pool@.service
-```
-
-The `SECURITY` line is the gotcha: valid for systemd, but bash parses `SECURITY=--api-key` as an assignment prefix and tries to *execute* the key. If you need the key in a script, extract it: `grep -E '^LLAMA_ROUTER_KEY=' /etc/llama/llama-secrets.env | cut -d= -f2-`. After editing the file, restart affected services — systemd re-reads EnvironmentFiles only at unit start.
+The llama.cpp router reads its preset **only at container start** — editing the file on
+`/opt/llama/config` without recreating the container silently keeps the old model list.
 
 ## Operations
 
 ```bash
-journalctl -u agent-router -f                 # or -u llama-pool@replica0, etc.
-journalctl -u agent-router --since "10:00"    # time-range
-nvidia-smi                                    # VRAM per GPU
-curl -s http://127.0.0.1:8502/health          # gateway
+docker ps -a                                   # containers on this node
+docker logs -f llama-cuda                      # llama.cpp server logs
+docker logs -f litellm-router                  # router logs (pyrite)
+
+curl -s http://127.0.0.1:8506/v1/models        # router: full model list
+curl -s http://127.0.0.1:8506/health/liveliness   # fast liveness  (~ms)
+curl -s http://127.0.0.1:8506/health/readiness    # fast readiness (~ms)
+# /health is the DEEP check (probes every model, 10-30s+); don't use it for health-checking
+
+curl -s http://127.0.0.1:8502/healthz          # public gateway health (5 ms)
+curl -s http://127.0.0.1:8502/v1/models        # public gateway -> router
+curl -s https://promptlyapi.com/v1/models -H "Authorization: Bearer $KEY"   # full public chain
+
+nvidia-smi                                     # VRAM on this node
 ```
 
-
-## Fast storage for model files
-
-Model weights are memory-mapped, so first-touch page-in speed is limited by disk. Keep them on the bcache, not the system root:
+### Quick API calls
 
 ```bash
-sudo mkdir -p /mnt/fast_scratch/llama-models
-ln -s /mnt/fast_scratch/llama-models <repo>/models     # repo-local, gitignored
+# chat
+curl -s http://127.0.0.1:8506/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"Qwen3.8-27B","messages":[{"role":"user","content":"hi"}],"max_tokens":16}'
+
+# embeddings
+curl -s http://127.0.0.1:8506/v1/embeddings \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"BGE-M3","input":"hello world"}'
 ```
 
-Then make the path traversable by the `llama` service user (the units run with `ProtectHome=read-only`, so plain permissions on `/home/...` are not enough):
+## Gotchas
 
-```bash
-sudo setfacl -m u:llama:x /home/<user>
-sudo setfacl -m u:llama:rx <repo>
-sudo setfacl -m u:llama:rx /mnt/fast_scratch/llama-models
-```
+- **Model file names are case-sensitive.** Preset `model =` paths must match the GGUF on disk
+  byte-for-byte; a single-case mismatch fails the load with a bare `failed to load model` at
+  request time (the router lists the model regardless).
+- **pyrite's bcache runs near full.** Check `df -h /mnt/fast_scratch` before large downloads.
+- **`models_max = 1` on pyrite** means model *swap*, not stack: requesting Flash-Next evicts
+  the 27B and its ~400 s cold load is the price. Warm loads are ~40 s.
+- **LiteLLM `/health` is deep and slow.** Point health checkers at `/healthz` (gateway) or
+  `/health/liveliness`/`/health/readiness` (router) — not raw `/health`.
+- **The public gateway auth lives in promptly** (gatekeeper → promptlyapi.com), not in this
+  repo or in nginx. The router runs keyless on the private side; never expose `:8506` to the
+  LAN.
+- **Qwen3.5+ chat templates**: the stock template rejects the `developer` role (breaks Claude
+  Code-style clients). The patched `chat_templates/qwen_chat.jinja` is deployed to
+  `/config/template.jinja` and referenced by the presets.
 
-Notes:
-- Download models into `models/` with `huggingface-cli` or `wget`; the repo stores none of them (`.gitignore` excludes `models`).
-- All unit files reference models through the repo path (`/home/<user>/llama.cpp/models/...`), so moving the *target* of the symlink requires no unit edits — just restart the affected services.
-- Check headroom before big downloads: `df -h /mnt/fast_scratch` (this box's bcache runs near full).
+## Claude Code backend
 
-## Troubleshooting
+This stack is the backend for local Claude Code sessions (via `~/.claude/settings.json`):
 
-### Note about Qwen3.5+ chat templates
+| Slot | Env var | Model | Why |
+|---|---|---|---|
+| main | `ANTHROPIC_DEFAULT_SONNET_MODEL` | Qwen3.8-27B | conversation |
+| fast | `ANTHROPIC_DEFAULT_OPUS_MODEL` | Qwen3.8-Flash-Next | extended work |
+| utility | `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Qwen2.5-Coder-7B | auto-mode tool classification, compaction — fast, non-reasoning |
 
-The stock chat template rejects the `developer` tags used by many harnesses (Claude Code, etc.). This is a known issue, see issue [here](https://github.com/ggml-org/llama.cpp/issues/27107). Use this [patched template](https://gist.githubusercontent.com/sudoingX/c2facf7d8f7608c65c1024ef3b22d431/raw/033fe789a538d230edd2b433b9dc6ce3ba16bf0e/qwen3.5_chat_template.jinja) instead:
-
-```bash
-curl -o qwen_chat.jinja https://gist.githubusercontent.com/sudoingX/c2facf7d8f7608c65c1024ef3b22d431/raw/033fe789a538d230edd2b433b9dc6ce3ba16bf0e/qwen3.5_chat_template.jinja
-```
-
-Then add it to effected models with `--chat-template-file /path/to/qwen_chat.jinja`. Note: it is supposedly also possible to fix the issue by passing `--chat-template chatml` but apparently this silently disables thinking. Using the patched template perserves thinking behavior and allows it to be controlled with `--chat-template-kwargs '{"reasoning_effort":"medium"}'`. Newer llama.cpp builds also accept `--reasoning-effort medium` etc.
-
-| Symptom | Cause / fix |
-|---|---|
-| `401 Invalid API Key` | Client key ≠ key in the running router's environment. Compare with `sudo tr '\0' '\n' < /proc/$(systemctl show -p MainPID --value agent-router)/environ \| grep ^LLAMA_ROUTER_KEY=`; mismatch after a secrets edit means the router needs a restart. Trailing whitespace/CRLF in the env file also causes this. |
-| `500 model name=X failed to load` for the *wrong* model name | The running router has a stale preset (ini edited, router not restarted) — section headers matter: keys without a `[Section]` line merge into the previous section. Restart via the switcher. |
-| `model name=X is not found` | Alias not in the loaded preset — check `/etc/llama/agent-router.ini` spelling vs the request's `model` field, then restart. |
-| Model load failure on a new quant | Build may not support the format (e.g. some ternary/experimental quants). Check the `llama-server` journal around the request for the loader error. |
-| VRAM OOM at startup | ctx-size × KV cache + weights must fit. Lower `ctx-size`, or keep `n-gpu-layers = -1` so nothing leaks to CPU. |
-| bcache nearly full | `df -h /mnt/fast_scratch`; prune old quants before downloading new ones. |
-
-## Benchmarks
-
-Current router deployment profile was benchmarked with `tests/router_benchmark.py`:
-
-
-```
-=========================================================================================
-model                run     ttft_s   pp_tok_s   tg_tok_s   gpu0_mib   gpu1_mib   ram_mib
------------------------------------------------------------------------------------------
-Qwen3.5-9B           cold     25.7     558.0       29.6      13093        261      10930
-Qwen3.5-9B           hot       5.4     685.6       27.4      13093        261      11344
-Gemma4-31B           cold     50.2     252.1       21.9      15021      15021      11099
-Gemma4-31B           hot      14.4     264.2       23.5      15021      15021      13530
-Qwen3.8-27B          cold     46.6     357.7       29.6      14555      14555      11440
-Qwen3.8-27B          hot       9.2     397.8       27.9      14557      14557      11975
-Muse-Glimmer-30B     cold     64.0     294.8       24.7      13057      13057      11742
-Muse-Glimmer-30B     hot       9.7     363.8       25.8      13057      13057      12134
-Qwen3.8-Flash-Next   cold    385.5      85.2       10.6       7075      14629     118170
-Qwen3.8-Flash-Next   hot      39.1      88.7       10.2       7075      14629     118686
-GLM-5.3-Flash        cold    713.4      47.7        3.8      10167      11991     194157
-GLM-5.3-Flash        hot      70.5      48.6        3.9      10167      11991     194620
-Qwen3-Coder-30B-A3B  cold     81.5     713.8       31.3      14017      14017       8780
-Qwen3-Coder-30B-A3B  hot       4.9     727.8       31.3      14017      14017       9096
-Qwen3-Coder-Next     cold    143.8     231.9       10.2      12633      13617      60300
-Qwen3-Coder-Next     hot      13.9     250.5       10.0      12633      13617      60559
-```
+`ANTHROPIC_BASE_URL` points at the public gateway (`https://promptlyapi.com/v1`) with a
+promptly key, so sessions exercise the full production chain. Note: model slots are resolved
+at **session start** — changing them requires a new session.

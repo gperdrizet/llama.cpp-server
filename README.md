@@ -14,21 +14,28 @@ Two machines on a Tailscale LAN:
 | **ethics-gradient** | 100.64.0.5 | 1× CUDA GPU | Remote models (coder + embeddings) |
 
 ```
-                        ┌─────────────────────────────── pyrite ───────────────────────────────┐
- clients ── HTTPS ──► promptlyapi.com ──► gatekeeper ──► nginx :8502 ──► litellm-router :8506 │
-                                                                     (auth, metering)     │      │
-                                                        local models ┌────────────────────┘      │
-                                                        (Docker net) │                           │
-                                                        ┌────────────┴─────────┐                 │
-                                                        ▼                      │                 │
-                                                  llama-cuda :8080             │                 │
-                                                  (2× P100, Qwen3.8-27B +      │                 │
-                                                   Qwen3.8-Flash-Next)         │                 │
-                        ┌─────────────────── ethics-gradient ────────────────┐  │                │
-                        │ llama-cuda :8080 (LAN-exposed)                     │◄─┘                │
-                        │ Qwen2.5-Coder-7B, BGE-M3 (embeddings)              │                    │
-                        └────────────────────────────────────────────────────┘                    │
-                        └─────────────────────────────────────────────────────────────────────────┘
+                        ┌──────────────────────────────────────┐
+                        │ VPS gateway  (promptlyapi.com)       │
+                        │ public OpenAI-compatible API (HTTPS) │
+                        └──────────────────────────────────────┘
+                                         │
+                                         │
+                                         │
+                         ┌───────────────┘
+                         ▼
+    ┌───────────────────────────────┐        ┌───────────────────────────────┐
+    │ pyrite                        │        │ ethics-gradient               │
+    │                               │        │                               │
+    │ nginx :8502                   │        │                               │
+    │    │                          │        │                               │
+    │    ▼                          │        │                               │
+    │ litellm-router :8506          │──LAN──►│ llama-cuda :8080              │
+    │    │                          │        │    • Qwen2.5-Coder-7B         │
+    │    ▼                          │        │    • BGE-M3  (embeddings)     │
+    │ llama-cuda :8080              │        │                               │
+    │    • Qwen3.8-27B              │        │                               │
+    │    • Qwen3.8-Flash-Next       │        │                               │
+    └───────────────────────────────┘        └───────────────────────────────┘
 ```
 
 - **nginx (`:8502`)** — public entry point. Proxies everything to LiteLLM and exposes a

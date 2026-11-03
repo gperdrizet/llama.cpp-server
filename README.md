@@ -10,16 +10,14 @@ Two machines on a Tailscale LAN:
 
 | Node | Tailscale IP | Hardware | Role |
 |---|---|---|---|
-| **pyrite** | 100.64.0.2 | 2× Tesla P100 16 GB, 24 cores, 251 GB RAM, bcache NVMe scratch | Local models + LiteLLM router + nginx front |
-| **ethics-gradient** | 100.64.0.5 | 1× CUDA GPU | Remote models (coder + embeddings) |
+| **pyrite** | 100.64.0.2 | 2× Tesla P100 16 GB | Reasoning models + LiteLLM router + nginx front |
+| **ethics-gradient** | 100.64.0.5 | 1× Tesla GTX1070 | Small utility & embedding models |
 
 ```
                         ┌──────────────────────────────────────┐
                         │ VPS gateway  (promptlyapi.com)       │
                         │ public OpenAI-compatible API (HTTPS) │
                         └──────────────────────────────────────┘
-                                         │
-                                         │
                                          │
                          ┌───────────────┘
                          ▼
@@ -38,12 +36,12 @@ Two machines on a Tailscale LAN:
     └───────────────────────────────┘        └───────────────────────────────┘
 ```
 
-- **nginx (`:8502`)** — public entry point. Proxies everything to LiteLLM and exposes a
+- **nginx (`:8502`)**: public entry point. Proxies everything to LiteLLM and exposes a
   fast `/healthz` (LiteLLM `/health/readiness`); the deep `/health` endpoint probes all
   models and is intentionally *not* the public probe.
-- **LiteLLM (`:8506`)** — the only router. Owns the model list (see `inventory/host_vars/pyrite.yml`,
-  `managed_models`), latency-based routing, and model selection. No per-profile switching exists.
-- **llama.cpp (`llama-cuda` container)** — one per node, `ghcr.io/ggml-org/llama.cpp:server-cuda`,
+- **LiteLLM (`:8506`)**: the router. Owns the model list (see `inventory/host_vars/pyrite.yml`,
+  `managed_models`), and model selection.
+- **llama.cpp (`llama-cuda` container)**: one per node, `ghcr.io/ggml-org/llama.cpp:server-cuda`,
   started with `--models-preset`. Holds `models_max` models resident; a new request evicts and
   reloads.
 
@@ -168,9 +166,9 @@ This stack is the backend for local Claude Code sessions (via `~/.claude/setting
 
 | Slot | Env var | Model | Why |
 |---|---|---|---|
-| main | `ANTHROPIC_DEFAULT_SONNET_MODEL` | Qwen3.8-27B | conversation |
-| fast | `ANTHROPIC_DEFAULT_OPUS_MODEL` | Qwen3.8-Flash-Next | extended work |
-| utility | `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Qwen2.5-Coder-7B | auto-mode tool classification, compaction — fast, non-reasoning |
+| main | `ANTHROPIC_DEFAULT_SONNET_MODEL` | Qwen3.8-27B | Light conversation, reasoning, code |
+| fast | `ANTHROPIC_DEFAULT_OPUS_MODEL` | Qwen3.8-Flash-Next | Deep reasoning, extended work |
+| utility | `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Qwen2.5-Coder-7B | fast, non-reasoning: auto-mode tool classification, compaction |
 
 `ANTHROPIC_BASE_URL` points at the public gateway (`https://promptlyapi.com/v1`) with a
 promptly key, so sessions exercise the full production chain. Note: model slots are resolved

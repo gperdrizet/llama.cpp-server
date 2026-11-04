@@ -121,9 +121,10 @@
         recreate: "{{ litellm_config.changed if litellm_config.changed is defined else false }}"
         networks: [{name: llm-network}]
 
-        # LiteLLM router listens on 8506
+        # LiteLLM router: public port 8502 on the host maps to 8506 in the
+        # container. (nginx gateway removed — LiteLLM now fronts :8502 directly.)
         ports:
-          - "8506:8506"
+          - "8502:8506"
 
         # Mount configuration file for LiteLLM router
         volumes:

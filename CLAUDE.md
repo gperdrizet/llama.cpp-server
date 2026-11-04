@@ -6,27 +6,26 @@ Guidance for Claude Code working in this repository.
 
 **Not the llama.cpp source.** This is `llama.cpp-server`: the deployment/ops repo for a
 Dockerized, Ansible-managed `llama.cpp` inference stack across two Tailscale nodes —
-*pyrite* (2× Tesla P100 16 GB, 24 cores; local models + the LiteLLM router + the nginx
-public gateway) and *ethics-gradient* (remote models). It contains the Ansible playbooks,
-per-node inventory, llama.cpp router presets, the LiteLLM config template, the nginx
-gateway, and benchmark tooling. The `llama.cpp` server image
+*pyrite* (2× Tesla P100 16 GB, 24 cores; local models + the LiteLLM router, which is the
+public front) and *ethics-gradient* (remote models). It contains the Ansible playbooks,
+per-node inventory, llama.cpp router presets, the LiteLLM config template, and benchmark
+tooling. The `llama.cpp` server image
 (`ghcr.io/ggml-org/llama.cpp:server-cuda`) is pulled, not built here.
 
-One public OpenAI-compatible port (8502) behind nginx, fronting the **LiteLLM router
-(8506)**, which routes to the models:
+One public OpenAI-compatible port (8502), the **LiteLLM router** itself (container
+port 8506, mapped to host 8502), which routes to the models:
 
 - pyrite local: `Qwen3.8-27B` (dual-GPU, MTP), `Qwen3.8-Flash-Next` (MoE, CPU-offloaded)
 - ethics-gradient remote (over LAN): `Qwen2.5-Coder-7B`, `BGE-M3` (embeddings)
-- the public chain is `promptlyapi.com → gatekeeper → pyrite:8502 → 8506`
+- the public chain is `promptlyapi.com → gatekeeper → pyrite:8502 (litellm-router)`
 
 ## Key commands
 
 ```bash
 ansible-playbook playbooks/deploy_llm_stack.yml --limit pyrite             # deploy/redeploy a node's llama.cpp (+ litellm on pyrite)
-ansible-playbook playbooks/deploy_nginx_gateway.yml                        # one-time: point the public gateway at LiteLLM (backups first, then nginx -t + reload)
 docker ps -a && docker logs -f llama-cuda                                  # container state / llama.cpp logs (per node)
-curl -s http://127.0.0.1:8506/v1/models                                    # router model list
-curl -s http://127.0.0.1:8502/healthz                                      # public gateway health (fast)
+curl -s http://127.0.0.1:8502/v1/models                                    # router model list
+curl -s http://127.0.0.1:8502/health/readiness                             # public health (fast)
 ```
 
 Benchmarks (see `tests/README.md` — docs pending update): runners are Python driven by
@@ -51,10 +50,10 @@ Prefer YAML/CSV configs over ad-hoc shell for repeatable runs.
 - **`models/` is a gitignored symlink** → `/mnt/fast_scratch/llama-models` (bcache) on each
   node. Pyrite's bcache runs near full — check `df -h /mnt/fast_scratch` before big downloads.
 - **LiteLLM `/health` is the deep check** (probes every model, 10–30 s+). Health-check
-  against `:8502/healthz`, `:8506/health/liveliness`, or `:8506/health/readiness` instead.
-- **Auth lives in promptly, not here.** The public gateway (nginx/nginx-fronted LiteLLM)
-  runs keyless on the private side; keying + metering happen at promptly/gatekeeper. Never
-  expose `:8506` to the LAN.
+  against `:8502/health/liveliness` or `:8502/health/readiness` instead.
+- **Auth lives in promptly, not here.** The LiteLLM router fronts `:8502` keyless on the
+  private side; keying + metering happen at promptly/gatekeeper. Keep `:8502` on the
+  Tailscale LAN only — its only client is the VPS gateway.
 - **Qwen3.5+ chat templates**: the stock template rejects the `developer` role (breaks
   Claude Code et al.). `chat_templates/qwen_chat.jinja` is deployed to `/config/template.jinja`
   and referenced by the presets. `--chat-template chatml` "works" but silently disables thinking.
@@ -69,6 +68,6 @@ Prefer YAML/CSV configs over ad-hoc shell for repeatable runs.
   `legacy/utils/switch-llama-profile`) is **reference only** — do not modify or deploy from it.
 - Config deployed to nodes lands under `/opt/llama/config/` and `/opt/litellm/` (root-owned);
   editing files in this repo does nothing until you re-run the relevant playbook.
-- This session's own Claude Code runs *through* this deployment (public gateway, Qwen
-  models), so re-running a deploy that recreates the router or gateway can interrupt this
-  session. Warn before `deploy_llm_stack.yml` on pyrite or `deploy_nginx_gateway.yml`.
+- This session's own Claude Code runs *through* this deployment (LiteLLM router on
+  `:8502`, Qwen models), so re-running a deploy that recreates the router can interrupt
+  this session. Warn before `deploy_llm_stack.yml` on pyrite.

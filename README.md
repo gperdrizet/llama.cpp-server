@@ -10,25 +10,26 @@ Two machines on a Tailscale LAN:
 
 | Node | Tailscale IP | Hardware | Role |
 |---|---|---|---|
-| **pyrite** | 100.64.0.2 | 2× Tesla P100 16 GB | Reasoning models + LiteLLM router + nginx front |
+| **pyrite** | 100.64.0.2 | 2× Tesla P100 16 GB | Reasoning models + LiteLLM router (public port) |
 | **ethics-gradient** | 100.64.0.5 | 1× Tesla GTX1070 | Small utility & embedding models |
 
 ```
-                        ┌──────────────────────────────────────┐
-                        │ VPS gateway  (promptlyapi.com)       │
-                        │ public OpenAI-compatible API (HTTPS) │
-                        └──────────────────────────────────────┘
-                                         │
-                         ┌───────────────┘
-                         ▼
+                    ┌──────────────────────────────────────┐
+                    │ VPS gateway  (promptlyapi.com)       │
+                    │ public OpenAI-compatible API (HTTPS) │
+                    └──────────────────────────────────────┘
+                                        │
+                                        │
+                                        │
+                                        │
+                    ┌───────────────────┘
+                    │
+                    ▼
     ┌───────────────────────────────┐        ┌───────────────────────────────┐
     │ pyrite                        │        │ ethics-gradient               │
     │                               │        │                               │
-    │ nginx :8502                   │        │                               │
-    │    │                          │        │                               │
-    │    ▼                          │        │                               │
-    │ litellm-router :8506          │──LAN──►│ llama-cuda :8080              │
-    │    │                          │        │    • Qwen2.5-Coder-7B         │
+    │ litellm-router :8502          │──LAN──►│ llama-cuda :8080              │
+    │    │  (Docker network, local) │        │    • Qwen2.5-Coder-7B         │
     │    ▼                          │        │    • BGE-M3  (embeddings)     │
     │ llama-cuda :8080              │        │                               │
     │    • Qwen3.8-27B              │        │                               │
@@ -36,11 +37,12 @@ Two machines on a Tailscale LAN:
     └───────────────────────────────┘        └───────────────────────────────┘
 ```
 
-- **nginx (`:8502`)**: public entry point. Proxies everything to LiteLLM and exposes a
-  fast `/healthz` (LiteLLM `/health/readiness`); the deep `/health` endpoint probes all
-  models and is intentionally *not* the public probe.
-- **LiteLLM (`:8506`)**: the router. Owns the model list (see `inventory/host_vars/pyrite.yml`,
-  `managed_models`), and model selection.
+- **LiteLLM (`:8502`)**: the router *and* the public entry point — the `litellm-router`
+  container maps host `:8502` to its `:8506`. Owns the model list (see
+  `inventory/host_vars/pyrite.yml`, `managed_models`) and model selection. Health checks go
+  to `/health/liveliness` or `/health/readiness` on `:8502`; the deep `/health` endpoint
+  probes all models and is intentionally *not* the public probe. (The old nginx gateway
+  that fronted LiteLLM was removed — see `legacy/nginx/`.)
 - **llama.cpp (`llama-cuda` container)**: one per node, `ghcr.io/ggml-org/llama.cpp:server-cuda`,
   started with `--models-preset`. Holds `models_max` models resident; a new request evicts and
   reloads.
@@ -62,8 +64,6 @@ node (pyrite: bcache, check free space before big downloads), mounted into the c
 | Path | What |
 |---|---|
 | `playbooks/deploy_llm_stack.yml` | Deploys the `llama-cuda` container (and LiteLLM where enabled) per node: presets, chat template, network, GPU passthrough, volumes |
-| `playbooks/deploy_nginx_gateway.yml` | One-time cutover playbook: backs up and replaces the nginx public gateway, removes old profile machinery, validates + graceful reload |
-| `nginx/llama-gateway` | The public gateway site (`:8502 → :8506`, `/healthz`) |
 | `ansible.cfg` | Points at `inventory/hosts.ini` |
 | `inventory/hosts.ini` | Node list (pyrite local, ethics-gradient over SSH/Tailscale) |
 | `inventory/host_vars/*.yml` | Per-node config: preset source, `models_max`, LAN exposure, image, LiteLLM `managed_models` |
@@ -95,7 +95,7 @@ The playbook:
 3. Creates the internal `llm-network` bridge.
 4. Starts `llama-cuda` with all GPUs, `shm 2 GB`, host IPC (P2P lanes), `restart_policy: unless-stopped`.
    Port 8080 is published to the LAN only when `expose_llama_port_to_lan` (ethics-gradient).
-5. Starts `litellm-router` (pyrite only) on `:8506` with no master key (`LITELLM_DANGEROUSLY_PERMIT_WEAK_OR_UNSET_MASTER_KEY`).
+5. Starts `litellm-router` (pyrite only) on host `:8502` → container `:8506`, with no master key (`LITELLM_DANGEROUSLY_PERMIT_WEAK_OR_UNSET_MASTER_KEY`).
 
 ### Adding / changing a model
 
@@ -117,13 +117,11 @@ docker ps -a                                   # containers on this node
 docker logs -f llama-cuda                      # llama.cpp server logs
 docker logs -f litellm-router                  # router logs (pyrite)
 
-curl -s http://127.0.0.1:8506/v1/models        # router: full model list
-curl -s http://127.0.0.1:8506/health/liveliness   # fast liveness  (~ms)
-curl -s http://127.0.0.1:8506/health/readiness    # fast readiness (~ms)
+curl -s http://127.0.0.1:8502/v1/models        # router: full model list
+curl -s http://127.0.0.1:8502/health/liveliness   # fast liveness  (~ms)
+curl -s http://127.0.0.1:8502/health/readiness    # fast readiness (~ms)
 # /health is the DEEP check (probes every model, 10-30s+); don't use it for health-checking
 
-curl -s http://127.0.0.1:8502/healthz          # public gateway health (5 ms)
-curl -s http://127.0.0.1:8502/v1/models        # public gateway -> router
 curl -s https://promptlyapi.com/v1/models -H "Authorization: Bearer $KEY"   # full public chain
 
 nvidia-smi                                     # VRAM on this node
@@ -133,12 +131,12 @@ nvidia-smi                                     # VRAM on this node
 
 ```bash
 # chat
-curl -s http://127.0.0.1:8506/v1/chat/completions \
+curl -s http://127.0.0.1:8502/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{"model":"Qwen3.8-27B","messages":[{"role":"user","content":"hi"}],"max_tokens":16}'
 
 # embeddings
-curl -s http://127.0.0.1:8506/v1/embeddings \
+curl -s http://127.0.0.1:8502/v1/embeddings \
   -H 'Content-Type: application/json' \
   -d '{"model":"BGE-M3","input":"hello world"}'
 ```
@@ -151,11 +149,11 @@ curl -s http://127.0.0.1:8506/v1/embeddings \
 - **pyrite's bcache runs near full.** Check `df -h /mnt/fast_scratch` before large downloads.
 - **`models_max = 1` on pyrite** means model *swap*, not stack: requesting Flash-Next evicts
   the 27B and its ~400 s cold load is the price. Warm loads are ~40 s.
-- **LiteLLM `/health` is deep and slow.** Point health checkers at `/healthz` (gateway) or
-  `/health/liveliness`/`/health/readiness` (router) — not raw `/health`.
-- **The public gateway auth lives in promptly** (gatekeeper → promptlyapi.com), not in this
-  repo or in nginx. The router runs keyless on the private side; never expose `:8506` to the
-  LAN.
+- **LiteLLM `/health` is deep and slow.** Point health checkers at
+  `/health/liveliness`/`/health/readiness` on `:8502` — not raw `/health`.
+- **Auth lives in promptly** (gatekeeper → promptlyapi.com), not in this repo. The router
+  runs keyless on `:8502`; its only clients are the VPS gateway and this machine, so keep
+  `:8502` on the Tailscale LAN — never publish it to the public internet.
 - **Qwen3.5+ chat templates**: the stock template rejects the `developer` role (breaks Claude
   Code-style clients). The patched `chat_templates/qwen_chat.jinja` is deployed to
   `/config/template.jinja` and referenced by the presets.

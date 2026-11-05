@@ -12,9 +12,10 @@ llama_docker_image: "ghcr.io/ggml-org/llama.cpp:server-cuda"
 managed_models:
 
   # Local models running on pyrite
-  - { name: "Qwen3.8-27B",        url: "http://llama-cuda:8080/v1" }
-  - { name: "Qwen3.8-Flash-Next", url: "http://llama-cuda:8080/v1" }
+  - { name: "Ternary-Bonsai-2-27B", url: "http://llama-cuda:8080/v1" }
+  - { name: "Qwen3.8-27B",          url: "http://llama-cuda:8080/v1" }
+  - { name: "Qwen3.8-Flash-Next",   url: "http://llama-cuda:8080/v1" }
 
   # Remote models running on ethics-gradient
-  - { name: "Qwen2.5-Coder-7B",   url: "http://100.64.0.5:8080/v1"}
-  - { name: "BGE-M3",             url: "http://100.64.0.5:8080/v1",is_embedding: true}
+  - { name: "Qwen3-4B-Instruct",    url: "http://100.64.0.5:8080/v1"}
+  - { name: "BGE-M3",               url: "http://100.64.0.5:8080/v1",is_embedding: true}

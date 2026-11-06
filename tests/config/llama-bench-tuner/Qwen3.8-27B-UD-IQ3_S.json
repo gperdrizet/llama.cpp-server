@@ -1,0 +1,76 @@
+{
+    "model_name": "Qwen3.8-27B-UD-IQ3_S",
+    "model_file": "Qwen3.8-27B-UD-IQ3_S.gguf",
+
+    "parameters": {
+        "-c":             "131072",
+        "-t":             "12",
+        "-tb":            "12",
+        "--flash-attn":   "on",
+        "--device":       "CUDA0,CUDA1",
+        "--n-gpu-layers": "-1",
+        "--split-mode":   "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0"
+    },
+
+    "phases": {
+        "1": {
+            "-npp": "8192",
+            "-ntg": "0",
+            "-npl": "1",
+            "--batch-size":  "1024,2048,4096,8192",
+            "--ubatch-size": "512,1024,2048,4096"
+        },
+        "2": {
+            "-npp": "8192",
+            "-ntg": "256",
+            "-npl": "1"
+        },
+        "3": {
+            "-npp": "1024,2048,4096,8192,16384,32768,65536,131072",
+            "-ntg": "256",
+            "-npl": "1"
+        }
+    },
+
+    "spec_variants": [
+        {
+            "label": "spec-off"
+        },
+        {
+            "label": "spec-nmax1",
+            "flags": {
+                "--model-draft":      "/models/Qwen3.8-27B-mtp-Q4_0.gguf",
+                "--spec-type":        "draft-mtp",
+                "--spec-draft-n-max": "1"
+            }
+        },
+        {
+            "label": "spec-nmax2",
+            "flags": {
+                "--model-draft":      "/models/Qwen3.8-27B-mtp-Q4_0.gguf",
+                "--spec-type":        "draft-mtp",
+                "--spec-draft-n-max": "2"
+            }
+        },
+        {
+            "label": "spec-nmax3",
+            "flags": {
+                "--model-draft":      "/models/Qwen3.8-27B-mtp-Q4_0.gguf",
+                "--spec-type":        "draft-mtp",
+                "--spec-draft-n-max": "3"
+            }
+        },
+        {
+            "label": "spec-nmax4",
+            "flags": {
+                "--model-draft":      "/models/Qwen3.8-27B-mtp-Q4_0.gguf",
+                "--spec-type":        "draft-mtp",
+                "--spec-draft-n-max": "4"
+            }
+        }
+    ],
+
+    "overrides": {}
+}

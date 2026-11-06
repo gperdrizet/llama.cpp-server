@@ -17,5 +17,5 @@ managed_models:
   - { name: "Qwen3.8-Flash-Next",   url: "http://llama-cuda:8080/v1" }
 
   # Remote models running on ethics-gradient
-  - { name: "Qwen3-4B-Instruct",    url: "http://100.64.0.5:8080/v1"}
+  - { name: "Qwen2.5-Coder-7B",     url: "http://100.64.0.5:8080/v1"}
   - { name: "BGE-M3",               url: "http://100.64.0.5:8080/v1",is_embedding: true}

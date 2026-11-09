@@ -80,6 +80,11 @@
         ipc_mode: host                    # Unlocks direct host inter-GPU communication lanes
         networks: [{name: llm-network}]   # Use the Docker network from above
 
+        # Allow unlimited memory locking and virtual memory
+        ulimits:
+          - "memlock:-1:-1"
+          - "as:-1:-1"
+
         # Automatically recreate the container if configuration changes
         recreate: "{{ llama_config.changed or (jinja_config.changed | default(false)) or ansible_docker_recreate | default(false) }}"
 

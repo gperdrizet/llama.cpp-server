@@ -252,11 +252,28 @@ def run_phase(
 
         except docker.errors.ContainerError as e:
             # One bad launch (arg rejected, OOM, ...) must not kill the
-            # whole chain. Any partial JSONL already emitted is kept.
-            print(f"    !! container exited {e.exit_code}; skipping run "
-                  f"(recovered {len(e.stdout or b'')} bytes of partial output)")
+            # whole chain. Capture the diagnostic and write an explicit
+            # error record so the condition still leaves a row for later
+            # analysis (it carries no measured cells). Note: ContainerError
+            # exposes `exit_status` and `stderr` -- not exit_code/stdout.
+            raw = e.stderr or b""
+            err = (raw.decode("utf-8", "replace") if isinstance(raw, (bytes, bytearray))
+                   else str(raw)).strip()
+            print(f"    !! container exited {e.exit_status}; no rows "
+                  f"(captured {len(err)} chars of stderr)")
 
-            csv_data = (e.stdout or b"").decode("utf-8", "replace")
+            record = {
+                "phase": phase, "run": run_id, "spec": spec_label,
+                "launch": launch_counter, "status": "error",
+                "exit_status": e.exit_status, "error": err,
+            }
+            for key in ("--batch-size", "--ubatch-size"):
+                if key in launch_params:
+                    record[key] = launch_params[key]
+            record["desc"] = label_desc
+            result_file.write(json.dumps(record, separators=(',', ':')) + "\n")
+
+            continue
 
         for line in csv_data.splitlines():
             line = line.strip()
@@ -270,7 +287,8 @@ def run_phase(
             except json.JSONDecodeError:
                 continue
 
-            tagged = {"phase": phase, "run": run_id, "spec": spec_label}
+            tagged = {"phase": phase, "run": run_id, "spec": spec_label,
+                      "launch": launch_counter, "status": "ok"}
             tagged.update(row)
             result_file.write(json.dumps(tagged, separators=(',', ':')) + "\n")
             rows.append((run_id, row))

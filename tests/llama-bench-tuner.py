@@ -132,6 +132,29 @@ def expand_outer_cells(parameters: dict) -> list:
     return out
 
 
+def valid_batch_ubatch_cells(base: dict) -> list:
+    '''Expand the phase-1 batch x ubatch cross, dropping cells where
+    ubatch > batch.
+
+    The physical ubatch can never exceed the logical batch -- the binary
+    would just ignore the excess -- so such combos are no-ops and are
+    never launched. E.g. batch=1024 x ubatch=2048 is a no-op.
+    '''
+
+    batch_key, ubatch_key = "--batch-size", "--ubatch-size"
+    cells = []
+
+    for cell in expand_outer_cells(base):
+        if batch_key in cell and ubatch_key in cell \
+                and int(cell[ubatch_key]) > int(cell[batch_key]):
+
+            continue
+
+        cells.append(cell)
+
+    return cells
+
+
 def build_spec_variants(config: dict) -> list:
     '''Return the list of spec variants; an empty/missing list = one spec-OFF control.'''
 
@@ -391,7 +414,7 @@ if __name__ == "__main__":
     result_file = Path(output_path / f"{config['model_name']}_{timestamp}.jsonl")
 
     # Calculate the number of launches for each phase
-    n_p1 = len(expand_outer_cells(phase_launch_params(shared, phases["1"], {}))) \
+    n_p1 = len(valid_batch_ubatch_cells(phase_launch_params(shared, phases["1"], {}))) \
         if (args.phase is None or args.phase == 1) and "1" in phases else 0
 
     n_p2 = len(spec_variants) if (args.phase is None or args.phase == 2) and "2" in phases else 0
@@ -421,9 +444,9 @@ if __name__ == "__main__":
         if args.phase is None or args.phase == 1:
             print("\n=== Phase 1: scan batch/ubatch for best prompt preprocessing ===")
 
-            # Generate the launch cells for phase 1
+            # Generate the launch cells for phase 1 (ubatch <= batch only)
             base = phase_launch_params(shared, phases["1"], {})
-            cells = expand_outer_cells(base)
+            cells = valid_batch_ubatch_cells(base)
             rows = []
 
             # Loop on cells for this phase, collecting results in rows

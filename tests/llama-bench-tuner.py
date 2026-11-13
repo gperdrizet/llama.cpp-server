@@ -196,9 +196,16 @@ def run_llama_bench(
     for key, value in spec_flags.items():
         bench_command.extend([key, value])
 
-    # Run the container and block until it finishes
-    container_output = client.containers.run(
-        image="ghcr.io/ggml-org/llama.cpp:full-cuda",
+    # Create + start the container, then drive it explicitly. This replaces
+    # client.containers.run(remove=True), which drains a follow=True log
+    # stream only AFTER container.remove() -- under the heavy phase-1
+    # workloads that intermittently tore out the final JSONL line, so the
+    # launch would exit 0 with empty stdout (no data row, no error row).
+    # Reading the logs with a single call after wait() (before remove)
+    # returns everything the container wrote.
+    image = "ghcr.io/ggml-org/llama.cpp:full-cuda"
+    container = client.containers.create(
+        image=image,
         name=f"llama-bench-{launch_id}",
         entrypoint="/app/llama-batched-bench",
         command=bench_command,
@@ -208,11 +215,26 @@ def run_llama_bench(
         device_requests=[
             docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])
         ],
-        remove=True,   # Automatically remove the container after it exits
-        detach=False,  # Blocks until execution completes
-        stdout=True,   # Captures the clean JSONL data
-        stderr=False   # Ignores initialization clutter completely
     )
+
+    try:
+        container.start()
+        exit_status = container.wait()['StatusCode']
+
+        if exit_status != 0:
+            # Capture stderr (the diagnostic) before removing the container.
+            stderr = container.logs(stdout=False, stderr=True)
+            raise docker.errors.ContainerError(
+                container, exit_status, bench_command, image, stderr
+            )
+
+        container_output = container.logs(stdout=True, stderr=False)
+
+    finally:
+        try:
+            container.remove()
+        except docker.errors.NotFound:
+            pass
 
     # Get and return results
     return container_output.decode('utf-8')
@@ -275,6 +297,8 @@ def run_phase(
 
             continue
 
+        parsed = 0
+
         for line in csv_data.splitlines():
             line = line.strip()
 
@@ -292,6 +316,25 @@ def run_phase(
             tagged.update(row)
             result_file.write(json.dumps(tagged, separators=(',', ':')) + "\n")
             rows.append((run_id, row))
+            parsed += 1
+
+        if parsed == 0:
+            # Container exited 0 but produced no JSONL. That can mean the
+            # model failed to load at request time, or the run was skipped
+            # by the bench binary for this cell. Leave an explicit record so
+            # the condition is not silently missing from the results file.
+            print(f"    !! launch {launch_counter} exited 0 with no JSONL "
+                  f"(stdout {len(csv_data)} chars); recording no_output")
+            record = {
+                "phase": phase, "run": run_id, "spec": spec_label,
+                "launch": launch_counter, "status": "no_output",
+                "stdout": csv_data[-2000:],
+            }
+            for key in ("--batch-size", "--ubatch-size"):
+                if key in launch_params:
+                    record[key] = launch_params[key]
+            record["desc"] = label_desc
+            result_file.write(json.dumps(record, separators=(',', ':')) + "\n")
 
     result_file.flush()
     return rows, launch_counter  # type: tuple[list[tuple[int, dict]], int]

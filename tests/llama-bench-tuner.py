@@ -60,6 +60,7 @@ chain N times and appends every run to the same output file.
 import argparse
 import json
 import math
+import re
 from itertools import product
 from pathlib import Path
 from datetime import datetime
@@ -72,6 +73,45 @@ NATIVE_SWEEP_FLAGS = {"-npp", "-ntg", "-npl"}
 
 # Flags whose comma-separated values are atomic, never to be swept.
 NON_SWEEP_FLAGS = {"--device"}
+
+
+# The bench's jsonl writer emits C-style non-strict JSON. Python's json
+# accepts NaN/Infinity but not the C forms -nan/-inf (case-insensitive),
+# which it writes for speed_tg when tg=0 -- normalize those before parsing.
+# The lookbehind replaces a leading \b, which cannot match across the
+# optional sign (space-to-dash is not a word boundary); it still keeps the
+# match from landing inside a longer identifier.
+_NAN_RE = re.compile(r'(?<![\w.])-?nan\b', re.IGNORECASE)
+_INF_RE = re.compile(r'(?<![\w.])-?inf\b', re.IGNORECASE)
+
+
+def parse_bench_jsonl(data: str) -> list:
+    '''Parse the bench's JSONL stdout into a list of row dicts.
+
+    Tolerates C-style non-strict tokens (-nan/-inf) in the bench output.
+    Lines that are not a JSON object are skipped.
+    '''
+
+    rows = []
+
+    for line in data.splitlines():
+        line = line.strip()
+
+        if not line:
+            continue
+
+        try:
+            row = json.loads(_NAN_RE.sub("NaN", _INF_RE.sub(
+                lambda m: "-Infinity" if m.group(0).startswith("-") else "Infinity",
+                line)))
+
+        except json.JSONDecodeError:
+            continue
+
+        if isinstance(row, dict):
+            rows.append(row)
+
+    return rows
 
 
 def split_lists(parameters: dict) -> dict:
@@ -297,28 +337,16 @@ def run_phase(
 
             continue
 
-        parsed = 0
+        parsed_rows = parse_bench_jsonl(csv_data)
 
-        for line in csv_data.splitlines():
-            line = line.strip()
-
-            if not line:
-                continue
-
-            try:
-                row = json.loads(line)
-
-            except json.JSONDecodeError:
-                continue
-
+        for row in parsed_rows:
             tagged = {"phase": phase, "run": run_id, "spec": spec_label,
                       "launch": launch_counter, "status": "ok"}
             tagged.update(row)
             result_file.write(json.dumps(tagged, separators=(',', ':')) + "\n")
             rows.append((run_id, row))
-            parsed += 1
 
-        if parsed == 0:
+        if not parsed_rows:
             # Container exited 0 but produced no JSONL. That can mean the
             # model failed to load at request time, or the run was skipped
             # by the bench binary for this cell. Leave an explicit record so

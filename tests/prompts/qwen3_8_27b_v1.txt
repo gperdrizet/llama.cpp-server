@@ -1,0 +1,869 @@
+<command-name>/clear</command-name>
+            <command-message>clear</command-message>
+            <command-args></command-args>
+
+We are running in `accept edits` mode because our classifier model for approving tool calls keeps timing out. The model should be Qwen2.5-Coder-7B. Can you check and verify:
+
+1. That tool approval calls are actualy going to Qwen2.5-Coder-7B.
+2. Qwen2.5-Coder-7B is working and responding to requests correctly outside of tool call approvals.
+
+If both of the above are true, investigate the reason for the timeouts/failed tool approval calls. See if there is a way to incrase the timeout.
+
+I'll start by gathering the routing configuration and checking the state of the stack.
+
+{"file_path": "/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/memory/claude-code-model-routing.md"}
+
+{"command": "env | grep -iE 'anthropic|claude|openai' | sed -E 's/(TOKEN|KEY|SECRET)=.*/\\1=<redacted>/i'", "description": "Show Claude/Anthropic-related environment variables (redacted)"}
+
+{"command": "curl -s -m 10 http://127.0.0.1:8502/v1/models | head -c 2000", "description": "List models on the local LiteLLM router"}
+
+1	---
+2	name: claude-code-model-routing
+3	description: "How Claude Code's model slots map to LiteLLM models; all traffic goes through the public promptlyapi.com gateway"
+4	metadata:
+5	  node_type: memory
+6	  type: project
+7	  originSessionId: a6432753-5184-475f-ad57-717d63bd0bb2
+8	  modified: 2026-11-03T17:01:21.385Z
+9	---
+10	
+11	Claude Code routes through the **public gateway**: `ANTHROPIC_BASE_URL=https://promptlyapi.com/v1`
+12	with a promptly API key as `ANTHROPIC_AUTH_TOKEN` (config in
+13	`/home/siderealyear/.claude/settings.json`, `env` block). Full chain:
+14	`promptlyapi.com → gatekeeper (74.208.107.78) → pyrite:8502 (litellm-router) → models`.
+15	(Nginx was removed 2026-11-03; the router now fronts 8502 directly.)
+16	
+17	Slot → model mapping:
+18	- **sonnet** (main conversation, `model: sonnet`) → `Qwen3.8-27B` (pyrite, reasoning)
+19	- **haiku** (small/fast = compaction, utility background tasks) → `Qwen2.5-Coder-7B` (ethics-gradient, over LAN)
+20	- **opus** (fast) → `Qwen3.8-Flash-Next` (pyrite)
+21	- **auto-mode tool-call safety classifier** → `Qwen2.5-Coder-7B`, set via the DEDICATED
+22	  env var `CLAUDE_CODE_AUTO_MODE_MODEL` (NOT the haiku slot). Added 2026-11-03.
+23	
+24	**Why (2026-11-03 correction):** the auto-mode classifier does NOT use the haiku
+25	slot. Per Claude Code docs (v2.1.302+), by default classifier requests go to the
+26	"Sonnet 5" class, which on a custom base URL resolves to
+27	`ANTHROPIC_DEFAULT_SONNET_MODEL` = Qwen3.8-27B — slow, timed out, and blocked the
+28	very Bash/Edit calls it should gate. `ANTHROPIC_DEFAULT_HAIKU_MODEL` does NOT
+29	steer the classifier. The correct knob is `CLAUDE_CODE_AUTO_MODE_MODEL` (env block in
+30	settings.json); set to `Qwen2.5-Coder-7B`. Verify in a fresh session: the timeout
+31	error message names the model actually used; or `claude --permission-mode auto
+32	--debug-file f` and grep `classifier_request_started`.
+33	(Original note that haiku = the classifier was wrong.)
+34	
+35	**How to apply:**
+36	- `settings.json` `env` is read at **session start** — routing changes only
+37	  take effect in the *next* Claude Code session. A session started before a
+38	  change keeps classifying with the old model (error messages name the model
+39	  they're actually using — a quick way to confirm which env a session has).
+40	- Exact model IDs matter: LiteLLM serves `Qwen2.5-Coder-7B`, not
+41	  "qwen2.5-instruct-7b". Mismatched names fail silently into fallback.
+42	- Qwen2.5-Coder-7B measured ~18 t/s decode, ~450 ms TTFT cached, ~2 s
+43	  end-to-end for a short verdict (probe: `tests/classifier_probe.py`).
+44	
+45	See [[docker-litellm-infra]].
+46	
+
+CLAUDE_CODE_CHILD_SESSION=1
+AI_AGENT=claude-code_2-1-317_agent
+CLAUDE_CODE_SESSION_ID=74fd96b6-f587-409c-9ef2-d6c433c192f6
+CLAUDE_PID=540680
+ANTHROPIC_API_TIMEOUT=900000
+ANTHROPIC_API_KEY=<redacted>
+CLAUDE_EFFORT=low
+CLAUDE_CODE_MAX_CONTEXT_TOKENS=131072
+CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1
+CLAUDE_CODE_MESSAGING_SOCKET=/run/user/1000/cc-socks/540680.sock
+CLAUDECODE=1
+CLAUDE_CODE_SESSION_ATTENDED=1
+ANTHROPIC_BASE_URL=https://promptlyapi.com/v1
+CLAUDE_STREAM_IDLE_TIMEOUT_MS=900000
+CLAUDE_CODE_AUTO_COMPACT_WINDOW=122880
+CLAUDE_CODE_SSE_PORT=20428
+CLAUDE_CODE_AUTO_MODE_MODEL=Qwen2.5-Coder-7B
+ANTHROPIC_DEFAULT_SONNET_MODEL=Qwen3.8-27B
+CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1
+ANTHROPIC_DEFAULT_OPUS_MODEL=Qwen3.8-Flash-Next
+ANTHROPIC_AUTH_TOKEN=<redacted>
+CLAUDE_CODE_ENTRYPOINT=cli
+ANTHROPIC_DEFAULT_HAIKU_MODEL=Qwen2.5-Coder-7B
+CLAUDE_CODE_EXECPATH=/home/siderealyear/.local/share/claude/versions/2.1.317
+CLAUDE_CODE_MESSAGING_TOKEN=<redacted>
+
+{"data":[{"id":"Qwen3.8-27B","object":"model","created":1677610602,"owned_by":"openai","max_input_tokens":262144,"max_output_tokens":262144},{"id":"Qwen3.8-Flash-Next","object":"model","created":1677610602,"owned_by":"openai","max_input_tokens":262144,"max_output_tokens":262144},{"id":"Qwen2.5-Coder-7B","object":"model","created":1677610602,"owned_by":"openai","max_input_tokens":131072,"max_output_tokens":131072},{"id":"BGE-M3","object":"model","created":1677610602,"owned_by":"openai","max_input_tokens":8192,"max_output_tokens":8192}],"object":"list"}
+
+Key findings so far:
+- `CLAUDE_CODE_AUTO_MODE_MODEL=Qwen2.5-Coder-7B` **is** set in this session's environment (the dedicated classifier knob, not the haiku slot). ✓
+- The LiteLLM router on `:8502` lists `Qwen2.5-Coder-7B` as available.
+- I (main conversation) am running on `Qwen3.8-27B` (the sonnet slot), which matches the expected routing.
+
+Now let me verify the settings file and test whether `Qwen2.5-Coder-7B` actually responds, both locally and through the public gateway.
+
+{"command": "cat /home/siderealyear/.claude/settings.json 2>/dev/null | python3 -c \"import json,sys; d=json.load(sys.stdin); print(json.dumps(d.get('env',{}),indent=2)); print('---top-level keys---'); print(list(d.keys()))\" 2>&1 | sed -E 's/(ANTHROPIC_AUTH_TOKEN|ANTHROPIC_API_KEY|[\"'\\'']?[a-zA-Z0-9_]*(key|token|secret)[a-zA-Z0-9_]*[\"'\\'']?\\s*[:=]\\s*[\"'\\'']?)[^\",}]+/\\1<redacted>/gi'", "description": "Show the env block from settings.json (secrets redacted)"}
+
+{"command": "echo \"=== TEST A: Qwen2.5-Coder-7B via LOCAL router :8502 (backend model) ===\" \ntime curl -s -m 60 http://127.0.0.1:8502/v1/chat/completions \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\":\"Qwen2.5-Coder-7B\",\"max_tokens\":120,\"messages\":[{\"role\":\"user\",\"content\":\"Reply with exactly the word: OK\"}]}' \\\n  | head -c 1500\necho\necho \"=== done ===\"", "description": "Test Qwen2.5-Coder-7B directly against local router with timing"}
+
+{
+  "ANTHROPIC_BASE_URL": "https://promptlyapi.com/v1",
+  "ANTHROPIC_AUTH_TOKEN": "<redacted>",
+  "ANTHROPIC_API_KEY":<redacted>"",
+  "ANTHROPIC_DEFAULT_SONNET_MODEL": "Qwen3.8-27B",
+  "ANTHROPIC_DEFAULT_HAIKU_MODEL": "Qwen2.5-Coder-7B",
+  "ANTHROPIC_DEFAULT_OPUS_MODEL": "Qwen3.8-Flash-Next",
+  "CLAUDE_CODE_AUTO_MODE_MODEL": "Qwen2.5-Coder-7B",
+  "CLAUDE_CODE_MAX_CONTEXT_TOKENS": "<redacted>",
+  "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "122880",
+  "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY": "1",
+  "ANTHROPIC_API_TIMEOUT": "900000",
+  "CLAUDE_STREAM_IDLE_TIMEOUT_MS": "900000",
+  "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1"
+}
+---top-level keys---
+['$schema', 'env', 'model', 'modelSettings', 'theme', 'autoMode']
+
+=== TEST A: Qwen2.5-Coder-7B via LOCAL router :8502 (backend model) ===
+{"id":"chatcmpl-3AG3iAoxugh28N0T694nat79KX7OgF2e","created":1793741977,"model":"Qwen2.5-Coder-7B","object":"chat.completion","system_fingerprint":"b12004-3c809f443","choices":[{"finish_reason":"stop","index":0,"message":{"content":"OK","role":"assistant"},"provider_specific_fields":{}}],"usage":{"completion_tokens":2,"prompt_tokens":36,"total_tokens":38,"prompt_tokens_details":{"cached_tokens":27}},"timings":{"cache_n":27,"prompt_n":9,"prompt_ms":221.128,"prompt_per_token_ms":24.569777777777777,"prompt_per_second":40.70040881299519,"predicted_n":2,"predicted_ms":52.896,"predicted_per_token_ms":52.896,"predicted_per_second":18.905021173623716}}
+real	0m0.379s
+user	0m0.004s
+sys	0m0.006s
+
+=== done ===
+
+{"command": "python3 -c \"import json; d=json.load(open('/home/siderealyear/.claude/settings.json')); print('autoMode:', json.dumps(d.get('autoMode'),indent=2)); print('model:', d.get('model')); print('modelSettings:', json.dumps(d.get('modelSettings'),indent=2))\"", "description": "Show autoMode, model, modelSettings from settings.json"}
+
+{"command": "echo \"=== TEST B: Qwen2.5-Coder-7B via PUBLIC chain (promptlyapi.com, Anthropic Messages API) ===\"\ntime curl -s -m 120 https://promptlyapi.com/v1/messages \\\n  -H \"x-api-key: $ANTHROPIC_AUTH_TOKEN\" \\\n  -H \"anthropic-version: 2023-06-01\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\":\"Qwen2.5-Coder-7B\",\"max_tokens\":120,\"messages\":[{\"role\":\"user\",\"content\":\"Reply with exactly the word: OK\"}]}' \\\n  | head -c 2000\necho\necho \"=== done ===\"", "description": "Test Qwen2.5-Coder-7B through public gateway with Anthropic API format, timed"}
+
+autoMode: {
+  "environment": [
+    "### Org-wide",
+    "**Organization**: None configured",
+    "**Cloud provider(s)**: None configured \u2014 inference runs on a local bare-metal GPU server named *pyrite* (2\u00d7 Tesla P100 16 GB, 24 cores, 251 GB RAM, 2.7 TB NVMe bcache)",
+    "**Repository visibility**: Not queryable (gh API returned 'not queryable here'); treat as possibly public \u2014 scope what is safe to commit or push to `gperdrizet/llama.cpp-server` accordingly",
+    "**Internal sharing / snippet hosting**: None configured \u2014 treat public paste/gist services as outside the trust boundary",
+    "**Secrets management**: Local systemd EnvironmentFile at `/etc/llama/llama-secrets.env` (root-only 0600); repo-local template is `utils/llama-secrets.env.example`. No managed secret store.",
+    "**Default / protected branches**: Default branch unknown (origin/HEAD unset); rulesets and protected branches not queryable",
+    "**CI/CD deploy targets**: None configured \u2014 deployment is manual via `bash utils/deploy-llama` (install units + config) and `sudo bash utils/switch-llama-profile [agents|pool|none]` (start/stop services)",
+    "**Network posture**: Public nginx gateway on 0.0.0.0:8502 (routes to active profile); loopback-only backends on 8503, 8082, 8083, 8084, 8085; CGNAT address 100.64.0.5 contacted 3\u00d7 in transcripts (likely local router/NAT)",
+    "**Host containment**: Services run as unprivileged `llama` user with `ProtectSystem=strict`, `ProtectHome=read-only`, `ReadOnlyPaths` hardening; repo files need POSIX ACLs (`setfacl u:llama:rx`) to be readable by services. Claude Code itself runs on this same host and its inference is served locally through the 8502 gateway.",
+    "**Source control**: `gperdrizet/llama.cpp-server` on GitHub (remote: `github.com:gperdrizet/llama.cpp-server.git`); no additional orgs configured",
+    "**Trusted internal domains**: `promptlyapi.com` (user's own public API gateway for this inference stack \u2014 auth, token metering, billing)",
+    "**Trusted cloud buckets**: None configured",
+    "**Key internal services**: agent-router (127.0.0.1:8503), llama-pool@replica0 (127.0.0.1:8083), llama-pool@replica1 (127.0.0.1:8084), llama-embed (127.0.0.1:8082), llama-flash-next (127.0.0.1:8085, CPU-only 125 B MoE, started manually), nginx gateway (0.0.0.0:8502)",
+    "**Internal package registry**: None configured",
+    "**Sensitive data locations & audiences**: `/etc/llama/llama-secrets.env` (root 0600, API keys); `.env` and `llama-secrets.env` are gitignored; `/mnt/fast_scratch/llama-models` (bcache, near full \u2014 check `df -h` before downloads); benchmark CSVs in `tests/results/` are run artifacts \u2014 ask before committing a batch",
+    "**Data retention / declassification**: None configured",
+    "**Sensitive remote targets**: any namespace, host, or container whose name carries `prod` or `production` as a whole word or name segment (hyphen/underscore/dot-delimited)",
+    "**Protected deployment namespaces / environments**: None configured \u2014 fall back to the Sensitive remote targets heuristic",
+    "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; anything whose name or tag carries `prod` or `production` as a whole word or name segment",
+    "### User-specific",
+    "**Primary use of Claude Code**: Operating and developing a self-hosted multi-profile llama.cpp inference stack on pyrite; Claude Code's own inference routes through the local 8502 gateway (Qwen models), so service restarts mid-session interrupt the conversation",
+    "**Trusted repo**: `/home/siderealyear/llama.cpp` \u2192 `github.com:gperdrizet/llama.cpp-server.git`",
+    "**Org-specific CLIs**: `switch-llama-profile` (profile switcher, 241\u00d7 in shell history \u2014 the ONLY tool that starts/stops inference services); `deploy-llama` (installs units + config, never starts/stops); `agent-router` (systemd service managing on-demand model loading); `openclaw` (150\u00d7 in shell history, purpose unclear); `ansible-playbook` (5\u00d7 in transcripts)",
+    "**Routine under siderealyear/ prefix**: systemctl start/stop/restart for llama units; journalctl -u monitoring; curl health checks against 127.0.0.1:8502; profile switching via `sudo bash utils/switch-llama-profile`; benchmark runs via Python scripts driven by YAML configs in `tests/config/`"
+  ]
+}
+model: sonnet
+modelSettings: {
+  "qwen3.8-27b": {
+    "effortLevel": "low"
+  }
+}
+
+=== TEST B: Qwen2.5-Coder-7B via PUBLIC chain (promptlyapi.com, Anthropic Messages API) ===
+{"error":{"message":"Invalid or missing API key.","type":"auth_error"}}
+real	0m0.147s
+user	0m0.056s
+sys	0m0.008s
+
+=== done ===
+
+The `x-api-key` header was wrong — `ANTHROPIC_AUTH_TOKEN` is sent as `Authorization: Bearer`. Let me redo TEST B correctly, and also run a more realistic classifier-shaped request to measure real latency through the full public chain.
+
+{"command": "echo \"=== TEST B (fixed): Qwen2.5-Coder-7B via PUBLIC chain, Bearer auth (how Claude Code sends ANTHROPIC_AUTH_TOKEN) ===\"\ntime curl -s -m 120 https://promptlyapi.com/v1/messages \\\n  -H \"Authorization: Bearer $ANTHROPIC_AUTH_TOKEN\" \\\n  -H \"anthropic-version: 2023-06-01\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\":\"Qwen2.5-Coder-7B\",\"max_tokens\":120,\"messages\":[{\"role\":\"user\",\"content\":\"Reply with exactly the word: OK\"}]}' \\\n  | head -c 2000\necho\necho \"=== done ===\"", "description": "Test Qwen2.5-Coder-7B via public gateway with Bearer auth"}
+
+=== TEST B (fixed): Qwen2.5-Coder-7B via PUBLIC chain, Bearer auth (how Claude Code sends ANTHROPIC_AUTH_TOKEN) ===
+{"detail":"Not Found"}
+real	0m0.504s
+user	0m0.054s
+sys	0m0.012s
+
+=== done ===
+
+`/v1/messages` returned `Not Found` for the 7B model. That's a strong signal, but I need to compare against a model I know works (I'm literally running on `Qwen3.8-27B` through this same chain). Let me test both models through the identical public path, and probe the gateway's actual routes.
+
+{"command": "echo \"=== Compare: same public path, model=Qwen3.8-27B (the model I'm running on) ===\"\ntime curl -s -m 120 https://promptlyapi.com/v1/messages \\\n  -H \"Authorization: Bearer $ANTHROPIC_AUTH_TOKEN\" \\\n  -H \"anthropic-version: 2023-06-01\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\":\"Qwen3.8-27B\",\"max_tokens\":20,\"messages\":[{\"role\":\"user\",\"content\":\"Reply OK\"}]}' \\\n  | head -c 1200\necho; echo \"---\"\necho \"=== /v1/models on public gateway ===\"\ncurl -s -m 20 https://promptlyapi.com/v1/models \\\n  -H \"Authorization: Bearer $ANTHROPIC_AUTH_TOKEN\" | head -c 1500\necho; echo \"---\"\necho \"=== /v1/chat/completions on public gateway (OpenAI path), model=Qwen2.5-Coder-7B ===\"\ntime curl -s -m 120 https://promptlyapi.com/v1/chat/completions \\\n  -H \"Authorization: Bearer $ANTHROPIC_AUTH_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"model\":\"Qwen2.5-Coder-7B\",\"max_tokens\":20,\"messages\":[{\"role\":\"user\",\"content\":\"Reply OK\"}]}' \\\n  | head -c 1200", "description": "Compare 27B vs 7B through public chain and probe gateway routes"}
+
+=== Compare: same public path, model=Qwen3.8-27B (the model I'm running on) ===
+{"detail":"Not Found"}
+real	0m0.539s
+user	0m0.066s
+sys	0m0.008s
+
+---
+=== /v1/models on public gateway ===
+{"data":[{"id":"Qwen3.8-27B","object":"model","created":1677610602,"owned_by":"openai","max_input_tokens":262144,"max_output_tokens":262144},{"id":"Qwen3.8-Flash-Next","object":"model","created":1677610602,"owned_by":"openai","max_input_tokens":262144,"max_output_tokens":262144},{"id":"Qwen2.5-Coder-7B","object":"model","created":1677610602,"owned_by":"openai","max_input_tokens":131072,"max_output_tokens":131072},{"id":"BGE-M3","object":"model","created":1677610602,"owned_by":"openai","max_input_tokens":8192,"max_output_tokens":8192}],"object":"list"}
+---
+=== /v1/chat/completions on public gateway (OpenAI path), model=Qwen2.5-Coder-7B ===
+{"id":"chatcmpl-Nvk0VlVVwhXZzDH4OkObWvFa4Bb9Ac2h","created":1793752807,"model":"Qwen2.5-Coder-7B","object":"chat.completion","system_fingerprint":"b12004-3c809f443","choices":[{"finish_reason":"stop","index":0,"message":{"content":"OK","role":"assistant"},"provider_specific_fields":{}}],"usage":{"completion_tokens":2,"prompt_tokens":31,"total_tokens":33,"prompt_tokens_details":{"cached_tokens":25}},"timings":{"cache_n":25,"prompt_n":6,"prompt_ms":442.932,"prompt_per_token_ms":73.822,"prompt_per_second":13.54609736934789,"predicted_n":2,"predicted_ms":56.512,"predicted_per_token_ms":56.512,"predicted_per_second":17.695356738391848}}
+real	0m1.054s
+user	0m0.056s
+sys	0m0.009s
+
+I found that the public gateway's `/v1/messages` endpoint returns `Not Found` for both models, suggesting the Anthropic-compatible path is elsewhere. I'll probe the gateway routes and repo config while asking Claude Code's auto-mode classifier about timeout settings.
+
+{"command": "for path in /messages /anthropic/v1/messages /v1/anthropic/messages /anthropic/messages; do\n  echo \"=== POST https://promptlyapi.com$path (7B) ===\"\n  curl -s -o /tmp/gw_out.txt -w \"HTTP %{http_code}, %{time_total}s\\n\" -m 30 \"https://promptlyapi.com$path\" \\\n    -H \"Authorization: Bearer $ANTHROPIC_AUTH_TOKEN\" \\\n    -H \"anthropic-version: 2023-06-01\" \\\n    -H \"Content-Type: application/json\" \\\n    -d '{\"model\":\"Qwen2.5-Coder-7B\",\"max_tokens\":20,\"messages\":[{\"role\":\"user\",\"content\":\"Reply OK\"}]}'\n  head -c 400 /tmp/gw_out.txt; echo; echo\ndone", "description": "Probe gateway for the Anthropic-format messages endpoint"}
+
+{"command": "grep -rniE 'promptly|gatekeeper|8502|messages' /home/siderealyear/llama.cpp --include='*.yml' --include='*.yaml' --include='*.md' --include='*.conf' --include='*.json' --include='*.ini' -l | grep -v node_modules | head -30", "description": "Find repo files referencing the public gateway"}
+
+{"description": "Auto-mode classifier mechanics", "prompt": "I'm operating a Claude Code CLI (version 2.1.317) with a custom ANTHROPIC_BASE_URL (OpenAI/Anthropic-compatible proxy serving non-Anthropic models). The \"auto-mode\" tool-call safety classifier is timing out, forcing the user into \"accept edits\" permission mode.\n\nPlease answer these specific questions from the Claude Code docs / source knowledge:\n\n1. How does the auto-mode permission classifier choose which model to call? Is it `CLAUDE_CODE_AUTO_MODE_MODEL`? What happens if that env var is unset? Which request (model name in the payload) does it send \u2014 the raw env var value, or a resolved model slot (sonnet/haiku)?\n2. Which timeout applies to classifier requests \u2014 is it the general ANTHROPIC_API_TIMEOUT / request timeout, or a separate, shorter, possibly non-configurable classifier timeout? What is the default value, and is there any documented env var or setting to increase it?\n3. When the classifier times out or errors, what is the fallback behavior (deny? allow? switch to asking the user / a different permission mode)?\n4. What logs / debug output does Claude Code produce for classifier requests (log file location, --debug-file, keywords to grep such as \"classifier_request_started\" or \"auto-mode\") so I can confirm which model name the classifier actually sent and how long each request took?\n5. Any known issue in 2.1.3xx where the classifier uses a slower model by default on custom base URLs, or retries without backoff?\n\nReport concrete facts with doc/source citations where possible; clearly flag anything you're unsure of.", "subagent_type": "claude-code-guide"}
+
+=== POST https://promptlyapi.com/messages (7B) ===
+HTTP 404, 0.124705s
+{"detail":"Not Found"}
+
+=== POST https://promptlyapi.com/anthropic/v1/messages (7B) ===
+HTTP 404, 0.128404s
+{"detail":"Not Found"}
+
+=== POST https://promptlyapi.com/v1/anthropic/messages (7B) ===
+HTTP 404, 0.781635s
+
+
+=== POST https://promptlyapi.com/anthropic/messages (7B) ===
+HTTP 404, 0.130486s
+{"detail":"Not Found"}
+
+Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)
+agentId: a5c302c8c2f3116bc (internal ID - do not mention to user. Use SendMessage with to: 'a5c302c8c2f3116bc', summary: '<5-10 word recap>' to continue this agent.)
+The agent is working in the background. You will be notified automatically when it completes. You know nothing about its results until that notification arrives — do not report, assume, or predict them; continue other work or respond to the user in the meantime.
+Do not duplicate this agent's work — avoid working with the same files or topics it is using.
+output_file: /tmp/claude-1000/-home-siderealyear-llama-cpp/d5b24a4e-47e7-4044-880c-e535131bd3c3/tasks/a5c302c8c2f3116bc.output
+Do NOT Read or tail this file via the shell tool — it is the full subagent JSONL transcript and reading it will overflow your context. If the user asks for progress, say the agent is still running; you'll get a completion notification.
+
+/home/siderealyear/llama.cpp/CLAUDE.md
+/home/siderealyear/llama.cpp/tests/results/generation-benchmark/generation-benchmark_models_5model_sweep_slots1_ctx512-65536_reps3.config.json
+/home/siderealyear/llama.cpp/playbooks/deploy_llm_stack.yml
+/home/siderealyear/llama.cpp/tests/results/generation-benchmark/generation-benchmark_models_dual_gpu_slots1_ctx1024-65536_reps5.config.json
+/home/siderealyear/llama.cpp/tests/results/generation-benchmark/generation-benchmark_models_qwen_tensor_slots1_ctx1024-240000_reps3.config.json
+/home/siderealyear/llama.cpp/README.md
+/home/siderealyear/llama.cpp/tests/results/generation-benchmark/generation-benchmark_models_dual_gpu_slots1_ctx512-65536_reps5.config.json
+/home/siderealyear/llama.cpp/tests/results/generation-benchmark/generation-benchmark_models_5model_sweep_slots1_ctx1024-131072_reps3.config.json
+/home/siderealyear/llama.cpp/tests/README_generation_benchmark.md
+/home/siderealyear/llama.cpp/tests/results/generation-benchmark/generation-benchmark_models_single_gpu_slots1_ctx512-16384_reps5.config.json
+/home/siderealyear/llama.cpp/tests/results/generation-benchmark/generation-benchmark_models_qwen_tensor_slots1_ctx234-120000_reps3.config.json
+/home/siderealyear/llama.cpp/tests/results/context_fit/single_gpu/gpt-oss-20b-Q4_K_M/summary.json
+/home/siderealyear/llama.cpp/tests/config/load_test/load-test-Qwen3.6-27B-Q4_K_M.yaml
+/home/siderealyear/llama.cpp/tests/config/load_test/load-test-GTP-OSS-20B.yaml
+
+{"command": "grep -n -iE 'promptly|gatekeeper|8502|8506|messages|anthropic' /home/siderealyear/llama.cpp/README.md /home/siderealyear/llama.cpp/playbooks/deploy_llm_stack.yml | head -40", "description": "Find gateway references in README and deploy playbook"}
+
+{"command": "ls -R /home/siderealyear/llama.cpp/inventory 2>/dev/null | head; echo ---; grep -n -iE 'managed_models|litellm|8506|8502' /home/siderealyear/llama.cpp/inventory/host_vars/*.yml 2>/dev/null | head -30", "description": "Show inventory layout and LiteLLM model config"}
+
+/home/siderealyear/llama.cpp/playbooks/deploy_llm_stack.yml:124:        # LiteLLM router: public port 8502 on the host maps to 8506 in the
+/home/siderealyear/llama.cpp/playbooks/deploy_llm_stack.yml:125:        # container. (nginx gateway removed — LiteLLM now fronts :8502 directly.)
+/home/siderealyear/llama.cpp/playbooks/deploy_llm_stack.yml:127:          - "8502:8506"
+/home/siderealyear/llama.cpp/playbooks/deploy_llm_stack.yml:138:        command: "--config /app/config.json --port 8506 --host 0.0.0.0"
+/home/siderealyear/llama.cpp/README.md:18:                    │ VPS gateway  (promptlyapi.com)       │
+/home/siderealyear/llama.cpp/README.md:31:    │ litellm-router :8502          │──LAN──►│ llama-cuda :8080              │
+/home/siderealyear/llama.cpp/README.md:40:- **LiteLLM (`:8502`)**: the router *and* the public entry point — the `litellm-router`
+/home/siderealyear/llama.cpp/README.md:41:  container maps host `:8502` to its `:8506`. Owns the model list (see
+/home/siderealyear/llama.cpp/README.md:43:  to `/health/liveliness` or `/health/readiness` on `:8502`; the deep `/health` endpoint
+/home/siderealyear/llama.cpp/README.md:98:5. Starts `litellm-router` (pyrite only) on host `:8502` → container `:8506`, with no master key (`LITELLM_DANGEROUSLY_PERMIT_WEAK_OR_UNSET_MASTER_KEY`).
+/home/siderealyear/llama.cpp/README.md:120:curl -s http://127.0.0.1:8502/v1/models        # router: full model list
+/home/siderealyear/llama.cpp/README.md:121:curl -s http://127.0.0.1:8502/health/liveliness   # fast liveness  (~ms)
+/home/siderealyear/llama.cpp/README.md:122:curl -s http://127.0.0.1:8502/health/readiness    # fast readiness (~ms)
+/home/siderealyear/llama.cpp/README.md:125:curl -s https://promptlyapi.com/v1/models -H "Authorization: Bearer $KEY"   # full public chain
+/home/siderealyear/llama.cpp/README.md:134:curl -s http://127.0.0.1:8502/v1/chat/completions \
+/home/siderealyear/llama.cpp/README.md:136:  -d '{"model":"Qwen3.8-27B","messages":[{"role":"user","content":"hi"}],"max_tokens":16}'
+/home/siderealyear/llama.cpp/README.md:139:curl -s http://127.0.0.1:8502/v1/embeddings \
+/home/siderealyear/llama.cpp/README.md:153:  `/health/liveliness`/`/health/readiness` on `:8502` — not raw `/health`.
+/home/siderealyear/llama.cpp/README.md:154:- **Auth lives in promptly** (gatekeeper → promptlyapi.com), not in this repo. The router
+/home/siderealyear/llama.cpp/README.md:155:  runs keyless on `:8502`; its only clients are the VPS gateway and this machine, so keep
+/home/siderealyear/llama.cpp/README.md:156:  `:8502` on the Tailscale LAN — never publish it to the public internet.
+/home/siderealyear/llama.cpp/README.md:167:| main | `ANTHROPIC_DEFAULT_SONNET_MODEL` | Qwen3.8-27B | Light conversation, reasoning, code |
+/home/siderealyear/llama.cpp/README.md:168:| fast | `ANTHROPIC_DEFAULT_OPUS_MODEL` | Qwen3.8-Flash-Next | Deep reasoning, extended work |
+/home/siderealyear/llama.cpp/README.md:169:| utility | `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Qwen2.5-Coder-7B | fast, non-reasoning: auto-mode tool classification, compaction |
+/home/siderealyear/llama.cpp/README.md:171:`ANTHROPIC_BASE_URL` points at the public gateway (`https://promptlyapi.com/v1`) with a
+/home/siderealyear/llama.cpp/README.md:172:promptly key, so sessions exercise the full production chain. Note: model slots are resolved
+
+/home/siderealyear/llama.cpp/inventory:
+hosts.ini
+host_vars
+
+/home/siderealyear/llama.cpp/inventory/host_vars:
+ethics-gradient.yml
+pyrite.yml
+---
+/home/siderealyear/llama.cpp/inventory/host_vars/pyrite.yml:1:run_litellm: true
+/home/siderealyear/llama.cpp/inventory/host_vars/pyrite.yml:4:expose_llama_port_to_lan: false                   # LiteLLM communicates internally over Docker network
+/home/siderealyear/llama.cpp/inventory/host_vars/pyrite.yml:11:# The master routing directory LiteLLM will use to direct requests
+/home/siderealyear/llama.cpp/inventory/host_vars/pyrite.yml:12:managed_models:
+/home/siderealyear/llama.cpp/inventory/host_vars/ethics-gradient.yml:1:run_litellm: false
+/home/siderealyear/llama.cpp/inventory/host_vars/ethics-gradient.yml:4:expose_llama_port_to_lan: true                    # Exposes port 8080 so pyrite's LiteLLM can reach it
+
+{"command": "ls -la /home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/ 2>/dev/null; echo ---; ls /home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/*.jsonl 2>/dev/null | head; echo ---; ls /home/siderealyear/llama.cpp/ | head -30; echo ---; find /home/siderealyear/llama.cpp -iname '*litellm*' -not -path '*/.git/*' 2>/dev/null", "description": "List transcript files and locate LiteLLM config in repo"}
+
+{"command": "grep -l 'auto' /home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/*.jsonl 2>/dev/null | head -5; echo ---; grep -ohiE 'classif[a-z_ ]*|auto[-_ ]?mode|timed? ?out[^,\"]*|timeout[^,\"]*' /home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/*.jsonl 2>/dev/null | sort | uniq -c | sort -rn | head -30", "description": "Search transcripts for classifier/timeout error strings"}
+
+{"file_path": "/home/siderealyear/llama.cpp/tests/classifier_probe.py"}
+
+total 10032
+drwxrwxr-x 9 siderealyear siderealyear    4096 Nov  3 20:26 .
+drwxrwxr-x 4 siderealyear siderealyear    4096 Oct 25 07:03 ..
+-rw------- 1 siderealyear siderealyear  203692 Nov  1 21:26 07e1f1bf-55fe-4aa6-a5e3-f3054aa897df.jsonl
+-rw------- 1 siderealyear siderealyear  202722 Nov  1 21:26 0f1b8913-02c8-44eb-82b3-671dd78fc51b.jsonl
+-rw------- 1 siderealyear siderealyear  135787 Oct 31 14:57 169381a7-e065-492f-8cdd-9ebdf6bf2b5f.jsonl
+-rw------- 1 siderealyear siderealyear  135795 Oct 31 14:52 2c7ab5e6-ba7d-41de-bb8c-0570ba3be32f.jsonl
+-rw------- 1 siderealyear siderealyear  205993 Nov  1 00:20 2cc7785e-c09f-4a7f-ac9e-91dbd19076a9.jsonl
+-rw------- 1 siderealyear siderealyear  203668 Nov  1 00:26 3275e31b-40f1-42b6-aba1-2c8255233b4a.jsonl
+-rw------- 1 siderealyear siderealyear  202719 Nov  1 21:25 3795d776-c8ef-4a95-af1f-709f902b0e55.jsonl
+drwx------ 3 siderealyear siderealyear    4096 Nov  3 08:50 3c4c97ba-8e14-4fdd-9d27-1bb4a999a4a4
+-rw------- 1 siderealyear siderealyear  828097 Nov  3 08:54 3c4c97ba-8e14-4fdd-9d27-1bb4a999a4a4.jsonl
+-rw------- 1 siderealyear siderealyear  203525 Nov  1 00:25 3e2e600f-4eb0-4790-86f7-ff661ab0a187.jsonl
+-rw------- 1 siderealyear siderealyear  435153 Nov  3 00:16 42753ba6-3871-47b2-a398-d3c0f64ad091.jsonl
+-rw------- 1 siderealyear siderealyear  135781 Oct 31 14:55 4d08776b-2938-4ecd-904e-eeb1f2af6c47.jsonl
+-rw------- 1 siderealyear siderealyear  132950 Oct 31 14:51 527acf8e-bc46-491f-a019-bfb19bfe3a63.jsonl
+-rw------- 1 siderealyear siderealyear  213998 Nov  3 00:04 71b4bb35-dfce-44a7-84e4-2e76b13cbe7a.jsonl
+drwxrwxr-x 3 siderealyear siderealyear    4096 Nov  3 20:26 74fd96b6-f587-409c-9ef2-d6c433c192f6
+-rw------- 1 siderealyear siderealyear  535455 Nov  3 20:28 74fd96b6-f587-409c-9ef2-d6c433c192f6.jsonl
+-rw------- 1 siderealyear siderealyear     912 Nov  2 21:39 88fc259c-96a7-44db-9ef3-c34b1878380d.jsonl
+-rw------- 1 siderealyear siderealyear  141296 Oct 31 14:58 89e741af-b698-46b1-9355-026c9a04986f.jsonl
+-rw------- 1 siderealyear siderealyear  213334 Nov  3 00:08 9dd10d14-4862-4485-89d9-bcc03ef68ead.jsonl
+drwx------ 3 siderealyear siderealyear    4096 Nov  2 23:11 a6432753-5184-475f-ad57-717d63bd0bb2
+-rw------- 1 siderealyear siderealyear 1899843 Nov  3 08:58 a6432753-5184-475f-ad57-717d63bd0bb2.jsonl
+drwx------ 2 siderealyear siderealyear    4096 Nov  1 20:16 bc93c739-52c8-4d3f-bad0-59b573ac9bc7
+-rw------- 1 siderealyear siderealyear 1121299 Nov  1 21:33 bc93c739-52c8-4d3f-bad0-59b573ac9bc7.jsonl
+-rw------- 1 siderealyear siderealyear  135779 Oct 31 14:56 c22ab6a1-65fa-46ce-a275-285a1670f6e8.jsonl
+drwx------ 2 siderealyear siderealyear    4096 Nov  3 09:10 d5b24a4e-47e7-4044-880c-e535131bd3c3
+-rw------- 1 siderealyear siderealyear 1901068 Nov  3 16:13 d5b24a4e-47e7-4044-880c-e535131bd3c3.jsonl
+-rw------- 1 siderealyear siderealyear  201565 Nov  1 21:33 d63078d3-f360-41aa-8e26-d7e7fd2866ac.jsonl
+-rw------- 1 siderealyear siderealyear  202653 Nov  1 21:25 e69211c4-2656-4bff-a2a8-3c099e723d68.jsonl
+drwx------ 2 siderealyear siderealyear    4096 Oct 24 00:26 e987801b-dfc5-40e2-861b-0a10c2721199
+-rw------- 1 siderealyear siderealyear  345006 Oct 25 15:34 e987801b-dfc5-40e2-861b-0a10c2721199.jsonl
+-rw------- 1 siderealyear siderealyear  211691 Nov  1 00:13 ef58d50c-e73d-47f5-9ee1-4bccd4f0b819.jsonl
+drwxrwxr-x 2 siderealyear siderealyear    4096 Nov  3 12:01 memory
+---
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/07e1f1bf-55fe-4aa6-a5e3-f3054aa897df.jsonl
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/0f1b8913-02c8-44eb-82b3-671dd78fc51b.jsonl
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/169381a7-e065-492f-8cdd-9ebdf6bf2b5f.jsonl
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/2c7ab5e6-ba7d-41de-bb8c-0570ba3be32f.jsonl
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/2cc7785e-c09f-4a7f-ac9e-91dbd19076a9.jsonl
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/3275e31b-40f1-42b6-aba1-2c8255233b4a.jsonl
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/3795d776-c8ef-4a95-af1f-709f902b0e55.jsonl
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/3c4c97ba-8e14-4fdd-9d27-1bb4a999a4a4.jsonl
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/3e2e600f-4eb0-4790-86f7-ff661ab0a187.jsonl
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/42753ba6-3871-47b2-a398-d3c0f64ad091.jsonl
+---
+ansible.cfg
+chat_templates
+CLAUDE.md
+inventory
+legacy
+llama_router_presets
+models
+playbooks
+README.md
+requirements.txt
+templates
+tests
+---
+/home/siderealyear/llama.cpp/templates/litellm_config.json.j2
+
+File does not exist. Note: your current working directory is /home/siderealyear/llama.cpp.
+
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/2c7ab5e6-ba7d-41de-bb8c-0570ba3be32f.jsonl
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/0f1b8913-02c8-44eb-82b3-671dd78fc51b.jsonl
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/4d08776b-2938-4ecd-904e-eeb1f2af6c47.jsonl
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/527acf8e-bc46-491f-a019-bfb19bfe3a63.jsonl
+/home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/07e1f1bf-55fe-4aa6-a5e3-f3054aa897df.jsonl
+---
+    360 classifier
+    238 auto-mode
+    136 auto mode
+    110 classifierBoundary
+     96 classify
+     81 timed out)
+     73 classifier and can still be used
+     70 AUTO_MODE
+     66 classifier_probe
+     52 timeout_ms
+     52 automode
+     47 classifier 
+     46 timeout
+     42 timeout` is in milliseconds: default 120000
+     37 autoMode
+     34 timeout in milliseconds (max 600000 for a foreground command)
+     33 timeout_ms` to the maximum and re-arm on each expiry
+     33 timeout_ms` (default 5 minutes
+     33 timeout even after the event has fired. For \
+     33 timeout`)
+     30 classification
+     26 timed out
+     21 timeout\
+     20 classifier workloads 
+     18 classifier model config
+     18 classifier model
+     17 classifier error 
+     17 Auto mode
+     16 classifier was originally 
+     14 TIMEOUT_MS\
+
+The subagent's doc answers are too generic to trust (it made zero tool calls), so I'll treat those as unverified. The transcripts, though, should contain the actual timeout errors. Let me pull the real error text.
+
+{"command": "grep -ohE '.{80}(timed? ?out|timeout|timed out).{120}' /home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/d5b24a4e-47e7-4044-880c-e535131bd3c3.jsonl /home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/a6432753-5184-475f-ad57-717d63bd0bb2.jsonl 2>/dev/null | grep -iE 'classif|auto.?mode|permission|approv' | sort | uniq -c | sort -rn | head -20", "description": "Extract real classifier timeout error strings from recent transcripts"}
+
+     16 tent":[{"type":"tool_result","content":"Qwen3.8-27B is temporarily unavailable (timed out), so auto mode cannot determine the safety of Bash right now. Wait a moment and then try this action again. If it keeps
+      3 t — so it fell back to the main Qwen3.8-27B reasoning model, which is\nslow and timed out, blocking the very Bash/Edit calls it should classify\n(catch-22: the broken fallback gates the fix). Repointed haiku t
+      3 ssifier use a specific model (the error text is \"X is temporarily unavailable (timed out), so auto mode cannot determine the safety of Bash right now\"), (2) whether ANTHROPIC_DEFAULT_HAIKU_MODEL affects it, 
+      3 om base URL resolves to\n`ANTHROPIC_DEFAULT_SONNET_MODEL` = Qwen3.8-27B — slow, timed out, and blocked the\nvery Bash/Edit calls it should gate. `ANTHROPIC_DEFAULT_HAIKU_MODEL` does NOT\nsteer the classifier. 
+      3 ly other background tasks (compaction/summarization)?\n4. Is there any separate timeout setting for the auto-mode classifier specifically (distinct from ANTHROPIC_API_TIMEOUT)?\n\nI want the precise field na
+      3 k in\nsettings.json); set to `Qwen2.5-Coder-7B`. Verify in a fresh session: the timeout\nerror message names the model actually used; or `claude --permission-mode auto\n--debug-file f` and grep `classifier_r
+      3 FAULT_SONNET_MODEL value, a slow reasoning model) as \"temporarily unavailable (timed out), so auto mode cannot determine the safety of Bash right now\" — even though ANTHROPIC_DEFAULT_HAIKU_MODEL is set to a 
+      2 :[{"type":"tool_result","content":"Qwen2.5-Coder-7B is temporarily unavailable (timed out), so auto mode cannot determine the safety of Write right now. Wait a moment and then try this action again. If it keep
+      2 nt ansible_host=100.64.0.5.\n\n4. Errors and fixes:\n   - Write tool classifier timeout (twice): \"Qwen2.5-Coder-7B temporarily unavailable (timed out), so auto mode cannot determine the safety of Write righ
+      1 ype":"text","text":"Template renders clean — all four models now carry `request_timeout: 1800`, `num_retries: 0`. Now let me settle the classifier question with primary evidence from the router logs — which 
+      1  whether ANTHROPIC_DEFAULT_HAIKU_MODEL controls it, (4) any classifier-specific timeout setting.","summary":"Ask for the pending report","type":"message","recipient":"ae9f5efc624de421f","recipient_kind":"age
+      1  whether ANTHROPIC_DEFAULT_HAIKU_MODEL controls it, (4) any classifier-specific timeout setting.","summary":"Ask for the pending report"}},"apiBlockIndex":2,"requestRef":"28041097-91d8-4a75-af41-e52ade1ac69e
+      1 ublic gateway)\n- classifier: the broken `Qwen3.7-27B` → 27B fallback\n\nSo the timeout walls you've been watching *this whole session* are the old broken classifier — and they'll all vanish the moment you s
+      1 't return a verdict in time, auto mode gives up with \"temporarily unavailable (timed out).\" That's the flake. The router logs confirm the broader picture: ten `Timeout passed=600` events and a string of `408
+      1  to pin the classifier model; let me nudge it for its report and apply the chat-timeout fix in the same pass."},{"type":"tool_use","id":"call_XOE3ijN0D956G6hFf5XYfXYnyawd7SdT","name":"SendMessage","input":{"
+      1  to pin the classifier model; let me nudge it for its report and apply the chat-timeout fix in the same pass."}],"model":"Qwen3.8-27B","stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":68
+      1 tes the fix). Repointed haiku to Qwen2.5-Coder-7B","-on 2026-11-01.","+slow and timed out, blocking the very Bash/Edit calls it should classify","+(catch-22: the broken fallback gates the fix). Repointed haiku
+      1 tent":[{"type":"tool_result","content":"Qwen3.8-27B is temporarily unavailable (timed out), so auto mode cannot determine the safety of Edit right now. Wait a moment and then try this action again. If it keeps
+      1 te. Either way, either of those models should work, right? Is there a different timeout for the classifier use case?"},"uuid":"798d92c4-831a-4918-9b66-644a167a857f","timestamp":"2026-11-03T03:17:16.658Z","pe
+      1 te. Either way, either of those models should work, right? Is there a different timeout for the classifier use case?"},"uuid":"2d6265d7-7a1f-4a5d-a843-fc605ec04860","timestamp":"2026-11-03T03:20:46.022Z","pe
+
+The transcripts show the classifier is hitting Qwen2.5-Coder-7B (confirmed by timeout errors), and the config was updated with `request_timeout: 1800` and `num_retries: 0` on all four models. Now I'll check the LiteLLM template, router logs, and test the classifier against a realistic payload size to identify what's still timing out.
+
+{"file_path": "/home/siderealyear/llama.cpp/templates/litellm_config.json.j2"}
+
+{"command": "docker ps --format '{{.Names}}\\t{{.Status}}\\t{{.Ports}}' 2>/dev/null; echo ---; docker logs litellm-router --since 6h 2>&1 | grep -iE 'error|timeout|408|fail|7b|coder' | tail -40", "description": "Show container state and recent LiteLLM router errors"}
+
+{"command": "grep -ohE '.{200}(408|Timeout passed|request_timeout|num_retries).{200}' /home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/d5b24a4e-47e7-4044-880c-e535131bd3c3.jsonl 2>/dev/null | sort | uniq -c | sort -rn | head -12", "description": "Extract prior session's findings on 408s and timeout config"}
+
+1	{
+2	  "model_list": [
+3	  {% for model in managed_models %}
+4	    {
+5	      "model_name": "{{ model.name }}",
+6	      "litellm_params": {
+7	        "model": "{{ model.name }}",
+8	        "api_base": "{{ model.url }}",
+9	        "api_key": "none",
+10	        "custom_llm_provider": "openai",
+11	        "request_timeout": {{ model.request_timeout | default(request_timeout_default) }},
+12	        "num_retries": {{ model.num_retries | default(0) }}
+13	      }
+14	    }{% if not loop.last %},{% endif %}
+15	  {% endfor %}
+16	  ],
+17	  "router_settings": {
+18	    "routing_strategy": "latency-based-routing",
+19	    "request_timeout": {{ request_timeout_default }},
+20	    "num_retries": 0,
+21	    "cooldown_time": 0
+22	  }
+23	}
+
+litellm-router	Up 5 hours	4000/tcp, 0.0.0.0:8502->8506/tcp
+llama-cuda	Up 5 hours (healthy)	
+jobsearch-dashboard	Up 5 days	100.64.0.2:8790->8080/tcp
+friendly_heyrovsky	Up 6 days	
+jobapp	Up 12 days	100.64.0.2:6080->6080/tcp, 127.0.0.1:6080->6080/tcp
+grafana	Up 13 days	100.64.0.2:3000->3000/tcp
+prometheus	Up 13 days	100.64.0.2:9090->9090/tcp
+pgadmin	Up 13 days	443/tcp, 100.64.0.2:8088->80/tcp
+postgres-exporter	Up 13 days	100.64.0.2:9187->9187/tcp
+student-postgres	Up 13 days (healthy)	100.64.0.2:5432->5432/tcp
+jupyterlab	Up 13 days	8888/tcp, 100.64.0.2:47302->47302/tcp
+buildx_buildkit_mybuilder0	Up 13 days	
+---
+20:57:48 - LiteLLM Proxy:WARNING: login_throttle.py:126 - trusted_proxy_ranges is not set or not a valid list of ranges, so failed Admin UI sign-in attempts are limited per source address and username only. Set it to the address ranges of the proxies in front of LiteLLM, or to an empty list when clients connect directly, to also limit each source address across usernames.
+    Qwen3.8-27B
+    Qwen2.5-Coder-7B
+20:57:48 - LiteLLM Proxy:WARNING: proxy_server.py:7384 - Key 'request_timeout' is not a valid argument for Router.__init__(). Ignoring this key.
+21:01:39 - LiteLLM:WARNING: transformation.py:513 - Dropping reasoning={'effort': 'low'} for model='Qwen3.8-27B' (drop_params=True) because its model cost map entry lacks supports_reasoning.
+21:16:43 - LiteLLM:WARNING: transformation.py:513 - Dropping reasoning={'effort': 'low'} for model='Qwen3.8-27B' (drop_params=True) because its model cost map entry lacks supports_reasoning.
+21:21:03 - LiteLLM:WARNING: transformation.py:513 - Dropping reasoning={'effort': 'low'} for model='Qwen3.8-27B' (drop_params=True) because its model cost map entry lacks supports_reasoning.
+21:39:38 - LiteLLM:WARNING: transformation.py:513 - Dropping reasoning={'effort': 'low'} for model='Qwen3.8-27B' (drop_params=True) because its model cost map entry lacks supports_reasoning.
+INFO:     100.64.0.1:37408 - "GET /metrics HTTP/1.1" 404 Not Found
+INFO:     100.64.0.1:40876 - "GET /metrics HTTP/1.1" 404 Not Found
+INFO:     100.64.0.1:40866 - "GET /metrics HTTP/1.1" 404 Not Found
+INFO:     100.64.0.1:47408 - "GET /metrics HTTP/1.1" 404 Not Found
+INFO:     100.64.0.1:54408 - "GET /metrics HTTP/1.1" 404 Not Found
+23:56:15 - LiteLLM:WARNING: transformation.py:513 - Dropping reasoning={'effort': 'low'} for model='Qwen3.8-27B' (drop_params=True) because its model cost map entry lacks supports_reasoning.
+INFO:     100.64.0.1:57408 - "GET /metrics HTTP/1.1" 404 Not Found
+INFO:     100.64.0.1:50408 - "GET /metrics HTTP/1.1" 404 Not Found
+00:38:56 - LiteLLM:WARNING: transformation.py:513 - Dropping reasoning={'effort': 'low'} for model='Qwen3.8-27B' (drop_params=True) because its model cost map entry lacks supports_reasoning.
+00:40:08 - LiteLLM:WARNING: transformation.py:513 - Dropping reasoning={'effort': 'low'} for model='Qwen3.8-27B' (drop_params=True) because its model cost map entry lacks supports_reasoning.
+INFO:     100.64.0.1:40408 - "GET /metrics HTTP/1.1" 404 Not Found
+01:26:14 - LiteLLM:WARNING: transformation.py:513 - Dropping reasoning={'effort': 'high'} for model='Qwen2.5-Coder-7B' (drop_params=True) because its model cost map entry lacks supports_reasoning.
+01:26:14 - LiteLLM:WARNING: transformation.py:513 - Dropping reasoning={'effort': 'low'} for model='Qwen3.8-27B' (drop_params=True) because its model cost map entry lacks supports_reasoning.
+01:26:43 - LiteLLM:WARNING: transformation.py:513 - Dropping reasoning={'effort': 'high'} for model='Qwen2.5-Coder-7B' (drop_params=True) because its model cost map entry lacks supports_reasoning.
+01:26:52 - LiteLLM:WARNING: transformation.py:513 - Dropping reasoning={'effort': 'low'} for model='Qwen3.8-27B' (drop_params=True) because its model cost map entry lacks supports_reasoning.
+01:29:13 - LiteLLM:WARNING: transformation.py:513 - Dropping reasoning={'effort': 'low'} for model='Qwen3.8-27B' (drop_params=True) because its model cost map entry lacks supports_reasoning.
+01:31:17 - LiteLLM:WARNING: transformation.py:513 - Dropping reasoning={'effort': 'low'} for model='Qwen3.8-27B' (drop_params=True) because its model cost map entry lacks supports_reasoning.
+
+      2 uda:8080/v1`; Qwen2.5-Coder-7B & BGE-M3 → `http://100.64.0.5:8080/v1` (all http://).\n   - `/home/siderealyear/llama.cpp/inventory/host_vars/ethics-gradient.yml` (read; changed on disk during task — `request_timeout_default: 1800` added; treat as current, do not revert) — `models_max: 2`, `expose_llama_port_to_lan: true`, `preset_file_src: \"ethics_gradient.ini\"`.\n   - `/home/siderealyear/llama.cpp/inventory/h
+      2 to call it out. Here are the relevant changes (shown with line numbers):\n1\trun_litellm: false\n2\tmodels_max: 2                                     # Holds up to two models in VRAM concurrently\n3\trequest_timeout_default: 1800                     # Extended request timeout for slow models\n4\texpose_llama_port_to_lan: true                    # Exposes port 8080 so pyrite's LiteLLM can reach it\n5\tpreset_file
+      2    \"litellm_params\": {\n        \"model\": \"{{ model.name }}\",\n        \"api_base\": \"{{ model.url }}\",\n        \"api_key\": \"none\",\n        \"custom_llm_provider\": \"openai\",\n        \"request_timeout\": {{ model.request_timeout | default(request_timeout_default) }},\n        \"num_retries\": {{ model.num_retries | default(0) }}\n      }\n    }{% if not loop.last %},{% endif %}\n  {% endfor %}\n  
+      1 ":"standard","fallback_credit":null},"stop_details":null},"apiBlockIndex":0,"requestRef":"eedc1f18-ee66-485e-a54f-a3788b92f8b0","requestedModel":"Qwen3.8-27B","type":"assistant","uuid":"0d3a1a54-55b5-4088-85e7-f543b4fc205b","timestamp":"2026-11-03T16:32:08.709Z","effort":"low","perTurnEffort":null,"session_id":"e3dfa26d-faec-4579-b1fc-494f16dbde3e","userType":"external","entrypoint":"cli","cwd":"/hom
+      1 ntory/host_vars/ethics-gradient.yml\"}\nResult of calling the Read tool:\n1\trun_litellm: false\n2\tmodels_max: 2                                     # Holds up to two models in VRAM concurrently\n3\trequest_timeout_default: 1800                     # Extended request timeout for slow models\n4\texpose_llama_port_to_lan: true                    # Exposes port 8080 so pyrite's LiteLLM can reach it\n5\tpreset_file
+      1 kE5tx8FhMD3d0SaeXskE4t","type":"tool_result","content":"=== pyrite.yml managed_models + key facts ===\n2:models_max: 1                                     # Swaps models instead of stacking them\n6:# request_timeout to an entry in managed_models below.\n8:expose_llama_port_to_lan: false                   # LiteLLM communicates internally over Docker network\n16:managed_models:\n19:  - { name: \"Qwen3.8-27B\",   
+      1 ,"interleaved-thinking-2025-05-14","effort-2025-11-24"],"max_tokens":32000,"thinking":{"type":"adaptive"},"output_config":{"effort":"low"}},"keep":0,"tail":["1b95cd2dd03f0ff149f2138d64e1f84e9157a6a0cd408470cfeb96d7ef647bac","d1332df7edf5127f5eb4b17bce1c31176fe6022ea36d091cd40a4f198c1d116a","e1412966af5d5d5aefdcf9330292b2605a37a4f4dd4b25cde308bf948a53cfe2","6e281a642018ed7edb0efd0876eb85477b91a15c5dd1
+      1 inder>"},{"content":"<system-reminder>\nResult of calling the Read tool:\n1\trun_litellm: false\n2\tmodels_max: 2                                     # Holds up to two models in VRAM concurrently\n3\trequest_timeout_default: 1800                     # Extended request timeout for slow models\n4\texpose_llama_port_to_lan: true                    # Exposes port 8080 so pyrite's LiteLLM can reach it\n5\tpreset_file
+      1 iderealyear/llama.cpp/inventory/host_vars/ethics-gradient.yml","snippet":"1\trun_litellm: false\n2\tmodels_max: 2                                     # Holds up to two models in VRAM concurrently\n3\trequest_timeout_default: 1800                     # Extended request timeout for slow models\n4\texpose_llama_port_to_lan: true                    # Exposes port 8080 so pyrite's LiteLLM can reach it\n5\tpreset_file
+      1 :"/home/siderealyear/llama.cpp/inventory/host_vars/ethics-gradient.yml","content":"run_litellm: false\nmodels_max: 2                                     # Holds up to two models in VRAM concurrently\nrequest_timeout_default: 1800                     # Extended request timeout for slow models\nexpose_llama_port_to_lan: true                    # Exposes port 8080 so pyrite's LiteLLM can reach it\npreset_file_src: 
+      1 "fallback_credit":null},"stop_details":null},"apiBlockIndex":0,"requestRef":"726e11d6-2a5a-454c-a23b-a4018d9947ac","requestedModel":"Qwen3.8-27B","type":"assistant","uuid":"f4e74824-74a9-49eb-b582-c344084d19ea","timestamp":"2026-11-03T17:02:19.297Z","effort":"low","perTurnEffort":null,"session_id":"e3dfa26d-faec-4579-b1fc-494f16dbde3e","userType":"external","entrypoint":"cli","cwd":"/home/siderealyea
+      1 e,"type":"system","subtype":"compact_boundary","content":"Conversation compacted","level":"info","compactMetadata":{"trigger":"manual","preTokens":74923,"postTokens":12144,"cumulativeDroppedTokens":114081,"durationMs":681006,"preCompactArtifactReadVersions":[],"preservedSegment":{"headUuid":"f4e74824-74a9-49eb-b582-c344084d19ea","anchorUuid":"6e1d759f-327c-41e5-ba49-7d0d6e3d8cdc","tailUuid":"fa7cf654
+
+{"command": "for f in /home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/*.jsonl; do\n  grep -H 'temporarily unavailable (timed out)' \"$f\" 2>/dev/null | python3 -c \"\nimport sys, json\nfor line in sys.stdin:\n    try: d = json.loads(line)\n    except: continue\n    ts = d.get('timestamp','')\n    # find the error text\n    s = json.dumps(d)\n    import re\n    for m in re.findall(r'(\\S+?) is temporarily unavailable \\(timed out\\)', s):\n        print(ts, m, '|', d.get('sessionId', d.get('session_id','?'))[:8])\n\" \ndone | sort | tail -25", "description": "Get timestamps of every classifier-timeout error across all transcripts"}
+
+{"command": "cat /home/siderealyear/llama.cpp/inventory/host_vars/pyrite.yml; echo ===; cat /home/siderealyear/llama.cpp/inventory/host_vars/ethics-gradient.yml; echo ===; docker exec litellm-router cat /app/config.json 2>/dev/null", "description": "Show inventory host_vars and the deployed LiteLLM config"}
+
+(Bash completed with no output)
+
+run_litellm: true
+models_max: 1                                     # Swaps models instead of stacking them
+request_timeout_default: 1800                     # Extended request timeout for slow models
+expose_llama_port_to_lan: false                   # LiteLLM communicates internally over Docker network
+preset_file_src: "pyrite.ini"                     # Llama.cpp presets per model
+host_models_dir: "/mnt/fast_scratch/llama-models" # Location of model files
+has_custom_template: true                         # Load custom chat template
+template_file_src: "qwen_chat.jinja"              # Patched chat template for Qwen3+ models
+llama_docker_image: "ghcr.io/ggml-org/llama.cpp:server-cuda"
+
+# The master routing directory LiteLLM will use to direct requests
+managed_models:
+
+  # Local models running on pyrite
+  - { name: "Qwen3.8-27B",        url: "http://llama-cuda:8080/v1" }
+  - { name: "Qwen3.8-Flash-Next", url: "http://llama-cuda:8080/v1" }
+
+  # Remote models running on ethics-gradient
+  - { name: "Qwen2.5-Coder-7B",   url: "http://100.64.0.5:8080/v1"}
+  - { name: "BGE-M3",             url: "http://100.64.0.5:8080/v1",is_embedding: true}===
+run_litellm: false
+models_max: 2                                     # Holds up to two models in VRAM concurrently
+request_timeout_default: 1800                     # Extended request timeout for slow models
+expose_llama_port_to_lan: true                    # Exposes port 8080 so pyrite's LiteLLM can reach it
+preset_file_src: "ethics_gradient.ini"            # Llama.cpp presets per model
+host_models_dir: "/mnt/fast_scratch/llama-models" # Location of model files
+has_custom_template: false                        # No custom chat templates for ethics-gradient
+llama_docker_image: "ghcr.io/ggml-org/llama.cpp:server-cuda"===
+{
+  "model_list": [
+      {
+      "model_name": "Qwen3.8-27B",
+      "litellm_params": {
+        "model": "Qwen3.8-27B",
+        "api_base": "http://llama-cuda:8080/v1",
+        "api_key": "none",
+        "custom_llm_provider": "openai",
+        "request_timeout": 1800,
+        "num_retries": 0
+      }
+    },      {
+      "model_name": "Qwen3.8-Flash-Next",
+      "litellm_params": {
+        "model": "Qwen3.8-Flash-Next",
+        "api_base": "http://llama-cuda:8080/v1",
+        "api_key": "none",
+        "custom_llm_provider": "openai",
+        "request_timeout": 1800,
+        "num_retries": 0
+      }
+    },      {
+      "model_name": "Qwen2.5-Coder-7B",
+      "litellm_params": {
+        "model": "Qwen2.5-Coder-7B",
+        "api_base": "http://100.64.0.5:8080/v1",
+        "api_key": "none",
+        "custom_llm_provider": "openai",
+        "request_timeout": 1800,
+        "num_retries": 0
+      }
+    },      {
+      "model_name": "BGE-M3",
+      "litellm_params": {
+        "model": "BGE-M3",
+        "api_base": "http://100.64.0.5:8080/v1",
+        "api_key": "none",
+        "custom_llm_provider": "openai",
+        "request_timeout": 1800,
+        "num_retries": 0
+      }
+    }    ],
+  "router_settings": {
+    "routing_strategy": "latency-based-routing",
+    "request_timeout": 1800,
+    "num_retries": 0,
+    "cooldown_time": 0
+  }
+}
+
+The deployed config is correct (7B → `http://100.64.0.5:8080/v1`, timeout 1800, retries 0). The timeout-error extraction failed because `grep -H` mangled the JSON. Let me redo it properly to establish a timeline:
+
+{"command": "cd /home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp\nfor f in *.jsonl; do\n  python3 - \"$f\" <<'EOF'\nimport sys, json, re\nf = sys.argv[1]\ntry:\n    lines = open(f, errors='replace').read().splitlines()\nexcept Exception:\n    sys.exit()\nfor line in lines:\n    if 'temporarily unavailable (timed out)' not in line:\n        continue\n    try: d = json.loads(line)\n    except Exception: continue\n    ts = d.get('timestamp','')\n    m = re.search(r'(\\S+?) is temporarily unavailable', line)\n    model = m.group(1) if m else '?'\n    t2 = re.search(r'safety of (\\w+) right now', line)\n    tool = t2.group(1) if t2 else '?'\n    print(f\"{ts}  model={model:20s} tool={tool:8s} file={f[:8]}\")\nEOF\ndone | sort | uniq -c | sort -k2 | tail -30", "description": "Extract timestamps and models of classifier timeout errors from all transcripts"}
+
+      1 2026-11-02T07:08:42.985Z  model={"parentUuid":"7c5c59da-54a1-4ecf-88b6-b2917fea6353","isSidechain":false,"promptId":"89e9c96b-7277-4740-8797-587dc5d0b5c8","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=a6432753
+      1 2026-11-02T07:24:37.140Z  model={"parentUuid":"dc68d94f-d4d4-4873-8ab3-72c2a13c3f67","isSidechain":false,"promptId":"89e9c96b-7277-4740-8797-587dc5d0b5c8","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=a6432753
+      1 2026-11-02T17:10:01.666Z  model={"parentUuid":"bf0a3c85-23b6-4d4d-8423-76e019b4c32a","isSidechain":false,"promptId":"25d3a12d-970d-4374-bc8b-afe4c490516d","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=a6432753
+      1 2026-11-02T19:19:35.747Z  model={"parentUuid":"69810535-57df-4461-8b3f-727f955b6f1c","isSidechain":false,"promptId":"62d0d6e7-c20a-41a1-a96d-792ee1ddded0","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=a6432753
+      1 2026-11-02T19:26:08.797Z  model={"parentUuid":"19fd62c4-70da-408b-87e1-b91d0b34afed","isSidechain":false,"promptId":"62d0d6e7-c20a-41a1-a96d-792ee1ddded0","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=a6432753
+      1 2026-11-02T19:30:40.657Z  model={"parentUuid":"4cd21dc2-a863-4d64-809d-46932efc0bd7","isSidechain":false,"promptId":"62d0d6e7-c20a-41a1-a96d-792ee1ddded0","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=a6432753
+      1 2026-11-02T19:44:27.498Z  model={"parentUuid":"68f03a33-ca33-4bf9-8170-241a04bdff96","isSidechain":false,"promptId":"6d5a7382-b670-497d-a4b7-e45d7f4bd433","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=a6432753
+      1 2026-11-02T19:50:19.244Z  model={"parentUuid":"b6620bba-4a27-4380-b23c-b3211b16bf19","isSidechain":false,"promptId":"6d5a7382-b670-497d-a4b7-e45d7f4bd433","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=a6432753
+      1 2026-11-02T19:53:21.879Z  model={"parentUuid":"594cfbb5-8955-45b1-b453-0a3d1bb9e803","isSidechain":false,"promptId":"6d5a7382-b670-497d-a4b7-e45d7f4bd433","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=a6432753
+      1 2026-11-02T23:52:36.278Z  model={"parentUuid":"1b3d8670-2754-4f68-93ba-f6e789d69e98","isSidechain":false,"promptId":"280a7003-878c-4c10-b08c-d46f444123d8","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=a6432753
+      1 2026-11-03T03:06:56.514Z  model={"parentUuid":"a624091a-4c8d-4c88-8913-616fd061cb50","isSidechain":false,"promptId":"deda23e7-0871-44c8-91a9-74c921bf8c14","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=a6432753
+      1 2026-11-03T03:59:54.413Z  model=?                    tool=?        file=a6432753
+      1 2026-11-03T03:59:54.465Z  model=?                    tool=Bash     file=a6432753
+      1 2026-11-03T04:00:52.070Z  model=?                    tool=Bash     file=a6432753
+      1 2026-11-03T04:32:33.885Z  model=\"X                  tool=Bash     file=a6432753
+      1 2026-11-03T13:03:07.617Z  model={"parentUuid":"6e348746-f56d-4273-8844-8f7f232f93bd","isSidechain":false,"promptId":"17cd9f95-9c1d-44ca-b6ab-2420294f4e1e","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=3c4c97ba
+      1 2026-11-03T13:07:21.253Z  model={"parentUuid":"f938cdcc-5530-429f-a1aa-3aecbd0182b9","isSidechain":false,"promptId":"17cd9f95-9c1d-44ca-b6ab-2420294f4e1e","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=3c4c97ba
+      1 2026-11-03T13:08:21.317Z  model={"parentUuid":"dbc21656-10eb-4421-831f-37c468a59226","isSidechain":false,"promptId":"17cd9f95-9c1d-44ca-b6ab-2420294f4e1e","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=3c4c97ba
+      1 2026-11-03T13:19:32.076Z  model={"parentUuid":"27e8379c-81e7-4fc5-a9df-225b3483942d","isSidechain":false,"promptId":"17cd9f95-9c1d-44ca-b6ab-2420294f4e1e","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=3c4c97ba
+      1 2026-11-03T13:26:17.300Z  model={"parentUuid":"bf4f924b-7fe0-400c-bc7e-0d40bf5b675a","isSidechain":false,"promptId":"17cd9f95-9c1d-44ca-b6ab-2420294f4e1e","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Agent    file=3c4c97ba
+      1 2026-11-03T13:50:37.920Z  model={"parentUuid":"2359fbdd-fa9f-4604-9cc9-75be403a56be","isSidechain":false,"promptId":"17cd9f95-9c1d-44ca-b6ab-2420294f4e1e","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Edit     file=3c4c97ba
+      1 2026-11-03T14:08:35.295Z  model={"parentUuid":"3a7ad593-95c2-494f-940b-cd9653e2d967","isSidechain":false,"promptId":"aa693ec0-1695-4e93-9797-4ca9b823cd25","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen2.5-Coder-7B tool=Write    file=d5b24a4e
+      1 2026-11-03T14:10:06.011Z  model={"parentUuid":"7c37aa73-8c8f-4556-bf2e-fc2075c68da7","isSidechain":false,"promptId":"aa693ec0-1695-4e93-9797-4ca9b823cd25","type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen2.5-Coder-7B tool=Write    file=d5b24a4e
+      1 2026-11-03T15:37:15.106Z  model=?                    tool=Write    file=d5b24a4e
+      1 2026-11-04T01:31:16.986Z  model=tent\":[{\"type\":\"tool_result\",\"content\":\"Qwen3.8-27B tool=Bash     file=74fd96b6
+      1 2026-11-04T01:33:33.929Z  model=re.findall(r'(\\S+?) tool=?        file=74fd96b6
+      1 2026-11-04T01:45:53.682Z  model=re.search(r'(\\S+?)  tool=?        file=74fd96b6
+      1   model=?                    tool=Write    file=d5b24a4e
+      1   model={"type":"api-request-blob","sessionId":"e987801b-dfc5-40e2-861b-0a10c2721199","hash":"4cd4519bf76fa5fa338710e25fa9ee7ed5cd7ce0bf8c736ff36ae408471a8bec","message":{"role":"user","content":[{"type":"tool_result","content":"Qwen3.8-27B tool=Bash     file=e987801b
+      1   model=\"X                  tool=Bash     file=a6432753
+Shell cwd was reset to /home/siderealyear/llama.cpp
+
+{"command": "cd /home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp\nfor f in d5b24a4e-47e7-4044-880c-e535131bd3c3.jsonl 3c4c97ba-8e14-4fdd-9d27-1bb4a999a4a4.jsonl; do\n  echo \"=== $f ===\"\n  python3 - \"$f\" <<'EOF'\nimport sys, json\nf = sys.argv[1]\nprev_ts = None\nfor line in open(f, errors='replace'):\n    if 'temporarily unavailable (timed out)' not in line: continue\n    try: d = json.loads(line)\n    except: continue\n    ts = d.get('timestamp','')\n    print(f\"  error at {ts}  (prev event {prev_ts})\")\n    # print surrounding context lines (next few) for retry text\nprev_ts = None\nfor line in open(f, errors='replace'):\n    try: d = json.loads(line)\n    except: continue\n    if d.get('timestamp'): prev_ts = d['timestamp']\n    if 'temporarily unavailable (timed out)' in line:\n        ts = d.get('timestamp','')\n        gap = ''\n        if prev_ts and ts and prev_ts != ts:\n            import datetime\n            t1 = datetime.datetime.fromisoformat(prev_ts.replace('Z','+00:00'))\n            t2 = datetime.datetime.fromisoformat(ts.replace('Z','+00:00'))\n            gap = f\"  prev event {prev_ts} (gap {(t2-t1).total_seconds():.0f}s)\"\n        print(f\"  error at {ts}{gap}\")\nEOF\ndone", "description": "Measure the gap between events around each timeout error"}
+
+{"command": "BIN=/home/siderealyear/.local/share/claude/versions/2.1.317/claude\nls -la \"$BIN\" 2>/dev/null | head -2\necho \"--- timeout-ish strings in the binary (classifier context) ---\"\nstrings \"$BIN\" 2>/dev/null | grep -iE 'auto.?mode|classif' | grep -ivE '^\\s*$' | sort -u | head -40", "description": "Inspect Claude Code binary for classifier/timeout strings"}
+
+=== d5b24a4e-47e7-4044-880c-e535131bd3c3.jsonl ===
+  error at 2026-11-03T14:08:35.295Z  (prev event None)
+  error at 2026-11-03T14:10:06.011Z  (prev event None)
+  error at 2026-11-03T15:37:15.106Z  (prev event None)
+  error at   (prev event None)
+  error at 2026-11-03T14:08:35.295Z
+  error at 2026-11-03T14:10:06.011Z
+  error at 2026-11-03T15:37:15.106Z
+  error at 
+=== 3c4c97ba-8e14-4fdd-9d27-1bb4a999a4a4.jsonl ===
+  error at 2026-11-03T13:03:07.617Z  (prev event None)
+  error at 2026-11-03T13:07:21.253Z  (prev event None)
+  error at 2026-11-03T13:08:21.317Z  (prev event None)
+  error at 2026-11-03T13:19:32.076Z  (prev event None)
+  error at 2026-11-03T13:26:17.300Z  (prev event None)
+  error at 2026-11-03T13:50:37.920Z  (prev event None)
+  error at 2026-11-03T13:03:07.617Z
+  error at 2026-11-03T13:07:21.253Z
+  error at 2026-11-03T13:08:21.317Z
+  error at 2026-11-03T13:19:32.076Z
+  error at 2026-11-03T13:26:17.300Z
+  error at 2026-11-03T13:50:37.920Z
+Shell cwd was reset to /home/siderealyear/llama.cpp
+
+--- timeout-ish strings in the binary (classifier context) ---
+
+My grep output was self-referential — the earlier hits are from my own command. The actual timeline shows the classifier was using **Qwen3.8-27B** on Nov 2–3 (timing out), then switched to **Qwen2.5-Coder-7B** starting Nov 3 14:08 UTC but still hit timeouts at 14:08, 14:10, and 15:37 UTC. I'll dig into the binary for the classifier's client-side timeout and check the router logs for those requests.
+
+{"command": "BIN=$(which claude 2>/dev/null); echo \"which: $BIN\"; ls -la \"$BIN\" 2>/dev/null; readlink -f \"$BIN\" 2>/dev/null; ls /home/siderealyear/.local/share/claude/versions/2.1.317/ 2>/dev/null | head", "description": "Locate the Claude Code binary"}
+
+which: /home/siderealyear/.local/bin/claude
+lrwxrwxrwx 1 siderealyear siderealyear 55 Nov  3 19:39 /home/siderealyear/.local/bin/claude -> /home/siderealyear/.local/share/claude/versions/2.1.318
+/home/siderealyear/.local/share/claude/versions/2.1.318
+
+{"command": "V=/home/siderealyear/.local/share/claude/versions\nls -la \"$V\" | head\nB=\"$V/2.1.318\"\n[ -f \"$B\" ] || B=$(ls \"$V\" | head -1)\necho \"using: $B\"\nstrings -n 8 \"$V/2.1.318\" 2>/dev/null > /tmp/cc_strings.txt; wc -l /tmp/cc_strings.txt\necho \"--- auto-mode / classifier strings ---\"\ngrep -iE 'auto.?mode|classif|temporarily unavailable' /tmp/cc_strings.txt | sort -u | head -50", "description": "Dump strings from Claude Code binary, filter for classifier"}
+
+<persisted-output>
+Output too large (867.1KB). Full output saved to: /home/siderealyear/.claude/projects/-home-siderealyear-llama-cpp/74fd96b6-f587-409c-9ef2-d6c433c192f6/tool-results/beejysud1.txt
+
+Preview (first 2KB):
+total 1258900
+drwxrwxr-x 2 siderealyear siderealyear      4096 Nov  3 19:39 .
+drwxrwxr-x 3 siderealyear siderealyear      4096 Oct 24 00:07 ..
+-rwxr-xr-x 1 siderealyear siderealyear 291638640 Oct 24 00:08 2.1.310
+-rwxr-xr-x 1 siderealyear siderealyear 328262000 Oct 31 14:51 2.1.316
+-rwxr-xr-x 1 siderealyear siderealyear 331362672 Nov  2 20:40 2.1.317
+-rwxr-xr-x 1 siderealyear siderealyear 337814032 Nov  3 19:39 2.1.318
+using: /home/siderealyear/.local/share/claude/versions/2.1.318
+592180 /tmp/cc_strings.txt
+--- auto-mode / classifier strings ---
+${a}`})]})}function hn(t,l){let i=xm()?QUe(t):t;if((i.action===void 0||i.action==="publish")&&i.file_path===void 0&&OA(i)===void 0&&Ra(i.url,"")==="")return"";return X(t,l)}function _n(){return QSt()}function G(t){return(l,i)=>X(ZUe(t,l),i)}var Tn=G("comments"),yn=G("data"),bn=G("check");function wn(t){let l=t.at(-1)?.data;if(!l||l.type!=="artifact_publish_retry"||l.resolved)return ZSt();let i=l.status===503?"Publish service temporarily unavailable":"Publish service busy";return e(Ve,{children:r(n,{dimColor:!0,children:[i," \u2014 retrying (attempt ",l.attempt," of ",l.maxAttempts,")\u2026"]})})}function re(t){let l=i3n(t);return l==="handlers_doc"||l==="handler_result"||l==="script_result"}function Y(t,l){let i=Z(t,l),T=xN(i)??"";return i.length<t.length?`${T}\u2026`:T}function te(t){return"emulatorPreview"in t&&i3n(t)==="emulatorPreview"}function se(t){return"preview"in t&&i3n(t)==="preview"}function vn(t,l,i){if(te(t)){let o=t.emulatorPreview,a=Y(j(o.file),80);return e(Ve,{children:e(n,{dimColor:!0,children:o.outcome==="looked"?`Looked at ${a} in the artifact viewer`:o.outcome==="aborted"?`Stopped looking at ${a} in the artifact viewer`:`Could not look at ${a} in the artifact viewer`})})}if(se(t)){let o={...t.preview,file:Z(t.preview.file,4096),shots:t.preview.shots.slice(0,Xbn).map((f)=>({...f,theme:Z(f.theme,32)})),issues:t.preview.issues.slice(0,Jbn),widths:t.preview.widths.slice(0,$Ye),themes:t.preview.themes.slice(0,
+...
+</persisted-output>
+
+The binary dump is minified JS. Let me target the specific error message and any timeout constants near it:
+
+{"command": "cd /tmp\ngrep -n 'temporarily unavailable (timed out)' cc_strings.txt | head -5\necho \"=== context around the error string ===\"\ngrep -oE '.{400}temporarily unavailable \\(timed out\\).{400}' cc_strings.txt | head -3", "description": "Find the classifier timeout error string in binary strings"}
+
+=== context around the error string ===
+Shell cwd was reset to /home/siderealyear/llama.cpp
+
+{"command": "cd /tmp\ngrep -oE '.{250}temporarily unavailable.{250}' cc_strings.txt | head -3\necho \"=== fragment: cannot determine the safety ===\"\ngrep -oE '.{300}cannot determine the safety.{300}' cc_strings.txt | head -2\necho \"=== fragment: auto mode / automode ===\"\ngrep -oiE '.{120}(auto.mode|automode).{120}' cc_strings.txt | sort -u | head -10", "description": "Search binary strings for classifier error fragments"}
+
+Up()?"Connection lost":"Connection lost while your computer was asleep";if(n==="StreamTruncated")return"Connection closed before the response finished";if(n==="StreamNoResponse")return"No response from API";if(n==="RouteTurnedAway")return"The API is temporarily unavailable";if(n==="BedrockUnexpectedContentType")return t.message;if(n==="ETIMEDOUT")return Up()?"Request timed out":"Request timed out. Check your internet connection and proxy settings";if(o){let i=m("set NODE_EXTRA_CA_CERTS to that CA bundle, or add it to 
+t may not be provisioned yet."};if(e instanceof Ig)return{outcome:"failed",reason:e.reason,message:`The memory store rejected the request: ${An(e.reason)}`};if(e instanceof pW)return{outcome:"failed",reason:"unavailable",message:"The memory store is temporarily unavailable. Try again later."};return{outcome:"failed",reason:"error",message:"The memory store request failed. Try again later."}}var q=null;async function Gyi(e){if(q===null)return!1;try{let n=await i3t(e);if(!n.endsWith(".md")||!T2(n)||GV(n))return!1;return
+s comment isn't allowed for your account${r?` (${r})`:""}, so nothing went to the pull request. ${NS}`;case"rate_limited":return`Posting is being rate-limited right now, so nothing went to the pull request. ${NS}`;case"unavailable":return`Posting is temporarily unavailable on the server, so nothing went to the pull request. ${NS}`;case"route_unavailable":return`This version of the server can't post review comments yet, so nothing went to the pull request. ${NS}`;case"unexpected_response":return`The post didn't go thro
+=== fragment: cannot determine the safety ===
+"_"," ")})`}if(n==="server_no_result")return" (the server returned none for this action)";if(n==="server_context_stale")return" (what it knew of the artifact was missing or out of date)";if(n==="server_unrecognized_result")return" (the server returned none)";return""}var x0s=Lxt,Nde=", so auto mode cannot determine the safety of ";function flt(e,n,r,s,h,y=!1,S,w=!1,H=!1,z,Y=KQn(r,s)){if(h!==void 0){let we=vpe(h),ne=`The API told auto mode's safety classifier (${n}) to wait ${we} from now${Y}${Nde}${e} until then. This is not a judgment that the action is unsafe, so don't rework the action to get around it. `,Te="Do not 
+=== fragment: auto mode / automode ===
+"; ")}`),$e({kill_switch:!1,auto_mode_off:C,settings_unreadable:k});return}return t("[code-session] move-to-cloud names auto mode"),$e(),"auto"}function $e(h){try{l("tengu_teleport_to_cloud",h===void 0?{action:b("auto_mode_asked")}:{action:b("auto_m
+()=>$e({kind:o(),description:o().max(Rco).optional(),schema:oe().optional(),untrusted_fields:A(o()).max(Tpe).optional(),auto_mode_fields:A(o()).max(Tpe).optional()})),Mco=p(()=>A(Pco()).max(vco)),K6o=p(()=>me(o(),oe())),Zii=p(()=>u({kind:o(),at:o(),
+}", ${H}`}}if(new Set(h).size!==h.length)return{ok:!1,reason:`kind ${r}: untrusted_fields names a field twice`};let y=e.auto_mode_fields??[],S=y.find((w)=>!s.value.some((H)=>H.name===w));if(S!==void 0)return{ok:!1,reason:`kind ${r}: auto_mode_fields
+=${yt}`);let Nn=++Re;ut.set(I,Nn);let An=0,jn=!1,rr=!1;if(rr=bt(),e.spawnMode!=="single-session")An=Pfs();jn=Boolean(ae.auto_mode_environment?.length)&&Tt;let sr=yYn("spawn")||An>0||rr||jn,Fn=sr?et!==void 0?et:await ke(fe):null;if(sr&&Fn===null&&M.a
+)=>!0],["allowedTools",()=>!0],["dangerouslySkipPermissions",()=>!0],["allowDangerouslySkipPermissions",()=>!0],["enableAutoMode",()=>!0],["bare",()=>!0]]);function P(e){return e.filter(({key:o,value:t})=>!O.get(o)?.(t)).map(({flag:o})=>o)}function
+!0,children:["  ","\xB7 /tui default to go back (saved to your preferences)"]})]}),m[0]=h;else h=m[0];return h}var WPo="Auto mode is now Claude Code's default permission mode.",GPo="Auto mode lets Claude handle permission prompts automatically. Clau
+0}}function ve(e){return e.code===127||e.code===4||e.code===1&&e.stderr===""}async function Vt(e,n){if(_t()||!mn("allow_auto_mode_sibling_docs"))return rt(`_Not queryable here (nonessential traffic disabled or policy-restricted). ${wt}_`);let r=awai
+ 0,headless:He.shouldAvoidPermissionPrompts===!0,serverPath:Ts&&!hp,serverInputTooLong:Gc});if(!Gc||ec){if(Dc)return t(`Auto mode classifier transcript too long for ${e.name}, denying (classifierOnly: no prompt fallback)`,{level:"warn"}),{behavior:"
+ 0){if(iXr(o,sXr(o),e,u,s))return{kind:"no_verdict"};return{kind:"block",message:KTn(A.reason,{refused:!1}),denialKind:"automode-parsing-error"}}return{kind:"no_verdict"}}catch(W){if(W instanceof Ye||o.abortController.signal.aborted)throw W;return 
+>0?{kind:"token",token:S}:{kind:"no-token"}}function Hno(){if(i.CLAUDE_CODE_EVAL_CONFINED)return!1;let e=wr.CLAUDE_CODE_AUTO_MODE_REPO_VISIBILITY;if(e!==void 0)return e;return Pf()?.repoVisibility===!0}var sI="2022-11-28",MS=3000;class IS{visibility
+Shell cwd was reset to /home/siderealyear/llama.cpp
+
+Found the relevant minified code. Let me extract the model resolution and timeout logic around the classifier:
+
+{"command": "cd /tmp\necho \"=== CLAUDE_CODE_AUTO_MODE_MODEL references ===\"\ngrep -oE '.{200}CLAUDE_CODE_AUTO_MODE_MODEL.{200}' cc_strings.txt | head -5\necho\necho \"=== 'is temporarily unavailable' full context ===\"\ngrep -oE '.{150}\\(timed out\\).{150}' cc_strings.txt | head -5\ngrep -oE '.{300}is temporarily unavailable.{100}' cc_strings.txt | head -5", "description": "Extract classifier model resolution and timeout strings"}
+
+=== CLAUDE_CODE_AUTO_MODE_MODEL references ===
+P_PROBE_WROTE_SONNET_DEFAULT:()=>Cx,CLAUDE_CODE_3P_SEEDED_OPUS_DEFAULT:()=>Lx,CLAUDE_CODE_3P_SEEDED_SONNET_DEFAULT:()=>Ox,CLAUDE_CODE_ALLOW_OTHER_MODELS:()=>vx,CLAUDE_CODE_ALWAYS_ENABLE_EFFORT:()=>bx,CLAUDE_CODE_AUTO_MODE_MODEL:()=>xx,CLAUDE_CODE_BG_CLASSIFIER_MODEL:()=>Nx,CLAUDE_CODE_CLIENT_DATA_URL:()=>gx,CLAUDE_CODE_DISABLE_1M_CONTEXT:()=>dx,CLAUDE_CODE_DISABLE_EXPLORE_INHERIT_CAP:()=>ax,CLAUDE_CODE_DISABLE_FAST_MODE:()=
+T","GOOGLE_CLOUD_QUOTA_PROJECT",...FIr,...mn,"AWS_REGION","AWS_DEFAULT_REGION",...cFt,"ANTHROPIC_BEDROCK_SERVICE_TIER","ANTHROPIC_BEDROCK_REGION_PREFIX","CLAUDE_CODE_CERT_STORE","DISABLE_GROWTHBOOK","CLAUDE_CODE_AUTO_MODE_MODEL","CLAUDE_CODE_BG_CLASSIFIER_MODEL","CLAUDE_CODE_SUBAGENT_MODEL_FORCE",...$Ir]),UIr=["VERTEX_REGION_CLAUDE_"],fE=["AWS_ENDPOINT_URL"];function Xon(e){let n=e.toUpperCase();return mE.has(n)||UIr.some((
+return[];return[e.accessKeyIdVar,e.secretAccessKeyVar,e.sessionTokenVar].filter((n)=>typeof n==="string")}var gna=new Set([...[...cFt].filter((e)=>e!=="ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION"),...$Ir,"CLAUDE_CODE_AUTO_MODE_MODEL","CLAUDE_CODE_BG_CLASSIFIER_MODEL","CLAUDE_CODE_SUBAGENT_MODEL_FORCE"]);function yna(e,n){if(!n||!e)return null;let r={};if(e.model!==void 0)r.model=e.model;if(e.availableModels!==void 0)r.availableM
+Sn()}function Eot(){return YEn().value}function vot(e){return Cvs(e)}function YEn(){let e=it(),n=Pf(),r=cbn(n?.modelByMainModel,{vet:(s)=>Dxe(s,"modelByMainModel")})??Dxe(n?.model,"model");if(r){if(i.CLAUDE_CODE_AUTO_MODE_MODEL){let{loggedPolicySkips:s}=PI();if(!s.has("env:shadowed"))s.add("env:shadowed"),t(`Auto mode classifier: ignoring CLAUDE_CODE_AUTO_MODE_MODEL=${i.CLAUDE_CODE_AUTO_MODE_MODEL} because a server-configur
+et it or pin a different model, such as ${Ip().sonnet5}.`}:void 0;if(r===void 0)return e;let s=`${n}:${e}`,{loggedPolicySkips:h}=PI();if(!h.has(s))h.add(s),t(n==="env"?`Auto mode classifier: ignoring CLAUDE_CODE_AUTO_MODE_MODEL=${e} because ${r.why}; using the default classifier model instead. ${r.next}`:`Auto mode classifier: skipping server-configured classifier model ${e} (tengu_auto_mode_config.${n}) because ${r.why}`,{
+
+=== 'is temporarily unavailable' full context ===
+!==void 0&&e>=500&&e<600)return" (server error)";if(n==="wall_clock_timeout"||n==="connection_timeout"||n==="server_call_unavailable_timeout")return" (timed out)";if(n==="connection_error")return" (connection failed)";if(n==="server_call_skipped")return" (it skipped this action)";if(n==="server_unsupported")re
+ession can start. Ask IT to allow HTTPS to ${q}, then retry.`;case"unavailable_timeout":return`Claude Code couldn't load your organization's settings (timed out). ${p(n)} requires them before a session can start. ${k(e)} check https://status.anthropic.com if this persists.${h(n)}`;case"unavailable_connect":ret
+de:n,isSSLError:o}=t;if(n==="StreamSuspended")return Up()?"Connection lost":"Connection lost while your computer was asleep";if(n==="StreamTruncated")return"Connection closed before the response finished";if(n==="StreamNoResponse")return"No response from API";if(n==="RouteTurnedAway")return"The API is temporarily unavailable";if(n==="BedrockUnexpectedContentType")return t.message;if(n==="ETIMEDOUT")return Up()?"Request tim
+und",message:"The memory store was not found \u2014 it may not be provisioned yet."};if(e instanceof Ig)return{outcome:"failed",reason:e.reason,message:`The memory store rejected the request: ${An(e.reason)}`};if(e instanceof pW)return{outcome:"failed",reason:"unavailable",message:"The memory store is temporarily unavailable. Try again later."};return{outcome:"failed",reason:"error",message:"The memory store request failed
+ed. ${NS}`;case"permission_denied":return`Posting this comment isn't allowed for your account${r?` (${r})`:""}, so nothing went to the pull request. ${NS}`;case"rate_limited":return`Posting is being rate-limited right now, so nothing went to the pull request. ${NS}`;case"unavailable":return`Posting is temporarily unavailable on the server, so nothing went to the pull request. ${NS}`;case"route_unavailable":return`This vers
+This is a transient failure of the check, not a judgment about the action: a later response may get a verdict. You may try the action again once, as-is. Repeated attempts are slowed by a growing delay, and after ${jje} responses in a row without a verdict the turn stops. ${Vkt} `+Zne(H);return`${n} is temporarily unavailable${Y}${Nde}${e} right now. Wait a moment and then try this action again. ${Vkt} ${Zne(H)}`}function n
+"not-served"};if(r.status>=400){z("failed",_,a,d,{error_kind:f("http"),http_status:r.status}),m("plugin_directory_search",`http_${r.status}`);let y;if(r.status===400&&d)y="it could not continue this results page; search again to start from the first page";else if(r.status===429||r.status>=500)y="it is temporarily unavailable; try again shortly";else y=`the request failed (HTTP ${r.status})`;let R=r.status===429||r.status==
+Shell cwd was reset to /home/siderealyear/llama.cpp
+
+Important discovery from the binary: `CLAUDE_CODE_AUTO_MODE_MODEL` exists but there's also a `tengu_auto_mode_config` server-side override. Now let me find the actual timeout duration used for classifier calls:
+
+{"command": "cd /tmp\necho \"=== wall_clock_timeout context ===\"\ngrep -oE '.{400}wall_clock_timeout.{400}' cc_strings.txt | head -3\necho\necho \"=== 'cannot determine the safety of' full template ===\"\ngrep -oE '.{600}\\(timed out\\), so auto mode cannot determine.{100}' cc_strings.txt | head -2", "description": "Find timeout classification context in binary"}
+
+[… earlier output omitted; full output: /tmp/claude-1000/-home-siderealyear-llama-cpp/d5b24a4e-47e7-4044-880c-e535131bd3c3/tasks/bu298wtfo.output]
+ This is not a judgment that the action is unsafe. ${s} ${Zne(n.callerHasReadTools===!0)}`}function KQn(e,n){return VQn(e,n)}function qhi(e,n){return[A0s(e,n),VQn(e,n)]}function A0s(e,n){if(e!==void 0)return` (HTTP ${e})`;return n!==void 0?` (${n})`:""}function VQn(e,n){if(e===429)return" (rate-limited)";if(e===529)return" (overloaded)";if(e!==void 0&&e>=500&&e<600)return" (server error)";if(n==="wall_clock_timeout"||n==="connection_timeout"||n==="server_call_unavailable_timeout")return" (timed out)";if(n==="connection_error")return" (connection failed)";if(n==="server_call_skipped")return" (it skipped this action)";if(n==="server_unsupported")return" (this request is not covered)";if(n==="server_thread_unsupported")return" (the request was sent on a message thread, which it does not cover; the next one wil
+ate.now()-h.current;if(T>=d){h.current=Date.now(),f(m);return}return c.setTimeout(()=>{h.current=Date.now(),f(m)},d-T)},[m,d,c]),g}var fw="\uE000",zg="\uE001",hw="\uE002",Tw=599,s0=[void 0,429,529,Tw],a0=[{ms:void 0,words:void 0},{ms:1000,words:"about 1 second"},{ms:7200000,words:"about 2 hours"}],i0=[{handedOff:!1,skippable:!1},{handedOff:!0,skippable:!1},{handedOff:!1,skippable:!0}],l0=[void 0,"wall_clock_timeout","connection_timeout","connection_error","server_not_requested","server_input_rewritten","server_unsupported","server_thread_unsupported","server_stream_ended","server_unavailable_disabled","server_unavailable_error","server_unavailable_other","server_unrecognized_result","server_no_result","server_results_not_held","server_context_stale","server_call_skipped","server_call_unavailable_timeout","s
+
+=== 'cannot determine the safety of' full template ===
+Command did not complete within its 120s timeout and was moved to the background (ID: bu298wtfo). Output is being written to: /tmp/claude-1000/-home-siderealyear-llama-cpp/d5b24a4e-47e7-4044-880c-e535131bd3c3/tasks/bu298wtfo.output. You will be notified when it completes. It is running now: do not start a second copy while it runs. If it is no longer needed, stop it with TaskStop. To check interim output, use Read on that file path.
+Session cwd remains /home/siderealyear/llama.cpp; directory changes made by the backgrounded command do not apply to subsequent commands.
+
+The grep is running in background. While it finishes, let me look at where the classifier actually makes its request and what timeout it applies:
+
+{"command": "cd /tmp\ngrep -oE 'classifier[^\"]{0,80}' cc_strings.txt | sort -u | grep -iE 'timeout|abort|ms' | head -20\necho \"=== tengu_auto_mode_config ===\"\ngrep -oE '.{150}tengu_auto_mode_config.{150}' cc_strings.txt | head -5", "description": "Search for classifier timeout config in binary strings"}
+
+classifierApprovable&&!(UN(_l)&&!RMs(_l)&&QHe(He))),rn=il(Ce.decisionReason,xMs)!==void 0,
+classifierCacheCreationInputTokens:e.usage?.cacheCreationInputTokens,classifierDurationMs:
+classifierDenyKind,HMs as classifierWrittenReason,Efe as decisionReasonCode,xOr as decisio
+classifierDurationMs
+classifierDurationMs:oa.durationMs,classifierSystemPromptLength:oa.promptLengths?.systemPr
+classifier, hook, user_temporary, user_permanent, user_reject, user_abort, or invalid_inpu
+classifierJudgesServedCall:!0},...rt!==void 0&&{servedSessionMode:rt},extraBodyParams:ZSn(
+classifierMayApprove:i},P=await De(l,a,k,s,h,t).catch((v)=>{if(t.abortController.signal.ab
+classifierQueueCommitWaitMs
+classifierQueueCommitWaitMs:$d},classifierSource:f(Gs),...cs,...hr()&&{sessionAutoClassifi
+classifierQueueDepth:qi?.queueDepth,classifierQueueWaitMs:qi?.queueWaitMs,...qi?.overlap!=
+classifierQueueWaitMs
+classifier_request_progress reqId=${s} tool=${n.toolName} stage=${n.classifierStage} ageMs
+classifierRouted===!0}function RMs(e){return(e.also??[]).some((o)=>{let s=PCe[o];return s?
+classifier] scanLinkRecords v5 read: ${p.error.code}`),null;let o=p.value.items[0];return 
+classifierStage1DurationMs
+classifierStage1DurationMs:oa.stage1DurationMs,classifierStage1RequestId:_e(oa.stage1Reque
+classifierStage1MsgId
+classifierStage1MsgId:_e(oa.stage1MsgId),classifierStage1CostUSD:oa.stage1Usage&&oa.model?
+classifierStage1MsgId:_e(R.stage1MsgId),classifierStage2RequestId:_e(R.stage2RequestId),cl
+=== tengu_auto_mode_config ===
+({skillModel:e,mode:n,fastMode:r}){if(!Lo(n))return!0;let{supported:s,disableFastModeBreakerFires:h}=iyo({model:Gt(e),fastMode:r,disableFastMode:!!v("tengu_auto_mode_config",{})?.disableFastMode});if(s)return!0;return t(h?`Skill/command model "${e}" skipped: fast mode is disabled for auto mode by config (disableFastMode)
+j(e,n){if(n==="auto"||e==="proactive"&&n==="acceptEdits")return n;return}function Juo(e){return dq(e)??XXe(e)}function ee(){let{value:e,source:n}=yn("tengu_auto_mode_config",{});if(e?.enabled!=="disabled")return!1;return n==="override"||n==="payload"}function Quo(e){let{cli:n,env:r,settings:s,agentFrontmatter:f}=e,d=_b(n
+,t2:35}),"claude-sonnet-5":Object.freeze({t1:25,t2:35}),"claude-opus-4-8":Object.freeze({t1:45,t2:35})})}),f=Object.freeze({});function Pf(){let e=v("tengu_auto_mode_config",f)??f;if(e!==f)return e;return Sm()?f:Dcs}var R=Object.freeze([]),E,p=R;function Qxi(e){if(!y3i()||!T())return R;if(e===E)return p;let t=new Set,o=n
+=r;if(s===Sqt&&!(typeof y?.action==="string"&&kqt.has(y.action)))return;let S=y?.[dw];return typeof S==="string"?S.length:0}function iNo(){return an("tengu_auto_mode_config",{})?.chromeAgentNote===!0||Cke("browserSummary")}var _qt=ge({logged:!1},(e)=>{e.logged=!1});function jor(e,n,r=iNo){if(wqt.has(n))return aNo(e,r);le
+es(pNo).flatMap(([e,n])=>f2e(e).map((r)=>[r,n]))),yNo=new Map(Object.entries(mNo).flatMap(([e,n])=>f2e(e).map((r)=>[r,n])));function _No(){return an("tengu_auto_mode_config",{})?.computerUseAgentNote===!0||Cke("computerUseSummary")}var Aqt=ge({logged:!1},(e)=>{e.logged=!1});function Wor(e,n,r=_No){let s=hNo.get(n);if(s==
+Shell cwd was reset to /home/siderealyear/llama.cpp
+
+I found the classifier timeout mapping in the binary. Let me extract the full model-resolution function and the timeout table:
+
+{"command": "cd /tmp\necho \"=== timeout table (t1/t2) full context ===\"\ngrep -oE '.{800}\\)t1:25,t2:35}.{200}' cc_strings.txt | head -1\necho\necho \"=== YEn / auto mode model resolution, full ===\"\ngrep -oE 'function YEn\\(\\)\\{.{900}' cc_strings.txt | head -1", "description": "Extract classifier timeout table and model resolution function"}
+
+=== timeout table (t1/t2) full context ===
+Command did not complete within its 120s timeout and was moved to the background (ID: bz0ytmwcm). Output is being written to: /tmp/claude-1000/-home-siderealyear-llama-cpp/d5b24a4e-47e7-4044-880c-e535131bd3c3/tasks/bz0ytmwcm.output. You will be notified when it completes. It is running now: do not start a second copy while it runs. If it is no longer needed, stop it with TaskStop. To check interim output, use Read on that file path.
+Session cwd remains /home/siderealyear/llama.cpp; directory changes made by the backgrounded command do not apply to subsequent commands.
+
+{"file_path": "/tmp/claude-1000/-home-siderealyear-llama-cpp/d5b24a4e-47e7-4044-880c-e535131bd3c3/tasks/bu298wtfo.output"}
+
+1	=== wall_clock_timeout context ===
+2	m("permission_auto_mode_classifier",h??"parse_failure");break;case"interrupted":break}l("tengu_auto_mode_outcome",{outcome:f(e),classifierModel:Ot(n),classifierType:ce(s),failureKind:ce(h),stopReason:ce(y),...S!==void 0&&{errorKind:gE(S)},...w!==void 0&&{fallbackFrom:Ot(w)},...H!==void 0&&{fallbackCause:f(H)},retryAfterBucket:ce(Y),stage1AllowSetAside:ce(z),...we})}function iPr(e){if(We(e))return"wall_clock_timeout";if(e instanceof AA)return"connection_timeout";if(e instanceof vf)return"connection_error";if(mQe(e))return Bue;if(e instanceof Ht&&typeof e.status==="number"){if(z8(e)!==void 0)return`http_${e.status}`;if(e.headers?.get("x-should-retry")==="false")return`http_${e.status}_no_retry`;return`http_${e.status}`}let n=k(e);if(n)return n.toLowerCase();return"other"}function T9r(e){if(e===void 0)return!1
+3	 This is not a judgment that the action is unsafe. ${s} ${Zne(n.callerHasReadTools===!0)}`}function KQn(e,n){return VQn(e,n)}function qhi(e,n){return[A0s(e,n),VQn(e,n)]}function A0s(e,n){if(e!==void 0)return` (HTTP ${e})`;return n!==void 0?` (${n})`:""}function VQn(e,n){if(e===429)return" (rate-limited)";if(e===529)return" (overloaded)";if(e!==void 0&&e>=500&&e<600)return" (server error)";if(n==="wall_clock_timeout"||n==="connection_timeout"||n==="server_call_unavailable_timeout")return" (timed out)";if(n==="connection_error")return" (connection failed)";if(n==="server_call_skipped")return" (it skipped this action)";if(n==="server_unsupported")return" (this request is not covered)";if(n==="server_thread_unsupported")return" (the request was sent on a message thread, which it does not cover; the next one wil
+4	ate.now()-h.current;if(T>=d){h.current=Date.now(),f(m);return}return c.setTimeout(()=>{h.current=Date.now(),f(m)},d-T)},[m,d,c]),g}var fw="\uE000",zg="\uE001",hw="\uE002",Tw=599,s0=[void 0,429,529,Tw],a0=[{ms:void 0,words:void 0},{ms:1000,words:"about 1 second"},{ms:7200000,words:"about 2 hours"}],i0=[{handedOff:!1,skippable:!1},{handedOff:!0,skippable:!1},{handedOff:!1,skippable:!0}],l0=[void 0,"wall_clock_timeout","connection_timeout","connection_error","server_not_requested","server_input_rewritten","server_unsupported","server_thread_unsupported","server_stream_ended","server_unavailable_disabled","server_unavailable_error","server_unavailable_other","server_unrecognized_result","server_no_result","server_results_not_held","server_context_stale","server_call_skipped","server_call_unavailable_timeout","s
+5	
+6	=== 'cannot determine the safety of' full template ===
+7	
+8	[exited with code 0]
+9	
+
+{"file_path": "/tmp/claude-1000/-home-siderealyear-llama-cpp/d5b24a4e-47e7-4044-880c-e535131bd3c3/tasks/bz0ytmwcm.output"}
+
+1	=== timeout table (t1/t2) full context ===
+2	
+3	=== YEn / auto mode model resolution, full ===
+4	function YEn(){let e=it(),n=Pf(),r=cbn(n?.modelByMainModel,{vet:(s)=>Dxe(s,"modelByMainModel")})??Dxe(n?.model,"model");if(r){if(i.CLAUDE_CODE_AUTO_MODE_MODEL){let{loggedPolicySkips:s}=PI();if(!s.has("env:shadowed"))s.add("env:shadowed"),t(`Auto mode classifier: ignoring CLAUDE_CODE_AUTO_MODE_MODEL=${i.CLAUDE_CODE_AUTO_MODE_MODEL} because a server-configured classifier model (${r}) takes priority; using that model instead`,{level:"warn"})}return{value:r,src:"gb"}}{let s=Dxe(i.CLAUDE_CODE_AUTO_MODE_MODEL,"env");if(s)return{value:s,src:"env"}}if(PI().externalSonnet5Probe!=="demoted"){let s=Avs(e);if(s)return{value:s,src:"default",externalDefault:!0}}return{value:vot(e),src:"default"}}function Dxe(e,n){if(!e)return;let r=!U5(e)?{why:"your organization's model policy does not allow it",next:"Unset it or pin a model your organization's policy allows."}:n==="env"&&!Tvs(e)?{why:"the API's safeguards refuse th
+5	
+6	[exited with code 0]
+7	
+
+I have enough to answer questions 1 and 2 definitively. Let me nail down question 3 by checking whether the 7B was under load / slow at the times of the timeouts, and confirm the classifier's actual request shape.
+
+{"command": "cd /home/siderealyear/llama.cpp\necho \"=== llama-cuda (pyrite local) logs: last 40 lines around any coder/7b + load ===\"\ndocker logs llama-cuda --since 20h 2>&1 | grep -iE 'load|slot|active|loaded|unloaded|prompt eval|eval time|7b|coder|tokens per second|t/s' | tail -30\necho\necho \"=== eth-node reachable? latency check to 7B ===\"\nfor i in 1 2 3; do\n  /usr/bin/time -f \"round %e: %es\" curl -s -o /dev/null -m 20 \\\n    -H \"Content-Type: application/json\" \\\n    -d '{\"model\":\"Qwen2.5-Coder-7B\",\"max_tokens\":5,\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}' \\\n    http://100.64.0.5:8080/v1/chat/completions 2>&1\ndone", "description": "Check local llama.cpp load and measure 7B latency over Tailscale"}
+
+=== llama-cuda (pyrite local) logs: last 40 lines around any coder/7b + load ===
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   3424, tg =  15.35 t/s, tg_3s =  12.84 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   3469, tg =  15.35 t/s, tg_3s =  14.85 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   3513, tg =  15.33 t/s, tg_3s =  14.02 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   3572, tg =  15.38 t/s, tg_3s =  19.15 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   3609, tg =  15.34 t/s, tg_3s =  12.16 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   3655, tg =  15.34 t/s, tg_3s =  15.26 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   3703, tg =  15.34 t/s, tg_3s =  15.58 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   3751, tg =  15.34 t/s, tg_3s =  15.08 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   3790, tg =  15.31 t/s, tg_3s =  12.91 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   3830, tg =  15.28 t/s, tg_3s =  13.26 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   3869, tg =  15.25 t/s, tg_3s =  12.86 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   3910, tg =  15.23 t/s, tg_3s =  13.35 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   3955, tg =  15.22 t/s, tg_3s =  13.91 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   3997, tg =  15.20 t/s, tg_3s =  13.55 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   4040, tg =  15.18 t/s, tg_3s =  14.24 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   4086, tg =  15.18 t/s, tg_3s =  14.89 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   4131, tg =  15.17 t/s, tg_3s =  14.40 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   4178, tg =  15.17 t/s, tg_3s =  15.41 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   4219, tg =  15.16 t/s, tg_3s =  13.52 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   4265, tg =  15.16 t/s, tg_3s =  15.16 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   4309, tg =  15.15 t/s, tg_3s =  14.49 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   4367, tg =  15.19 t/s, tg_3s =  18.76 t/s
+[40181] slot print_timing: id  0 | task 15814 | n_gen =   4430, tg =  15.25 t/s, tg_3s =  20.80 t/s
+[40181] slot print_timing: id  0 | task 15814 | prompt eval time =    3594.23 ms /   441 tokens (    8.15 ms per token,   122.70 tokens per second)
+[40181] slot print_timing: id  0 | task 15814 |        eval time =  291678.59 ms /  4449 tokens (   65.58 ms per token,    15.25 tokens per second)
+[40181] slot print_timing: id  0 | task 15814 |       total time =  295272.81 ms /  4890 tokens
+[40181] slot print_timing: id  0 | task 15814 |    graphs reused =      11498
+[40181] slot print_timing: id  0 | task 15814 |   graph reallocs =          0    /     0        (same size) / (changed size)
+[40181] slot print_timing: id  0 | task 15814 | draft acceptance = 0.98239 ( 1897 accepted /  1931 generated), mean len =  3.41
+[40181] slot      release: id  0 | task 15814 | stop processing: n_tokens = 79339, truncated = 0
+
+=== eth-node reachable? latency check to 7B ===
+round 0.55: 0.55s
+round 0.27: 0.27s
+round 0.28: 0.28s
+
+The 7B responds in ~0.3–0.5s for small prompts — so the 1800s router timeout isn't the bottleneck. The failing timeout must be a **client-side** timeout inside Claude Code. Let me find its actual value and measure a realistic classifier-sized request.
+
+{"command": "cd /tmp\n# Extract the region around the classifier model resolution + timeout with a fast python slice\npython3 - <<'EOF'\ndata = open('cc_strings.txt', errors='replace').read()\nimport re\n# Find the YEn function and grab 3000 chars after\ni = data.find('function YEn(){')\nif i>=0:\n    print(\"=== YEn (classifier model resolution) ===\")\n    print(data[i:i+1400])\nEOF", "description": "Fast extract of classifier model-resolution function"}
+
+{"command": "cd /tmp\npython3 - <<'EOF'\ndata = open('cc_strings.txt', errors='replace').read()\nimport re\n# Look for where the classifier sets a timeout / abort. Search for 'classifier' near 'imeout' or 'abort' or 'AbortSignal.timeout'\nfor m in re.finditer(r'(AbortSignal\\.timeout\\([^)]{0,40}\\))', data):\n    s = data[max(0,m.start()-160):m.end()+40]\n    if 'lassif' in s or 'auto' in s.lower():\n        print(\"CTX:\", s.replace('\\n',' ')[:340]); print('---')\nEOF", "description": "Find AbortSignal.timeout near classifier code"}
+
+=== YEn (classifier model resolution) ===
+function YEn(){let e=it(),n=Pf(),r=cbn(n?.modelByMainModel,{vet:(s)=>

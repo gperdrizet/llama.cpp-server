@@ -1,0 +1,73 @@
+{
+    "model_name": "Qwen3.8-27B",
+
+    "model_base": "Qwen3.8-27B",
+    "quants": "UD-Q4_K_M,UD-IQ3_S",
+
+    "image": "ghcr.io/ggml-org/llama.cpp:full-cuda",
+
+    "server_parameters": {
+        "--ctx-size":      "131072",
+        "--threads":       "12",
+        "--threads-batch": "12",
+        "--device":        "CUDA0,CUDA1",
+        "--n-gpu-layers":  "-1",
+        "--cache-type-k":  "q8_0",
+        "--cache-type-v":  "q8_0"
+    },
+
+    "server_sweep_parameters": {
+        "--flash-attn": "on,off",
+        "--split-mode": "layer,tensor"
+    },
+
+    "pp_parameters": {
+        "--batch-size":  "4096",
+        "--ubatch-size": "512,1024,2048,4096"
+    },
+
+    "spec_variants": [
+        { "label": "spec-off" },
+        {
+            "label": "spec-nmax2",
+            "flags": {
+                "--model-draft":      "/models/Qwen3.8-27B-mtp-Q4_0.gguf",
+                "--spec-type":        "draft-mtp",
+                "--spec-draft-n-max": "2"
+            }
+        },
+        {
+            "label": "spec-nmax3",
+            "flags": {
+                "--model-draft":      "/models/Qwen3.8-27B-mtp-Q4_0.gguf",
+                "--spec-type":        "draft-mtp",
+                "--spec-draft-n-max": "3"
+            }
+        },
+        {
+            "label": "spec-nmax4",
+            "flags": {
+                "--model-draft":      "/models/Qwen3.8-27B-mtp-Q4_0.gguf",
+                "--spec-type":        "draft-mtp",
+                "--spec-draft-n-max": "4"
+            }
+        },
+        {
+            "label": "spec-nmax5",
+            "flags": {
+                "--model-draft":      "/models/Qwen3.8-27B-mtp-Q4_0.gguf",
+                "--spec-type":        "draft-mtp",
+                "--spec-draft-n-max": "5"
+            }
+        }
+    ],
+
+    "prompt_file": "tests/prompts/qwen3_8_27b_v1.txt,tests/prompts/qwen3_8_27b_v2.txt,tests/prompts/qwen3_8_27b_v3.txt",
+    "ntg": 1,
+    "spec_ntg": 128,
+
+    "load_timeout": 600,
+    "request_timeout": 3600,
+
+    "overrides": {}
+}

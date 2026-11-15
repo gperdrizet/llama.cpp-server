@@ -1,0 +1,55 @@
+{
+    "model_name": "Qwen3.8-27B",
+    "study_name": "Qwen3.8-27B-optuna",
+
+    "model_base": "Qwen3.8-27B",
+    "quants": "UD-Q4_K_M,UD-IQ3_S",
+
+    "image": "ghcr.io/ggml-org/llama.cpp:full-cuda",
+
+    "fixed": {
+        "--ctx-size":      "131072",
+        "--threads":       "12",
+        "--threads-batch": "12",
+        "--device":        "CUDA0,CUDA1"
+    },
+
+    "space": {
+        "--n-gpu-layers": "12,20,28,36,999",
+        "--flash-attn":   "on,off",
+        "--split-mode":   "layer,tensor",
+        "--cache-type-k": "q8_0,q4_0,bf16",
+        "--cache-type-v": "q8_0,q4_0,bf16",
+        "--batch-size":   "2048,4096,8192",
+        "--ubatch-size":  "512,1024,2048,4096"
+    },
+
+    "spec": {
+        "modes": [
+            { "name": "off" },
+            {
+                "name": "mtp",
+                "base_flags": {
+                    "--model-draft": "/models/Qwen3.8-27B-mtp-Q4_0.gguf",
+                    "--spec-type":   "draft-mtp"
+                },
+                "params": {
+                    "--spec-draft-n-max": { "type": "int", "low": 1, "high": 5 }
+                }
+            }
+        ]
+    },
+
+    "prompt_file": "tests/prompts/qwen3_8_27b_v1.txt,tests/prompts/qwen3_8_27b_v2.txt,tests/prompts/qwen3_8_27b_v3.txt",
+    "ntg": 128,
+
+    "n_trials": 20,
+    "seed": null,
+
+    "load_timeout": 600,
+    "request_timeout": 3600,
+
+    "min_free_vram_gib": 24,
+    "stop_production": true,
+    "production_containers": ["llama-cuda"]
+}

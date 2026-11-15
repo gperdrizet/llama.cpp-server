@@ -1,0 +1,3895 @@
+{
+  "model": "Qwen3.8-27B",
+  "model_specs": [
+    {
+      "quant": "UD-Q4_K_M",
+      "model_file": "Qwen3.8-27B-UD-Q4_K_M.gguf"
+    },
+    {
+      "quant": "UD-IQ3_S",
+      "model_file": "Qwen3.8-27B-UD-IQ3_S.gguf"
+    }
+  ],
+  "image": "ghcr.io/ggml-org/llama.cpp:full-cuda",
+  "runs": 3,
+  "ntg": 1,
+  "prompts": [
+    "/home/siderealyear/llama.cpp/tests/prompts/qwen3_8_27b_v1.txt",
+    "/home/siderealyear/llama.cpp/tests/prompts/qwen3_8_27b_v2.txt",
+    "/home/siderealyear/llama.cpp/tests/prompts/qwen3_8_27b_v3.txt"
+  ],
+  "result_file": "/home/siderealyear/llama.cpp/tests/results/llama-server-bench/Qwen3.8-27B_2026-11-13_23-21-00.jsonl",
+  "sweep_cells": [
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "on",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "layer",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "512"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "on",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "layer",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "1024"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "on",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "layer",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "2048"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "on",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "layer",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "4096"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "on",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "tensor",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "512"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "on",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "tensor",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "1024"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "on",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "tensor",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "2048"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "on",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "tensor",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "4096"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "off",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "layer",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "512"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "off",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "layer",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "1024"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "off",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "layer",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "2048"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "off",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "layer",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "4096"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "off",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "tensor",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "512"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "off",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "tensor",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "1024"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "off",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "tensor",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "2048"
+    },
+    {
+      "--ctx-size": "131072",
+      "--threads": "12",
+      "--threads-batch": "12",
+      "--flash-attn": "off",
+      "--device": "CUDA0,CUDA1",
+      "--n-gpu-layers": "-1",
+      "--split-mode": "tensor",
+      "--cache-type-k": "q8_0",
+      "--cache-type-v": "q8_0",
+      "--batch-size": "4096",
+      "--ubatch-size": "4096"
+    }
+  ],
+  "spec_variants": [
+    {
+      "label": "spec-off"
+    },
+    {
+      "label": "spec-nmax2",
+      "flags": {
+        "--model-draft": "/models/Qwen3.8-27B-mtp-Q4_0.gguf",
+        "--spec-type": "draft-mtp",
+        "--spec-draft-n-max": "2"
+      }
+    }
+  ],
+  "launches": [
+    {
+      "launch": 1,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 2,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 3,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 4,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 5,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 6,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 7,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 8,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 9,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 10,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 11,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 12,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 13,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 14,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 15,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 16,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 17,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 18,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 19,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 20,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 21,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 22,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 23,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 24,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 25,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 26,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 27,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 28,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 29,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 30,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 31,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 32,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 33,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 34,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 35,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 36,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 37,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 38,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 39,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 40,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 41,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 42,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 43,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 44,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 45,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 46,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 47,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 48,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 49,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 50,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 51,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 52,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 53,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 54,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 55,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 56,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 57,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 58,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 59,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 60,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 61,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 62,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 63,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 64,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 65,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 66,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 67,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 68,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 69,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 70,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 71,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 72,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 73,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 74,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 75,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 76,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 77,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 78,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 79,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 80,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 81,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 82,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 83,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 84,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 85,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 86,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 87,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 88,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 89,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 90,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 91,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 92,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 93,
+      "spec": "spec-off",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 94,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 95,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 96,
+      "spec": "spec-nmax2",
+      "quant": "UD-Q4_K_M",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 97,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 98,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 99,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 100,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 101,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 102,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 103,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 104,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 105,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 106,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 107,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 108,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 109,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 110,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 111,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 112,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 113,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 114,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 115,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 116,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 117,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 118,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 119,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 120,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 121,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 122,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 123,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 124,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 125,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 126,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 127,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 128,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 129,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 130,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 131,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 132,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 133,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 134,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 135,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 136,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 137,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 138,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 139,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 140,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 141,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 142,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 143,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 144,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "on",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 145,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 146,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 147,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 148,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 149,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 150,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 151,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 152,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 153,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 154,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 155,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 156,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 157,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 158,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 159,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 160,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 161,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 162,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 163,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 164,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 165,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 166,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 167,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 168,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "layer",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 169,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 170,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 171,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 172,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 173,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 174,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "512"
+      }
+    },
+    {
+      "launch": 175,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 176,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 177,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 178,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 179,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 180,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "1024"
+      }
+    },
+    {
+      "launch": 181,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 182,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 183,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 184,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 185,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 186,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "2048"
+      }
+    },
+    {
+      "launch": 187,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 188,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 189,
+      "spec": "spec-off",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 190,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v1.txt",
+      "run": 1,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 191,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v2.txt",
+      "run": 2,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    },
+    {
+      "launch": 192,
+      "spec": "spec-nmax2",
+      "quant": "UD-IQ3_S",
+      "prompt": "qwen3_8_27b_v3.txt",
+      "run": 3,
+      "cell": {
+        "--ctx-size": "131072",
+        "--threads": "12",
+        "--threads-batch": "12",
+        "--flash-attn": "off",
+        "--n-gpu-layers": "-1",
+        "--split-mode": "tensor",
+        "--cache-type-k": "q8_0",
+        "--cache-type-v": "q8_0",
+        "--batch-size": "4096",
+        "--ubatch-size": "4096"
+      }
+    }
+  ]
+}

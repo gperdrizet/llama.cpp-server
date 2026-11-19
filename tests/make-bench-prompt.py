@@ -1,8 +1,9 @@
 '''Build a long, realistic benchmark prompt from Claude Code transcripts.
 
-The llama-server prompt-processing decay curve (tests/llama-server-bench.py)
-needs an input prompt that fills the context (>= ~131k tokens for a 131072
-window). This builds one from real conversation transcripts so the token
+The llama-server prompt-processing decay curve (measured by the tools in
+tests/ that share llama_server_lib.py) needs an input prompt that fills the
+context (>= ~131k tokens for a 131072 window). This builds one from real
+conversation transcripts so the token
 distribution (prose + code + agentic chatter) is realistic rather than
 synthetic filler, and writes it to a single swappable file.
 

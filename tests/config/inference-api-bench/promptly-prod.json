@@ -1,0 +1,20 @@
+{
+    "name": "promptly-prod",
+    "base_url": "https://promptlyapi.com/v1",
+    "api_key_env": "PROMPTLY_API_KEY",
+
+    "prompt_file": "tests/prompts/qwen3_8_27b_v1.txt",
+    "ntg": 512,
+    "runs": 1,
+    "temperature": 0,
+
+    "warmup": true,
+    "warmup_max_tokens": 8,
+    "timings_per_token": true,
+
+    "exclude_regex": "(?i)(embed|bge|rerank)",
+    "exclude_models": [],
+    "include_models": [],
+
+    "request_timeout": 3600
+}

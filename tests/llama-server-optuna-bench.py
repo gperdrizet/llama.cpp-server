@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 '''Optuna-driven parameter search for the llama-server bench.
 
-The sibling `llama-server-bench.py` sweeps parameters in a fixed 4-phase
-order, which can't see interactions between axes (e.g. cache dtype only
-matters at certain n-gpu-layers / split-mode combos). This tool hands the
-WHOLE joint parameter space to Optuna's TPE sampler, which learns the
-interactions from the trials it has already spent and spends its budget on
-the promising regions.
+Older tooling swept parameters in a fixed phase order, which couldn't see
+interactions between axes (e.g. cache dtype only matters at certain
+n-gpu-layers / split-mode combos). This tool hands the WHOLE joint parameter
+space to Optuna's TPE sampler, which learns the interactions from the trials
+it has already spent and spends its budget on the promising regions.
 
 Objective (minimize): the mean, across every prompt in the config, of the
 **standardized-workload time** T* of one `/v1/completions` request — the time
@@ -36,9 +35,9 @@ older objective cannot be mixed with the new values, so resuming a study whose
 (the configs use a `-std` suffix) or set `objective.allow_objective_migration`.
 
 The launch machinery is NOT duplicated: this script imports
-`llama-server-bench.py` (same directory, hyphenated filename → importlib)
-and reuses its container driver, log parser, VRAM gate, stale-container
-cleanup, and the production stop/restart guard.
+`llama_server_lib.py` (same directory) and reuses its container driver, log
+parser, VRAM gate, stale-container cleanup, standardized objective, and the
+production stop/restart guard.
 
 Data retention
 --------------
@@ -160,11 +159,11 @@ ROOT = HERE.parent
 # `wall_request_s` objective and the standardized T* are NOT comparable).
 OBJECTIVE_VERSION = "standardized-v1"
 
-# Import the sibling bench (hyphenated filename → not importable by name).
-# Everything heavy (container driver, log parser, VRAM gate, production
-# stop/restore) is reused from there — keep the two in lockstep.
-_spec = importlib.util.spec_from_file_location("llm_srv_bench",
-                                               HERE / "llama-server-bench.py")
+# Import the shared engine (importlib so it works regardless of the caller's
+# sys.path). Everything heavy (container driver, log parser, VRAM gate,
+# objective, production stop/restore) is reused from there — keep in lockstep.
+_spec = importlib.util.spec_from_file_location("llama_server_lib",
+                                               HERE / "llama_server_lib.py")
 LLM = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(LLM)
 

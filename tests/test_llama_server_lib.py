@@ -1,10 +1,10 @@
-'''Host-side self-test for llama-server-bench.py (no GPU, no real docker).
+'''Host-side self-test for llama_server_lib.py (no GPU, no real docker).
 
 Verifies the pure logic (log parsing, sweep expansion) and drives run_launch
 with run_bench_launch mocked to confirm result rows land in the JSONL and
 failures are recorded. Run with:
 
-    .venv/bin/python tests/test_llama_server_bench.py
+    .venv/bin/python tests/test_llama_server_lib.py
 '''
 
 import importlib.util
@@ -14,7 +14,7 @@ from pathlib import Path
 from unittest import mock
 
 HERE = Path(__file__).resolve().parent
-_spec = importlib.util.spec_from_file_location("llm_srv_bench", HERE / "llama-server-bench.py")
+_spec = importlib.util.spec_from_file_location("llama_server_lib", HERE / "llama_server_lib.py")
 b = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(b)
 
@@ -352,7 +352,7 @@ def test_run_bench_launch_vram_gate():
         config = {"model_name": "M", "models_path": str(HERE)}
         with mock.patch.object(b, "free_vram_gib", return_value=7.0):
             res = b.run_bench_launch(config, {}, {}, str(prompt), 1,
-                                     "test_llama_server_bench.py")
+                                     "test_llama_server_lib.py")
         assert res["status"] == "error" and "VRAM free" in res["error"], res
     finally:
         prompt.unlink()
@@ -525,7 +525,7 @@ def test_stop_production_docker_unreachable():
 
 
 if __name__ == "__main__":
-    print("Running llama-server-bench self-tests:")
+    print("Running llama_server_lib self-tests:")
     try:
         test_parse_server_log()
         test_pp_time_at()

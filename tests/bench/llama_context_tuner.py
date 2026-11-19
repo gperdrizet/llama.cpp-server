@@ -41,15 +41,13 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-import importlib.util
-
-HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent
-
-_spec = importlib.util.spec_from_file_location("llama_server_lib",
-                                               HERE / "llama_server_lib.py")
-LLM = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(LLM)
+# Works both as `python tests/bench/llama_context_tuner.py` and as an import.
+try:
+    from . import llama_server_lib as LLM
+    from . import paths
+except ImportError:  # direct script execution: this file's dir is sys.path[0]
+    import llama_server_lib as LLM
+    import paths
 
 # A context too large for the KV cache fails at load / allocation with one of
 # these. Anything else is a real error and must not be mistaken for "ctx too
@@ -119,7 +117,7 @@ def truncated_prompt(src: Path, workdir: Path, max_ctx: int,
     '''Copy the long prompt into ``workdir``, cut to fit ``max_ctx`` tokens.
 
     The server reports the true token count; this is only a sizing estimate
-    (the same chars/token ratio ``make-bench-prompt.py`` uses) with a margin so
+    (the same chars/token ratio ``make_bench_prompt.py`` uses) with a margin so
     the request is not rejected for being a few tokens too long.
     '''
     budget = max(256, int((max_ctx - ntg - 512) * chars_per_token))
@@ -247,7 +245,7 @@ def main() -> int:
         if key not in config:
             parser.error(f"config is missing required key {key!r}")
 
-    config.setdefault("models_path", str(ROOT / "models"))
+    config.setdefault("models_path", str(paths.REPO_ROOT / "models"))
     config.setdefault("image", LLM.IMAGE_DEFAULT)
     config.setdefault("ntg", 1)
     # We are deliberately probing the VRAM boundary; the gate must not refuse
@@ -259,7 +257,8 @@ def main() -> int:
     model_host = Path(config["models_path"]) / config["model_file"]
     prompt_cfg = Path(config["prompt_file"]).expanduser() \
         if config.get("prompt_file") else None
-    long_prompt = (prompt_cfg if prompt_cfg.is_absolute() else ROOT / prompt_cfg
+    long_prompt = (prompt_cfg if prompt_cfg.is_absolute()
+                   else paths.REPO_ROOT / prompt_cfg
                    ).resolve() if prompt_cfg else None
     if not model_host.is_file():
         parser.error(f"model file not found: {model_host}")
@@ -290,7 +289,7 @@ def main() -> int:
         print("  (dry run: no launches)")
         return 0
 
-    output_dir = ROOT / "tests/results/llama-context-tuner"
+    output_dir = paths.RESULTS_DIR / "llama-context-tuner"
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     result_file = output_dir / f"{config['model_name']}_{timestamp}.jsonl"

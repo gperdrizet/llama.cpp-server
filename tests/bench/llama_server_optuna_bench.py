@@ -34,10 +34,10 @@ older objective cannot be mixed with the new values, so resuming a study whose
 `objective_version` differs fails fast; give it a new `study_name`/`storage`
 (the configs use a `-std` suffix) or set `objective.allow_objective_migration`.
 
-The launch machinery is NOT duplicated: this script imports
-`llama_server_lib.py` (same directory) and reuses its container driver, log
-parser, VRAM gate, stale-container cleanup, standardized objective, and the
-production stop/restart guard.
+The launch machinery is NOT duplicated: this script imports the sibling
+`llama_server_lib` module and reuses its container driver, log parser, VRAM
+gate, stale-container cleanup, standardized objective, and the production
+stop/restart guard.
 
 Data retention
 --------------
@@ -124,14 +124,13 @@ restart. `--no-stop-production` opts out (the VRAM gate then refuses
 launches while the production model is resident).
 
 Usage:
-    .venv/bin/python tests/llama-server-optuna-bench.py \\
+    .venv/bin/python tests/bench/llama_server_optuna_bench.py \\
         --config tests/config/llama-server-optuna-bench/Qwen3.8-27B.json
-    .venv/bin/python tests/llama-server-optuna-bench.py --config ... --dry-run
-    .venv/bin/python tests/llama-server-optuna-bench.py --config ... --n-trials 20
+    .venv/bin/python tests/bench/llama_server_optuna_bench.py --config ... --dry-run
+    .venv/bin/python tests/bench/llama_server_optuna_bench.py --config ... --n-trials 20
 '''
 
 import argparse
-import importlib.util
 import itertools
 import json
 import re
@@ -151,21 +150,19 @@ if hasattr(optuna, "TrialPruned"):
 else:  # pragma: no cover - older Optuna
     TrialPrunedError = optuna.TrialPrunedError
 
-HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent
-
 # Bumped whenever the objective's definition changes, so a study built with an
 # older objective is never silently mixed with new trial values (the raw
 # `wall_request_s` objective and the standardized T* are NOT comparable).
 OBJECTIVE_VERSION = "standardized-v1"
 
-# Import the shared engine (importlib so it works regardless of the caller's
-# sys.path). Everything heavy (container driver, log parser, VRAM gate,
-# objective, production stop/restore) is reused from there — keep in lockstep.
-_spec = importlib.util.spec_from_file_location("llama_server_lib",
-                                               HERE / "llama_server_lib.py")
-LLM = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(LLM)
+# Import the shared engine and canonical paths. Works both as
+# `python tests/bench/llama_server_optuna_bench.py` and as an import.
+try:
+    from . import llama_server_lib as LLM
+    from . import paths
+except ImportError:  # direct script execution: this file's dir is sys.path[0]
+    import llama_server_lib as LLM
+    import paths
 
 
 # --------------------------------------------------------------------------
@@ -463,7 +460,8 @@ def run_study(config: dict, n_trials: int, seed=None) -> optuna.study.Study:
     study_name = config.get("study_name") or \
         f"{config['model_name']}-optuna"
     db_path = Path(config.get("storage",
-                              f"{ROOT / 'tests/results/llama-server-optuna-bench' / study_name}.db")
+                              str(paths.RESULTS_DIR / "llama-server-optuna-bench"
+                                  / f"{study_name}.db"))
                    ).expanduser().resolve()
     output_dir = Path(config.get("output_dir",
                                  str(db_path.parent / study_name))).expanduser().resolve()
@@ -680,7 +678,7 @@ def main() -> int:
     with open(args.config, encoding="utf-8") as f:
         config = json.load(f)
 
-    config.setdefault("models_path", str(ROOT / "models"))
+    config.setdefault("models_path", str(paths.REPO_ROOT / "models"))
     config["stop_production"] = not args.no_stop_production
     if args.study_name:
         config["study_name"] = args.study_name
@@ -694,7 +692,7 @@ def main() -> int:
 
     study_name = config.get("study_name") or f"{config['model_name']}-optuna"
     db_path = Path(config.get("storage",
-                              str(ROOT / "tests/results/llama-server-optuna-bench"
+                              str(paths.RESULTS_DIR / "llama-server-optuna-bench"
                                   / f"{study_name}.db"))).expanduser().resolve()
     output_dir = Path(config.get("output_dir", str(db_path.parent / study_name))
                       ).expanduser().resolve()

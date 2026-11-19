@@ -42,8 +42,11 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent
+# Works both as `python tests/bench/inference_api_bench.py` and as an import.
+try:
+    from . import paths
+except ImportError:  # direct script execution: this file's dir is sys.path[0]
+    import paths
 
 DEFAULT_BASE_URL = "https://promptlyapi.com/v1"
 # The router's /v1/models has no capability flag; these names are embeddings.
@@ -63,7 +66,7 @@ def resolve_prompts(cfg: dict) -> list:
     out = []
     for item in items:
         p = Path(item.strip()).expanduser()
-        p = p if p.is_absolute() else ROOT / p
+        p = p if p.is_absolute() else paths.REPO_ROOT / p
         out.append(p.resolve())
     return out
 
@@ -404,7 +407,7 @@ def main() -> int:
         print("no models to benchmark")
         return 2
 
-    output_dir = ROOT / "tests/results/inference-api-bench"
+    output_dir = paths.RESULTS_DIR / "inference-api-bench"
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     result_file = output_dir / f"{name}_{timestamp}.jsonl"

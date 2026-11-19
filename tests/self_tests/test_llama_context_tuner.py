@@ -1,24 +1,21 @@
-'''Host-side self-tests for llama-context-tuner.py (no GPU, no real docker).
+'''Host-side self-tests for bench.llama_context_tuner (no GPU, no real docker).
 
 Mocks the shared launch primitive so the search logic -- exponential probe,
 bisection, OOM classification, native-limit detection and non-OOM abort -- is
 tested without loading a model. Run with:
 
-    .venv/bin/python tests/test_llama_context_tuner.py
+    .venv/bin/python tests/self_tests/test_llama_context_tuner.py
 '''
 
-import importlib.util
 import io
 import json
+import sys
 import tempfile
 from pathlib import Path
 from unittest import mock
 
-HERE = Path(__file__).resolve().parent
-_spec = importlib.util.spec_from_file_location("ctx_tuner",
-                                              HERE / "llama-context-tuner.py")
-ct = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(ct)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # tests/
+from bench import llama_context_tuner as ct  # noqa: E402
 
 
 def ok_log(tokens=4096):

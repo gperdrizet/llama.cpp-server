@@ -3,12 +3,12 @@
 This module is the reusable engine behind the benchmark tools in this
 directory. It is imported by:
 
-  * ``llama-server-optuna-bench.py`` -- the joint-space Optuna search (the
+  * ``llama_server_optuna_bench`` -- the joint-space Optuna search (the
     current tuning tool), which uses ``run_bench_launch`` for every trial and
     ``standardized_objective`` to score it;
-  * ``llama-context-tuner.py`` -- finds the largest safe ``--ctx-size`` for a
+  * ``llama_context_tuner`` -- finds the largest safe ``--ctx-size`` for a
     model, reusing the same container launch + PP decay-curve parser;
-  * the host-side self-tests.
+  * the host-side self-tests in ``tests/self_tests``.
 
 It deliberately contains NO command-line sweep of its own: the old four-phase
 ``llama-server-bench.py`` sweep was superseded by the Optuna search and has

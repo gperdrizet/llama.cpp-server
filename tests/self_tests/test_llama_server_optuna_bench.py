@@ -1,14 +1,13 @@
-'''Host-side self-test for llama-server-optuna-bench.py (no GPU, no real docker).
+'''Host-side self-test for bench.llama_server_optuna_bench (no GPU, no docker).
 
 Verifies the config→search-space logic, the objective math, and drives a
 real study.optimize with `run_bench_launch` MOCKED (the launch returns a
 synthetic server log) — so the whole Optuna plumbing (SQLite DB, sampling,
 per-run files, pruning) is exercised without a GPU. Run with:
 
-    .venv/bin/python tests/test_llama_server_optuna_bench.py
+    .venv/bin/python tests/self_tests/test_llama_server_optuna_bench.py
 '''
 
-import importlib.util
 import json
 import shutil
 import sys
@@ -25,11 +24,9 @@ if hasattr(optuna, "TrialPruned"):
 else:  # pragma: no cover - older Optuna
     TrialPrunedError = optuna.TrialPrunedError
 
-HERE = Path(__file__).resolve().parent
-_spec = importlib.util.spec_from_file_location(
-    "llm_srv_optuna", HERE / "llama-server-optuna-bench.py")
-o = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(o)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # tests/
+from bench import llama_server_optuna_bench as o  # noqa: E402
+from bench import paths  # noqa: E402
 
 
 def synth_log():
@@ -669,8 +666,8 @@ def test_main_dry_run():
         cfg_file = tmp_path / "cfg.json"
         cfg = dict(CFG)
         # real prompt paths so the dry-run validation passes
-        cfg["prompt_file"] = [str(HERE / "prompts" / "qwen3_8_27b_v1.txt"),
-                              str(HERE / "prompts" / "qwen3_8_27b_v2.txt")]
+        cfg["prompt_file"] = [str(paths.TESTS_DIR / "prompts" / "qwen3_8_27b_v1.txt"),
+                              str(paths.TESTS_DIR / "prompts" / "qwen3_8_27b_v2.txt")]
         # model + draft files need to exist; point at the prompts as stand-ins
         models = tmp_path / "models"
         models.mkdir()
@@ -689,7 +686,7 @@ def test_main_dry_run():
 
 
 if __name__ == "__main__":
-    print("llama-server-optuna-bench self-test:")
+    print("llama_server_optuna_bench self-test:")
     test_space_helpers()
     test_sample_params_deterministic_and_constraints()
     test_sample_params_ubatch_gt_batch_prunes()

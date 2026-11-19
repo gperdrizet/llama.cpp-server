@@ -1,22 +1,19 @@
-'''Host-side self-tests for inference-api-bench.py (no network, no API key).
+'''Host-side self-tests for bench.inference_api_bench (no network, no API key).
 
 Mocks urllib to feed synthetic SSE chunks and checks model filtering, body
 construction, exact-timings math and the wall-clock fallback. Run with:
 
-    .venv/bin/python tests/test_inference_api_bench.py
+    .venv/bin/python tests/self_tests/test_inference_api_bench.py
 '''
 
-import importlib.util
 import json
 import re
+import sys
 from pathlib import Path
 from unittest import mock
 
-HERE = Path(__file__).resolve().parent
-_spec = importlib.util.spec_from_file_location("api_bench",
-                                              HERE / "inference-api-bench.py")
-api = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(api)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # tests/
+from bench import inference_api_bench as api  # noqa: E402
 
 
 class FakeResponse:

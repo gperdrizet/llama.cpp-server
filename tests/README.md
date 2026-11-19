@@ -1,15 +1,38 @@
 # Benchmark tooling
 
-Four tools, all in this directory:
+## Layout
+
+```
+tests/
+├── bench/                  # Python package: all tooling + the shared engine
+│   ├── paths.py            # canonical repo/tests/results paths
+│   ├── llama_server_lib.py # shared Docker launch + measurement engine
+│   ├── llama_server_optuna_bench.py
+│   ├── llama_context_tuner.py
+│   ├── inference_api_bench.py
+│   └── make_bench_prompt.py
+├── self_tests/             # host-side self-tests (no GPU/Docker/network)
+├── config/<tool>/<model>.json
+├── prompts/
+├── results/<tool>/         # run outputs
+└── llama-server-bench-results.ipynb   # legacy analysis of old results
+```
+
+Run a tool as a script from the repository root:
+`.venv/bin/python tests/bench/<tool>.py --config tests/config/<tool>/<model>.json`.
+They are also importable as `from bench import <tool>` (with `tests/` on
+`sys.path`) — both forms resolve paths identically via `bench/paths.py`.
+
+Four tools:
 
 | Tool | What it answers | How it drives inference |
 | --- | --- | --- |
-| `llama-server-optuna-bench.py` | Best llama-server flags for a model (joint Optuna search) | Local Dockerized `llama-server` |
-| `llama-context-tuner.py` | Largest safe `--ctx-size` for a model | Local Dockerized `llama-server` |
-| `inference-api-bench.py` | PP / generation rates of a **live** OpenAI-compatible endpoint | HTTPS (no Docker, no GPU) |
-| `make-bench-prompt.py` | Builds the long realistic test prompts | — (offline helper) |
+| `llama_server_optuna_bench.py` | Best llama-server flags for a model (joint Optuna search) | Local Dockerized `llama-server` |
+| `llama_context_tuner.py` | Largest safe `--ctx-size` for a model | Local Dockerized `llama-server` |
+| `inference_api_bench.py` | PP / generation rates of a **live** OpenAI-compatible endpoint | HTTPS (no Docker, no GPU) |
+| `make_bench_prompt.py` | Builds the long realistic test prompts | — (offline helper) |
 
-The two local tools share `llama_server_lib.py`, which contains the Docker
+The two local tools share `llama_server_lib`, which contains the Docker
 launch driver, the PP decay-curve log parser, the standardized-workload
 objective, and the VRAM / production guards. They need no local llama.cpp
 install — the container image is pulled. Results go to
@@ -28,13 +51,13 @@ install — the container image is pulled. Results go to
 > the duration of the run.** The router itself keeps running but returns 502
 > for the pyrite-local models until the restart. Pass `--no-stop-production`
 > to opt out (production must then already be down, or the
-> `min_free_vram_gib` gate refuses the launches). `inference-api-bench.py`
+> `min_free_vram_gib` gate refuses the launches). `inference_api_bench.py`
 > never touches Docker or the local GPUs.
 
-## Shared engine: `llama_server_lib.py`
+## Shared engine: `llama_server_lib`
 
 Not a CLI — the reusable machinery imported by the Optuna search and the
-context tuner (and exercised by `test_llama_server_lib.py`):
+context tuner (and exercised by `self_tests/test_llama_server_lib.py`):
 
 - `run_bench_launch()` — one launch: preflight the model/prompt files and free
   VRAM, `docker run` the image (model → `/models`, prompt → `/prompts`, a temp
@@ -88,7 +111,7 @@ kept so any score can be re-derived offline; the raw `wall_request_s`,
 `finish_reason` and per-token `gen_curve` (`[[predicted_n, predicted_ms], …]`)
 are retained too.
 
-## `llama-server-optuna-bench.py` — Optuna search over the whole parameter space
+## `llama_server_optuna_bench.py` — Optuna search over the whole parameter space
 
 The current tuning tool. It hands the **whole joint space** to Optuna's TPE
 sampler, which learns interactions between axes (e.g. cache dtype only matters
@@ -163,7 +186,7 @@ lower it on smaller hosts).
 
 `prompt_file` is a file or comma-separated list of versions; every trial runs
 with **every** prompt and the T\* objective averages across them. The shipped
-configs use the three ~32k-token prompts from `make-bench-prompt.py` and
+configs use the three ~32k-token prompts from `make_bench_prompt.py` and
 `ntg: 4096`.
 
 ### Flash-Next (MoE, CPU-offloaded) config
@@ -189,14 +212,14 @@ three quants are sharded GGUFs (~71–104 GiB) that cannot fit in 2×16 GB of VR
 
 ```bash
 # validate config/search space without stopping production or launching:
-.venv/bin/python tests/llama-server-optuna-bench.py \
+.venv/bin/python tests/bench/llama_server_optuna_bench.py \
     --config tests/config/llama-server-optuna-bench/Qwen3.8-27B.json --dry-run
 # run (resumable — re-run to add trials):
-.venv/bin/python tests/llama-server-optuna-bench.py \
+.venv/bin/python tests/bench/llama_server_optuna_bench.py \
     --config tests/config/llama-server-optuna-bench/Qwen3.8-27B.json --n-trials 20
 ```
 
-## `llama-context-tuner.py` — find the max safe `--ctx-size`
+## `llama_context_tuner.py` — find the max safe `--ctx-size`
 
 Answers: *given every other server flag for a model (from its config), what is
 the largest `--ctx-size` that still loads and serves a request?*
@@ -233,15 +256,15 @@ VRAM boundary, so the tuning-oriented VRAM floor must not refuse launches.
 
 ```bash
 # validate inputs, print the probe ladder, no launches:
-.venv/bin/python tests/llama-context-tuner.py \
+.venv/bin/python tests/bench/llama_context_tuner.py \
     --config tests/config/llama-context-tuner/Qwen3.8-27B.json --dry-run
 # run the search:
-.venv/bin/python tests/llama-context-tuner.py \
+.venv/bin/python tests/bench/llama_context_tuner.py \
     --config tests/config/llama-context-tuner/Qwen3.8-27B.json
 # quick overrides: --min-ctx, --native-ctx, --no-stop-production
 ```
 
-## `inference-api-bench.py` — benchmark a live inference API
+## `inference_api_bench.py` — benchmark a live inference API
 
 Tests every model exposed by a live OpenAI-compatible endpoint, intended for
 `https://promptlyapi.com/v1` (see `/home/siderealyear/promptly`). **No Docker,
@@ -277,19 +300,19 @@ per measured request) plus a `.summary.json` with per-model means
 
 ```bash
 # validate config/prompts, no network:
-.venv/bin/python tests/inference-api-bench.py \
+.venv/bin/python tests/bench/inference_api_bench.py \
     --config tests/config/inference-api-bench/promptly-prod.json --dry-run
 # list the discovered (filtered) catalog without benchmarking:
-PROMPTLY_API_KEY=... .venv/bin/python tests/inference-api-bench.py \
+PROMPTLY_API_KEY=... .venv/bin/python tests/bench/inference_api_bench.py \
     --config tests/config/inference-api-bench/promptly-prod.json --list-models
 # benchmark all text models:
-PROMPTLY_API_KEY=... .venv/bin/python tests/inference-api-bench.py \
+PROMPTLY_API_KEY=... .venv/bin/python tests/bench/inference_api_bench.py \
     --config tests/config/inference-api-bench/promptly-prod.json
 # override per-run: --url, --api-key, --models M1,M2, --exclude REGEX,
 #                  --runs N, --ntg N
 ```
 
-## `make-bench-prompt.py` — build the test prompt
+## `make_bench_prompt.py` — build the test prompt
 
 Builds a long, realistic prompt from real Claude Code transcripts. It harvests
 the full realistic content of an agentic session — assistant/user **text**,
@@ -307,11 +330,11 @@ one big tool result. Point a config at any file (including a hand-written one)
 to try variations.
 
 ```bash
-.venv/bin/python tests/make-bench-prompt.py \
+.venv/bin/python tests/bench/make_bench_prompt.py \
     --out tests/prompts/qwen3_8_27b_v1.txt --target 32000 --offset 0
-.venv/bin/python tests/make-bench-prompt.py \
+.venv/bin/python tests/bench/make_bench_prompt.py \
     --out tests/prompts/qwen3_8_27b_v2.txt --target 32000 --offset 487000
-.venv/bin/python tests/make-bench-prompt.py \
+.venv/bin/python tests/bench/make_bench_prompt.py \
     --out tests/prompts/qwen3_8_27b_v3.txt --target 32000 --offset 974000
 ```
 
@@ -320,10 +343,10 @@ to try variations.
 No GPU, no real docker, no network. Run before trusting a real sweep:
 
 ```bash
-.venv/bin/python tests/test_llama_server_lib.py          # shared engine: log parser, launch, guards
-.venv/bin/python tests/test_llama_server_optuna_bench.py # config→space, T* math, version guard, tiny study
-.venv/bin/python tests/test_llama_context_tuner.py       # probe/bisect, OOM classification, non-OOM abort
-.venv/bin/python tests/test_inference_api_bench.py       # model filtering, body, timings math, wall fallback
+.venv/bin/python tests/self_tests/test_llama_server_lib.py             # shared engine: log parser, launch, guards
+.venv/bin/python tests/self_tests/test_llama_server_optuna_bench.py    # config→space, T* math, version guard, tiny study
+.venv/bin/python tests/self_tests/test_llama_context_tuner.py          # probe/bisect, OOM classification, non-OOM abort
+.venv/bin/python tests/self_tests/test_inference_api_bench.py          # model filtering, body, timings math, wall fallback
 ```
 
 `test_llama_server_optuna_bench.py` includes a real (tiny) `study.optimize`

@@ -1,22 +1,20 @@
-'''Host-side self-test for llama_server_lib.py (no GPU, no real docker).
+'''Host-side self-test for bench.llama_server_lib (no GPU, no real docker).
 
 Verifies the pure logic (log parsing, sweep expansion) and drives run_launch
 with run_bench_launch mocked to confirm result rows land in the JSONL and
 failures are recorded. Run with:
 
-    .venv/bin/python tests/test_llama_server_lib.py
+    .venv/bin/python tests/self_tests/test_llama_server_lib.py
 '''
 
-import importlib.util
 import json
 import sys
 from pathlib import Path
 from unittest import mock
 
 HERE = Path(__file__).resolve().parent
-_spec = importlib.util.spec_from_file_location("llama_server_lib", HERE / "llama_server_lib.py")
-b = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(b)
+sys.path.insert(0, str(HERE.parent))  # tests/ — makes the `bench` package importable
+from bench import llama_server_lib as b  # noqa: E402
 
 
 def synth_log():

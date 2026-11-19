@@ -1,0 +1,46 @@
+{
+ "tool": "llama-server-optuna-bench",
+ "study": "Qwen3.8-27B-optuna",
+ "trial": 31,
+ "run": 1,
+ "prompt": "qwen3_8_27b_v1.txt",
+ "params": {
+  "quant": "UD-Q4_K_M",
+  "--flash-attn": "on",
+  "--split-mode": "layer",
+  "--cache-type-k": "q4_0",
+  "--cache-type-v": "q8_0",
+  "--batch-size": "8192",
+  "--ubatch-size": "4096"
+ },
+ "spec_mode": "ngram-simple",
+ "spec_flags": {
+  "--spec-type": "ngram-simple",
+  "--spec-draft-n-max": 59
+ },
+ "model_file": "Qwen3.8-27B-UD-Q4_K_M.gguf",
+ "cell": {
+  "--ctx-size": "131072",
+  "--threads": "12",
+  "--threads-batch": "12",
+  "--device": "CUDA0,CUDA1",
+  "--n-gpu-layers": "-1",
+  "--flash-attn": "on",
+  "--split-mode": "layer",
+  "--cache-type-k": "q4_0",
+  "--cache-type-v": "q8_0",
+  "--batch-size": "8192",
+  "--ubatch-size": "4096"
+ },
+ "ntg": 4096,
+ "status": "error",
+ "timestamp": "2026-11-18T12:07:28.081581+00:00",
+ "error": "completion request failed: RemoteDisconnected('Remote end closed connection without response')",
+ "objective_s": null,
+ "server_log_tail": "slot decode token, id=1639, n_ctx = 131072, n_tokens = 36021, truncated = 0\n4.29.307.597 D set_adapters_lora: adapters = (nil)\n4.29.307.597 D adapters_lora_are_same: adapters = (nil)\n4.29.307.598 D set_embeddings: value = 0\n4.29.307.600 D srv        decode: n_batch (effective) = 8192, off = 0\n4.29.307.600 D que  yield_to_que: yielding to queue\n4.29.307.612 D que  process_new_: processing task, id = 56\n4.29.307.613 D srv  process_sing: decoding, decline task, id_task = 56\n4.29.307.614 D que  process_new_: task declined, id = 56\n4.29.418.195 D que  yield_to_que: done yielding to queue\n4.29.418.200 D que  yield_to_que: yielding to queue\n4.29.418.213 D que  process_new_: processing task, id = 56\n4.29.418.215 D srv  process_sing: decoding, decline task, id_task = 56\n4.29.418.215 D que  process_new_: task declined, id = 56\n4.29.418.227 D que  yield_to_que: done yielding to queue\n4.29.418.953 D slot process_toke: id  0 | task 0 | n_gen = 51, n_remaining = 4045, next token: 12305 'python'\n4.29.418.959 D que    start_loop: waiting for new tasks\n4.29.418.959 D que    start_loop: processing new tasks\n4.29.418.961 D que  process_new_: processing task, id = 56\n4.29.418.963 D que    start_loop: update slots\n4.29.418.964 D srv  update_slots: posting NEXT_RESPONSE\n4.29.418.968 D que          post: new task, id = 57, front = 0\n4.29.418.972 D slot get_n_draft_: id  0 | task 0 | max possible draft: 4044\n4.29.419.059 D que  yield_to_que: yielding to queue\n4.29.419.078 D que  process_new_: processing task, id = 57\n4.29.419.082 D srv  process_sing: decoding, decline task, id_task = 57\n4.29.419.082 D que  process_new_: task declined, id = 57\n4.29.419.139 D que  yield_to_que: done yielding to queue\n4.29.419.144 D slot handle_last_: id  0 | task 0 | slot decode token, id=12305, n_ctx = 131072, n_tokens = 36022, truncated = 0\n4.29.419.150 D set_adapters_lora: adapters = (nil)\n4.29.419.150 D adapters_lora_are_same: adapters = (nil)\n4.29.419.151 D set_embeddings: value = 0\n4.29.419.153 D srv        decode: n_batch (effective) = 8192, off = 0\n4.29.419.154 D que  yield_to_que: yielding to queue\n4.29.419.165 D que  process_new_: processing task, id = 57\n4.29.419.166 D srv  process_sing: decoding, decline task, id_task = 57\n4.29.419.166 D que  process_new_: task declined, id = 57\n4.29.529.451 D que  yield_to_que: done yielding to queue\n4.29.529.457 D que  yield_to_que: yielding to queue\n4.29.529.470 D que  process_new_: processing task, id = 57\n4.29.529.471 D srv  process_sing: decoding, decline task, id_task = 57\n4.29.529.472 D que  process_new_: task declined, id = 57\n4.29.529.484 D que  yield_to_que: done yielding to queue\n4.29.530.214 D slot process_toke: id  0 | task 0 | n_gen = 52, n_remaining = 4044, next token:    18 '3'\n4.29.530.220 D que    start_loop: waiting for new tasks\n4.29.530.221 D que    start_loop: processing new tasks\n4.29.530.223 D que  process_new_: processing task, id = 57\n4.29.530.225 D que    start_loop: update slots\n4.29.530.226 D srv  update_slots: posting NEXT_RESPONSE\n4.29.530.230 D que          post: new task, id = 58, front = 0\n4.29.530.235 D slot get_n_draft_: id  0 | task 0 | max possible draft: 4043\n4.29.530.323 D que  yield_to_que: yielding to queue\n4.29.530.343 D que  process_new_: processing task, id = 58\n4.29.530.347 D srv  process_sing: decoding, decline task, id_task = 58\n4.29.530.347 D que  process_new_: task declined, id = 58\n4.29.530.412 D que  yield_to_que: done yielding to queue\n4.29.530.417 D slot handle_last_: id  0 | task 0 | slot decode token, id=18, n_ctx = 131072, n_tokens = 36023, truncated = 0\n4.29.530.423 D set_adapters_lora: adapters = (nil)\n4.29.530.423 D adapters_lora_are_same: adapters = (nil)\n4.29.530.424 D set_embeddings: value = 0\n4.29.530.426 D srv        decode: n_batch (effective) = 8192, off = 0\n4.29.530.426 D que  yield_to_que: yielding to queue\n4.29.530.438 D que  process_new_: processing task, id = 58\n4.29.530.439 D srv  process_sing: decoding, decline task, id_task = 58\n4.29.530.439 D que  process_new_: task declined, id = 58\n4.29.641.097 D que  yield_to_que: done yielding to queue\n4.29.641.102 D que  yield_to_que: yielding to queue\n4.29.641.116 D que  process_new_: processing task, id = 58\n4.29.641.118 D srv  process_sing: decoding, decline task, id_task = 58\n4.29.641.118 D que  process_new_: task declined, id = 58\n4.29.641.132 D que  yield_to_que: done yielding to queue\n4.29.641.858 D slot process_toke: id  0 | task 0 | n_gen = 53, n_remaining = 4043, next token:   471 ' -'\n4.29.641.864 D que    start_loop: waiting for new tasks\n4.29.641.864 D que    start_loop: processing new tasks\n4.29.641.866 D que  process_new_: processing task, id = 58\n4.29.641.868 D que    start_loop: update slots\n4.29.641.870 D srv  update_slots: posting NEXT_RESPONSE\n4.29.641.873 D que          post: new task, id = 59, front = 0\n4.29.641.878 D slot get_n_draft_: id  0 | task 0 | max possible draft: 4042\n4.29.641.976 D que  yield_to_que: yielding to queue\n4.29.641.985 D common_ngram_simple_draft: #tokens = 36024: found matching pattern at pos 35764, length 12, draft length 48\n4.29.641.989 D spec common_specu: called impl ngram-simple, hist size = 36024, call_count = 53, gen = 48\n4.29.641.997 D que  process_new_: processing task, id = 59\n4.29.641.998 D srv  process_sing: decoding, decline task, id_task = 59\n4.29.641.998 D que  process_new_: task declined, id = 59\n4.29.642.011 D que  yield_to_que: done yielding to queue\n4.29.781.256 D slot   operator(): id  0 | task 0 | created speculative checkpoint (pos_min = 36023, pos_max = 36023, n_tokens = 36024, size = 149.626 MiB, draft = 0.000 MiB)\n4.29.781.263 D slot handle_last_: id  0 | task 0 | generate_draft: id=471, #tokens=36024, #draft=48, pos_next=36024\n4.29.781.278 D set_adapters_lora: adapters = (nil)\n4.29.781.278 D adapters_lora_are_same: adapters = (nil)\n4.29.781.279 D set_embeddings: value = 0\n4.29.781.287 D srv        decode: n_batch (effective) = 8192, off = 0\n4.29.781.288 D que  yield_to_que: yielding to queue\n4.29.781.322 D que  process_new_: processing task, id = 59\n4.29.781.323 D srv  process_sing: decoding, decline task, id_task = 59\n4.29.781.324 D que  process_new_: task declined, id = 59\n4.30.597.961 E CUDA error: out of memory\n4.30.597.967 E   current device: 1, in function alloc at /app/ggml/src/ggml-cuda/ggml-cuda.cu:631\n4.30.597.967 E   cuMemCreate(&handle, reserve_size, &prop, 0)\n/app/ggml/src/ggml-cuda/ggml-cuda.cu:111: CUDA error\nlibggml-base.so.0(+0x18366)[0x7036fe69f366]\nlibggml-base.so.0(+0x187ea)[0x7036fe69f7ea]\nlibggml-base.so.0(ggml_abort+0x15b)[0x7036fe69f9cb]\n/app/libggml-cuda.so(_Z15ggml_cuda_errorPKcS0_S0_iS0_+0xb5)[0x7036ed21d135]\n/app/libggml-cuda.so(_ZN18ggml_cuda_pool_vmm5allocEmPm+0x5a7)[0x7036ed23c4d7]\n/app/libggml-cuda.so(+0x30d7bb)[0x7036ed2297bb]\n/app/libggml-cuda.so(+0x31c306)[0x7036ed238306]\nlibggml-base.so.0(ggml_backend_sched_graph_compute_async+0x40c)[0x7036fe6bf04c]\nlibllama.so.0(_ZN13llama_context13graph_computeEP11ggml_cgraphb+0xdb)[0x7036fe9cc6db]\nlibllama.so.0(_ZN13llama_context14process_ubatchERK12llama_ubatch14llm_graph_typeP22llama_memory_context_iR11ggml_status+0x134)[0x7036fe9d00d4]\nlibllama.so.0(_ZN13llama_context6decodeERK15llama_batch_ext+0x42a)[0x7036fe9da37a]\nlibllama-server-impl.so(_ZNSt17_Function_handlerIFvvEZN19server_context_impl6decodeERiiEUlvE_E9_M_invokeERKSt9_Any_data+0x52)[0x7036ffa382c2]\nlibllama-server-impl.so(_ZN12server_queue14yield_to_queueEOSt8functionIFvvEE+0xa6)[0x7036ff9ded66]\nlibllama-server-impl.so(_ZN19server_context_impl6decodeERii+0x193)[0x7036ffa51453]\nlibllama-server-impl.so(_ZN19server_context_impl12update_slotsEv+0x566)[0x7036ffa53196]\nlibllama-server-impl.so(_ZN12server_queue10start_loopEl+0x125)[0x7036ff9df8f5]\nlibllama-server-impl.so(+0x100600)[0x7036ff976600]\nlibllama-server-impl.so(_Z12llama_serveriPPc+0x11d2)[0x7036ff977db2]\n/lib/x86_64-linux-gnu/libc.so.6(+0x2a1ca)[0x7036ff3d91ca]\n/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x8b)[0x7036ff3d928b]\n/app/llama-server(+0x1315)[0x55cef8185315]\n",
+ "error_lines": [
+  "CUDA error: out of memory",
+  "current device: 1, in function alloc at /app/ggml/src/ggml-cuda/ggml-cuda.cu:631",
+  "cuMemCreate(&handle, reserve_size, &prop, 0)"
+ ]
+}

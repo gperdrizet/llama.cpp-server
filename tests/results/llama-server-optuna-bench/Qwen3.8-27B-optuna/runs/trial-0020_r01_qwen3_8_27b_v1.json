@@ -1,0 +1,98 @@
+{
+ "tool": "llama-server-optuna-bench",
+ "study": "Qwen3.8-27B-optuna",
+ "trial": 20,
+ "run": 1,
+ "prompt": "qwen3_8_27b_v1.txt",
+ "params": {
+  "quant": "UD-IQ2_S",
+  "--flash-attn": "on",
+  "--split-mode": "layer",
+  "--cache-type-k": "f16",
+  "--cache-type-v": "q8_0",
+  "--batch-size": "8192",
+  "--ubatch-size": "4096"
+ },
+ "spec_mode": "ngram-simple",
+ "spec_flags": {
+  "--spec-type": "ngram-simple",
+  "--spec-draft-n-max": 62
+ },
+ "model_file": "Qwen3.8-27B-UD-IQ2_S.gguf",
+ "cell": {
+  "--ctx-size": "131072",
+  "--threads": "12",
+  "--threads-batch": "12",
+  "--device": "CUDA0,CUDA1",
+  "--n-gpu-layers": "-1",
+  "--flash-attn": "on",
+  "--split-mode": "layer",
+  "--cache-type-k": "f16",
+  "--cache-type-v": "q8_0",
+  "--batch-size": "8192",
+  "--ubatch-size": "4096"
+ },
+ "ntg": 4096,
+ "status": "ok",
+ "timestamp": "2026-11-18T09:10:38.583412+00:00",
+ "points": [
+  {
+   "n_tokens_cum": 8192,
+   "n_tokens_seg": 8192,
+   "t_cum_s": 37.28,
+   "t_seg_s": 37.28,
+   "tps_cum": 219.742,
+   "tps_seg": 219.742
+  },
+  {
+   "n_tokens_cum": 16384,
+   "n_tokens_seg": 8192,
+   "t_cum_s": 67.77,
+   "t_seg_s": 30.49,
+   "tps_cum": 241.759,
+   "tps_seg": 268.678
+  },
+  {
+   "n_tokens_cum": 24576,
+   "n_tokens_seg": 8192,
+   "t_cum_s": 101.63,
+   "t_seg_s": 33.86,
+   "tps_cum": 241.818,
+   "tps_seg": 241.937
+  },
+  {
+   "n_tokens_cum": 31872,
+   "n_tokens_seg": 7296,
+   "t_cum_s": 134.71,
+   "t_seg_s": 33.08,
+   "tps_cum": 236.597,
+   "tps_seg": 220.556
+  },
+  {
+   "n_tokens_cum": 35968,
+   "n_tokens_seg": 4096,
+   "t_cum_s": 162.03,
+   "t_seg_s": 27.32,
+   "tps_cum": 221.984,
+   "tps_seg": 149.927
+  }
+ ],
+ "prompt_eval": {
+  "n_tokens": 35972,
+  "t_ms": 172416.4,
+  "ms_per_tok": 4.79,
+  "tps": 208.63
+ },
+ "gen_eval": {
+  "n_tokens": 132,
+  "t_ms": 11914.0,
+  "ms_per_tok": 90.95,
+  "tps": 11.0
+ },
+ "response": {
+  "prompt_tokens": 35972,
+  "completion_tokens": 132,
+  "wall_request_s": 184.428
+ },
+ "objective_s": 184.428
+}

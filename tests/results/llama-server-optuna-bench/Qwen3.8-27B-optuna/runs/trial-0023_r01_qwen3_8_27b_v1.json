@@ -1,0 +1,106 @@
+{
+ "tool": "llama-server-optuna-bench",
+ "study": "Qwen3.8-27B-optuna",
+ "trial": 23,
+ "run": 1,
+ "prompt": "qwen3_8_27b_v1.txt",
+ "params": {
+  "quant": "UD-IQ2_S",
+  "--flash-attn": "on",
+  "--split-mode": "layer",
+  "--cache-type-k": "q4_0",
+  "--cache-type-v": "q4_0",
+  "--batch-size": "8192",
+  "--ubatch-size": "2048"
+ },
+ "spec_mode": "ngram-simple",
+ "spec_flags": {
+  "--spec-type": "ngram-simple",
+  "--spec-draft-n-max": 51
+ },
+ "model_file": "Qwen3.8-27B-UD-IQ2_S.gguf",
+ "cell": {
+  "--ctx-size": "131072",
+  "--threads": "12",
+  "--threads-batch": "12",
+  "--device": "CUDA0,CUDA1",
+  "--n-gpu-layers": "-1",
+  "--flash-attn": "on",
+  "--split-mode": "layer",
+  "--cache-type-k": "q4_0",
+  "--cache-type-v": "q4_0",
+  "--batch-size": "8192",
+  "--ubatch-size": "2048"
+ },
+ "ntg": 4096,
+ "status": "ok",
+ "timestamp": "2026-11-18T10:11:04.515423+00:00",
+ "points": [
+  {
+   "n_tokens_cum": 8192,
+   "n_tokens_seg": 8192,
+   "t_cum_s": 36.82,
+   "t_seg_s": 36.82,
+   "tps_cum": 222.488,
+   "tps_seg": 222.488
+  },
+  {
+   "n_tokens_cum": 16384,
+   "n_tokens_seg": 8192,
+   "t_cum_s": 65.68,
+   "t_seg_s": 28.86,
+   "tps_cum": 249.452,
+   "tps_seg": 283.853
+  },
+  {
+   "n_tokens_cum": 24576,
+   "n_tokens_seg": 8192,
+   "t_cum_s": 98.01,
+   "t_seg_s": 32.33,
+   "tps_cum": 250.75,
+   "tps_seg": 253.387
+  },
+  {
+   "n_tokens_cum": 32768,
+   "n_tokens_seg": 8192,
+   "t_cum_s": 133.77,
+   "t_seg_s": 35.76,
+   "tps_cum": 244.958,
+   "tps_seg": 229.083
+  },
+  {
+   "n_tokens_cum": 33920,
+   "n_tokens_seg": 1152,
+   "t_cum_s": 139.68,
+   "t_seg_s": 5.91,
+   "tps_cum": 242.841,
+   "tps_seg": 194.924
+  },
+  {
+   "n_tokens_cum": 35968,
+   "n_tokens_seg": 2048,
+   "t_cum_s": 152.07,
+   "t_seg_s": 12.39,
+   "tps_cum": 236.523,
+   "tps_seg": 165.295
+  }
+ ],
+ "prompt_eval": {
+  "n_tokens": 35972,
+  "t_ms": 157202.46,
+  "ms_per_tok": 4.37,
+  "tps": 228.83
+ },
+ "gen_eval": {
+  "n_tokens": 355,
+  "t_ms": 47228.59,
+  "ms_per_tok": 133.41,
+  "tps": 7.5
+ },
+ "response": {
+  "prompt_tokens": 35972,
+  "completion_tokens": 355,
+  "wall_request_s": 204.532
+ },
+ "objective_s": 204.532
+}

@@ -1,0 +1,122 @@
+{
+ "tool": "llama-server-optuna-bench",
+ "study": "Qwen3.8-27B-optuna",
+ "trial": 12,
+ "run": 3,
+ "prompt": "qwen3_8_27b_v3.txt",
+ "params": {
+  "quant": "UD-Q5_K_M",
+  "--flash-attn": "on",
+  "--split-mode": "layer",
+  "--cache-type-k": "q4_0",
+  "--cache-type-v": "q8_0",
+  "--batch-size": "4096",
+  "--ubatch-size": "512"
+ },
+ "spec_mode": "ngram-map-k",
+ "spec_flags": {
+  "--spec-type": "ngram-map-k",
+  "--spec-draft-n-max": 33
+ },
+ "model_file": "Qwen3.8-27B-UD-Q5_K_M.gguf",
+ "cell": {
+  "--ctx-size": "131072",
+  "--threads": "12",
+  "--threads-batch": "12",
+  "--device": "CUDA0,CUDA1",
+  "--n-gpu-layers": "-1",
+  "--flash-attn": "on",
+  "--split-mode": "layer",
+  "--cache-type-k": "q4_0",
+  "--cache-type-v": "q8_0",
+  "--batch-size": "4096",
+  "--ubatch-size": "512"
+ },
+ "ntg": 4096,
+ "status": "ok",
+ "timestamp": "2026-11-18T07:51:45.484998+00:00",
+ "points": [
+  {
+   "n_tokens_cum": 4096,
+   "n_tokens_seg": 4096,
+   "t_cum_s": 30.4,
+   "t_seg_s": 30.4,
+   "tps_cum": 134.737,
+   "tps_seg": 134.737
+  },
+  {
+   "n_tokens_cum": 8192,
+   "n_tokens_seg": 4096,
+   "t_cum_s": 50.65,
+   "t_seg_s": 20.25,
+   "tps_cum": 161.737,
+   "tps_seg": 202.272
+  },
+  {
+   "n_tokens_cum": 12288,
+   "n_tokens_seg": 4096,
+   "t_cum_s": 71.75,
+   "t_seg_s": 21.1,
+   "tps_cum": 171.261,
+   "tps_seg": 194.123
+  },
+  {
+   "n_tokens_cum": 16384,
+   "n_tokens_seg": 4096,
+   "t_cum_s": 93.72,
+   "t_seg_s": 21.97,
+   "tps_cum": 174.819,
+   "tps_seg": 186.436
+  },
+  {
+   "n_tokens_cum": 20480,
+   "n_tokens_seg": 4096,
+   "t_cum_s": 116.52,
+   "t_seg_s": 22.8,
+   "tps_cum": 175.764,
+   "tps_seg": 179.649
+  },
+  {
+   "n_tokens_cum": 24576,
+   "n_tokens_seg": 4096,
+   "t_cum_s": 140.21,
+   "t_seg_s": 23.69,
+   "tps_cum": 175.28,
+   "tps_seg": 172.9
+  },
+  {
+   "n_tokens_cum": 28237,
+   "n_tokens_seg": 3661,
+   "t_cum_s": 163.41,
+   "t_seg_s": 23.2,
+   "tps_cum": 172.798,
+   "tps_seg": 157.802
+  },
+  {
+   "n_tokens_cum": 28749,
+   "n_tokens_seg": 512,
+   "t_cum_s": 167.02,
+   "t_seg_s": 3.61,
+   "tps_cum": 172.129,
+   "tps_seg": 141.828
+  }
+ ],
+ "prompt_eval": {
+  "n_tokens": 28753,
+  "t_ms": 168774.55,
+  "ms_per_tok": 5.87,
+  "tps": 170.36
+ },
+ "gen_eval": {
+  "n_tokens": 673,
+  "t_ms": 78876.08,
+  "ms_per_tok": 117.38,
+  "tps": 8.52
+ },
+ "response": {
+  "prompt_tokens": 28753,
+  "completion_tokens": 673,
+  "wall_request_s": 247.731
+ },
+ "objective_s": 247.731
+}

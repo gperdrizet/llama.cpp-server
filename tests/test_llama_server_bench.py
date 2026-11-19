@@ -50,6 +50,123 @@ def test_parse_server_log():
     print("  test_parse_server_log  ok")
 
 
+def test_pp_time_at():
+    pts = [{"n_tokens_cum": 4096, "t_cum_s": 10.0},
+           {"n_tokens_cum": 8192, "t_cum_s": 22.0},
+           {"n_tokens_cum": 16384, "t_cum_s": 50.0}]
+    # interpolation inside the observed range (through (0,0) and the points)
+    assert b.pp_time_at(pts, 8192) == (22.0, False)
+    t, ext = b.pp_time_at(pts, 12288)
+    assert abs(t - 36.0) < 1e-9 and ext is False, (t, ext)
+    # beyond the last point: extend the final segment's marginal rate
+    # (16384-8192)/(50-22) = 8192/28 tokens per second
+    t, ext = b.pp_time_at(pts, 16384 + 8192)
+    assert ext is True and abs(t - (50.0 + 8192 / (8192 / 28.0))) < 1e-9, (t, ext)
+    # no curve -> unmeasurable
+    assert b.pp_time_at([], 100) == (None, True)
+    print("  test_pp_time_at  ok")
+
+
+def _stream_curve(n_gen, dt_ms, slope_ms_per_ctx=0.0, l_obs=32768, step=32):
+    '''Synthetic per-token decode curve [[n, t_ms], ...] for the objective tests.
+
+    Per-step cost = dt_ms + slope_ms_per_ctx * (l_obs + k); step 1 is free.
+    '''
+    pts = [[1, 0.0]]
+    t = 0.0
+    for k in range(2, n_gen + 1):
+        t += dt_ms + slope_ms_per_ctx * (l_obs + k)
+        if k % step == 0 or k == n_gen:
+            pts.append([k, round(t, 4)])
+    return pts
+
+
+def _stream_resp(curve, n_gen, l_obs=32768, finish="length"):
+    return {"prompt_tokens": l_obs, "completion_tokens": n_gen,
+            "finish_reason": finish, "wall_request_s": 1.0,
+            "timings": {"predicted_n": n_gen,
+                        "predicted_ms": curve[-1][1] if curve else 0.0,
+                        "prompt_n": l_obs},
+            "gen_curve": curve, "stream_chunks": len(curve)}
+
+
+def test_standardized_objective_short_output_not_rewarded():
+    '''A 256-token output must score the SAME as a 4096-token output (scaled up),
+    not faster -- and must be flagged low-confidence.'''
+    parsed = b.parse_server_log(synth_log())
+    cfg = {"objective": {"prompt_tokens": 32768, "output_tokens": 4096,
+                         "min_gen_tokens": 512, "gen_fit_min_steps": 16}}
+    long_ = b.standardized_objective(
+        parsed, _stream_resp(_stream_curve(4096, 39.0), 4096), cfg, 4096)
+    short = b.standardized_objective(
+        parsed, _stream_resp(_stream_curve(256, 39.0), 256), cfg, 4096)
+
+    assert long_["objective_mode"] == "stream-fit", long_
+    assert short["objective_mode"] == "stream-fit", short
+    # both are scored for the SAME 4096-token reference workload
+    assert abs(long_["objective_s"] - short["objective_s"]) < 0.05, (long_, short)
+    # flat per-step cost -> P(32768) + 39.0 ms * 4095 steps
+    pp = long_["objective_pp_s"]
+    assert abs(long_["objective_gen_s"] - 39.0 * 4095 / 1000.0) < 0.5, long_
+    assert abs(long_["objective_s"] - (pp + 39.0 * 4095 / 1000.0)) < 0.5, long_
+    # the full-length run is trustworthy; the 256-token one is flagged
+    assert long_["objective_low_confidence"] is False, long_
+    assert short["objective_low_confidence"] is True, short
+    reasons = " ".join(short["objective_low_confidence_reasons"])
+    assert "256 generated tokens" in reasons and "generation-fit steps" in reasons, reasons
+    print("  test_standardized_objective_short_output_not_rewarded  ok")
+
+
+def test_standardized_objective_context_growth_and_flags():
+    '''The per-token fit must capture decode slowing as the KV grows; the
+    fallback path and an early EOS must both be flagged.'''
+    parsed = b.parse_server_log(synth_log())
+    cfg = {"objective": {"prompt_tokens": 32768, "output_tokens": 4096,
+                         "min_gen_tokens": 512, "gen_fit_tail_steps": 64}}
+    flat = b.standardized_objective(
+        parsed, _stream_resp(_stream_curve(4096, 39.0, 0.0), 4096), cfg, 4096)
+    sloped = b.standardized_objective(
+        parsed, _stream_resp(_stream_curve(4096, 39.0, 0.002), 4096), cfg, 4096)
+    assert sloped["objective_s"] > flat["objective_s"] + 50, (flat, sloped)
+    assert sloped["objective_gen_fit_b_ms_per_ctx"] > 0, sloped
+
+    # no per-token curve -> midpoint fallback + low confidence
+    resp = {"prompt_tokens": 32768, "completion_tokens": 64,
+            "finish_reason": "length", "wall_request_s": 561.0,
+            "timings": {"predicted_n": 64, "predicted_ms": 1200.0}}
+    fb = b.standardized_objective(parsed, resp, cfg, 4096)
+    assert fb["objective_mode"] == "linear-midpoint", fb
+    assert fb["objective_gen_scale"] > 1.0, fb     # scaled up to the longer context
+    assert fb["objective_low_confidence"] is True, fb
+    assert any("midpoint" in r for r in fb["objective_low_confidence_reasons"]), fb
+
+    # early EOS is flagged even when the curve is otherwise fine
+    eos = b.standardized_objective(
+        parsed, _stream_resp(_stream_curve(1024, 39.0), 1024, finish="stop"),
+        cfg, 4096)
+    assert eos["objective_low_confidence"] is True, eos
+    assert any("finish_reason=stop" in r for r in eos["objective_low_confidence_reasons"]), eos
+    print("  test_standardized_objective_context_growth_and_flags  ok")
+
+
+def test_standardized_objective_pp_only():
+    '''The phased PP sweep runs with ntg=1: the reference is pure PP, the free
+    first token costs nothing, and nothing is flagged.'''
+    parsed = b.parse_server_log(synth_log())
+    cfg = {"objective": {"prompt_tokens": 32768, "output_tokens": 1}}
+    resp = {"prompt_tokens": 32768, "completion_tokens": 1,
+            "finish_reason": "length", "wall_request_s": 140.2,
+            "timings": {"predicted_n": 1, "predicted_ms": 0.0},
+            "gen_curve": [[1, 0.0]]}
+    std = b.standardized_objective(parsed, resp, cfg, 1)
+    assert std["objective_mode"] == "pp-only", std
+    assert std["objective_gen_s"] == 0.0, std
+    assert std["objective_s"] == std["objective_pp_s"], std
+    assert std["objective_s"] and std["objective_s"] > 0, std
+    assert std["objective_low_confidence"] is False, std
+    print("  test_standardized_objective_pp_only  ok")
+
+
 def test_expand_cells():
     base = {
         "--flash-attn": "on",
@@ -77,14 +194,62 @@ def test_model_specs():
     # plain model_file still works (quant = the file stem)
     specs = b.model_specs_from_config({"model_file": "m.gguf"})
     assert specs == [{"quant": "m", "model_file": "m.gguf"}], specs
+    # sharded GGUFs: explicit quant -> first-shard filename mapping
+    specs = b.model_specs_from_config({
+        "model_base": "Qwen3.8-Flash-Next-UD",
+        "quants": "IQ2_XS,IQ3_XXS",
+        "model_files": {
+            "IQ2_XS": "Qwen3.8-Flash-Next-UD-IQ2_XS-00001-of-00003.gguf",
+            "IQ3_XXS": "Qwen3.8-Flash-Next-UD-IQ3_XXS-00001-of-00004.gguf",
+        }})
+    assert specs == [
+        {"quant": "IQ2_XS",
+         "model_file": "Qwen3.8-Flash-Next-UD-IQ2_XS-00001-of-00003.gguf"},
+        {"quant": "IQ3_XXS",
+         "model_file": "Qwen3.8-Flash-Next-UD-IQ3_XXS-00001-of-00004.gguf"},
+    ], specs
+    try:
+        b.model_specs_from_config({
+            "model_base": "x", "quants": "A", "model_files": {"B": "b.gguf"}})
+        raise AssertionError("expected missing-quant error")
+    except ValueError as e:
+        assert "model_files" in str(e), e
     print("  test_model_specs  ok")
+
+
+def test_bool_flag_command():
+    '''Bare switches emit no value; "off" uses the negated form when available.'''
+    cmd = b._build_server_command(
+        {}, {"--ctx-size": "131072", "--cpu-moe": "on",
+             "--repack": "off", "--kv-offload": "on"}, {}, "m.gguf")
+    assert cmd.count("--cpu-moe") == 1, cmd
+    assert "--no-repack" in cmd and "--repack" not in cmd, cmd
+    assert "--kv-offload" in cmd and "--no-kv-offload" not in cmd, cmd
+    assert "on" not in cmd and "off" not in cmd, cmd  # no stray value tokens
+    assert cmd[cmd.index("--ctx-size") + 1] == "131072", cmd
+    # spec flags go through the same helper
+    cmd = b._build_server_command({}, {}, {"--spec-draft-cpu-moe": "on"}, "m.gguf")
+    assert cmd.count("--spec-draft-cpu-moe") == 1, cmd
+    try:
+        b._build_server_command({}, {"--repack": "maybe"}, {}, "m.gguf")
+        raise AssertionError("expected bad bool value error")
+    except ValueError as e:
+        assert "--repack" in str(e), e
+    print("  test_bool_flag_command  ok")
 
 
 def test_run_launch_ok():
     ok_result = {
         "status": "ok",
-        "response": {"prompt_tokens": 131072, "completion_tokens": 0,
-                     "wall_request_s": 560.5},
+        "response": {
+            "prompt_tokens": 131072, "completion_tokens": 64,
+            "finish_reason": "length",
+            "wall_request_s": 560.5,
+            "timings": {"prompt_n": 131072, "prompt_ms": 560000.0,
+                        "predicted_n": 64, "predicted_ms": 1200.0},
+            "gen_curve": [[1, 0.0], [32, 600.0], [64, 1200.0]],
+            "stream_chunks": 66,
+        },
         "server_log": synth_log(),
     }
     config = {"model_name": "M", "model_base": "M",
@@ -118,6 +283,22 @@ def test_run_launch_ok():
                 8192 / (50.00 - 24.00), 69082 / (367.36 - 50.00),
                 45606 / (560.00 - 367.36)]
     assert abs(last["pp_auc"] - round(sum(tps_segs), 3)) < 0.5, last["pp_auc"]
+    # raw request facts are now retained for offline re-analysis
+    assert last["finish_reason"] == "length"
+    assert last["completion_tokens_http"] == 64
+    assert last["timings_predicted_n"] == 64
+    assert last["gen_curve_points"] == 3
+    # ... and the standardized objective (ntg=0 here -> pure-PP reference)
+    assert last["objective_mode"] == "pp-only", last
+    assert last["objective_gen_s"] == 0.0
+    assert last["objective_ref_prompt_tokens"] == 32768
+    # P(32768) interpolates between the (16384, 50.0) and (85466, 367.36) points
+    expected_pp = 50.0 + (32768 - 16384) / (85466 - 16384) * (367.36 - 50.0)
+    assert abs(last["objective_pp_s"] - round(expected_pp, 4)) < 1e-3, last
+    assert abs(last["objective_s"] - round(expected_pp, 4)) < 1e-3, last
+    # the full per-token curve rides ONLY on the last point row
+    assert last["gen_curve"] == [[1, 0.0], [32, 600.0], [64, 1200.0]]
+    assert all("gen_curve" not in r for r in point_rows[:-1])
     # the returned launch summary is the same dict stamped on the rows
     assert counter == 1 and launch_sum["pp_tps"] == 234.06, (counter, launch_sum)
     print("  test_run_launch_ok  ok")
@@ -347,8 +528,13 @@ if __name__ == "__main__":
     print("Running llama-server-bench self-tests:")
     try:
         test_parse_server_log()
+        test_pp_time_at()
+        test_standardized_objective_short_output_not_rewarded()
+        test_standardized_objective_context_growth_and_flags()
+        test_standardized_objective_pp_only()
         test_expand_cells()
         test_model_specs()
+        test_bool_flag_command()
         test_run_launch_ok()
         test_run_launch_error_recorded()
         test_run_launch_no_output()

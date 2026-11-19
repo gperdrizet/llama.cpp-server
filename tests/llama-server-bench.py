@@ -30,12 +30,19 @@ For every (sweep cell, spec variant, prompt version, run) the script:
      model-load log cannot deadlock a pipe), waits until the model is actually
      loaded (polls /v1/models for the alias, because /health answers 200 while
      the model is still being read in), then POSTs the prompt to
-     `/v1/completions` with `max_tokens = ntg` (1 => PP only), reads the
-     response, and shuts the server down.
+     `/v1/completions` with `max_tokens = ntg` (1 => PP only), **`stream: true`
+     and `timings_per_token: true`**, consumes the SSE stream, and shuts the
+     server down. Every chunk carries a `timings` snapshot, so the driver
+     returns the per-token decode curve as well as `finish_reason`, the exact
+     HTTP token counts and the final `timings` object — raw data, no filtering.
   3. The server log is parsed (host side, pure functions) into the occupancy
      curve: the cumulative progress points are converted to per-segment
      (tokens, seconds, rate) rows, and the two summary lines (`prompt eval
      time`, `eval time`) give the final PP and generation rates.
+  4. Both sources feed `standardized_objective()`: the time for a FIXED
+     reference workload (T* = P(L0) + G(L0, N0)) so a model that emits EOS
+     early is scaled UP rather than rewarded for a shorter answer. Short /
+     unmeasurable extrapolations are flagged, never dropped.
 
 Output
 ------
@@ -47,6 +54,14 @@ Directly loadable by pandas: filter `status=="ok"` and plot `tps_cum`/`tps_seg`
 (y) vs `n_tokens_cum` (x), grouped by condition. Every condition is recorded,
 including failures (status `error`/`no_output`), so a sweep leaves a complete,
 analyzable trail. A `.summary.json` records the config + launch list.
+
+Alongside `pp_auc` (the phase winner metric) each row also carries the raw
+request facts — `finish_reason`, `completion_tokens_http`, `prompt_tokens_http`,
+`timings_predicted_n`/`_ms`, `wall_request_s` — and the standardized-workload
+objective `objective_s` (T*) with its audit fields (`objective_mode`,
+`objective_low_confidence[_reasons]`, `objective_pp_s`, `objective_gen_s`, the
+fit coefficients, the observed token count). The full per-token `gen_curve` is
+written only on the last point row of each launch.
 
 Four-phase sweep
 ----------------
@@ -145,6 +160,35 @@ SERVER_BIN = "/app/llama-server"
 # Flags whose comma-separated values are atomic, never to be swept.
 NON_SWEEP_FLAGS = {"--device"}
 
+# Bare CLI switches: llama.cpp takes NO value for these. The config still says
+# "on"/"off" so TPE can sweep them; emit the true form or the negated form
+# (where one exists) instead of appending a stray token. A `None` false form
+# means "off" is simply the default (omit the flag).
+BOOL_FLAGS = {
+    "--cpu-moe":            ("--cpu-moe", None),
+    "--spec-draft-cpu-moe": ("--spec-draft-cpu-moe", None),
+    "--repack":             ("--repack", "--no-repack"),
+    "--kv-offload":         ("--kv-offload", "--no-kv-offload"),
+    "--no-host":            ("--no-host", None),
+}
+
+
+def extend_cli_flags(cmd: list, flags: dict) -> None:
+    '''Append a config flag dict to an argv list, handling bare bool switches.'''
+    for key, value in flags.items():
+        if key in BOOL_FLAGS:
+            on, off = BOOL_FLAGS[key]
+            v = str(value).strip().lower()
+            if v in ("on", "true", "1", "yes"):
+                cmd.append(on)
+            elif v in ("off", "false", "0", "no", ""):
+                if off:
+                    cmd.append(off)
+            else:
+                raise ValueError(f"{key}: expected on/off, got {value!r}")
+        else:
+            cmd.extend([key, str(value)])
+
 # Server log lines carry the curve. Matched per-line, most-specific first so
 # "prompt eval time" is not mistaken for the generation "eval time".
 RE_PROGRESS = re.compile(
@@ -219,6 +263,267 @@ def parse_server_log(log_text: str) -> dict:
         prev_n, prev_t = n, t
 
     return {"points": points, "prompt_eval": prompt_eval, "gen_eval": gen_eval}
+
+
+# ---------------------------------------------------------------------------
+# standardized-workload objective
+# ---------------------------------------------------------------------------
+# Raw wall time is a bad objective for two reasons the operator flagged:
+#   1. a model that emits EOS at 800 tokens finishes early and "wins" without
+#      doing the requested 4096 tokens of work;
+#   2. the PP rate decays as the context fills AND decode slows as the KV cache
+#      grows, so runs at different output lengths / prompt lengths are not
+#      comparable.
+# We instead score every launch on the SAME reference workload:
+#
+#     T* = P(L0) + G(L0, N0)
+#
+# P(L0) is read off the measured PP decay curve (interpolated at L0 prompt
+# tokens). G(L0, N0) is the generation time extrapolated to N0 tokens at
+# reference context L0. With `timings_per_token` the driver records a
+# per-token decode curve, so G is a direct least-squares fit of per-step decode
+# time vs context (the "full-fat" path); without it, G scales the observed mean
+# decode step by the context-midpoint ratio (the fallback). Nothing is
+# discarded: short outputs are scaled UP to N0, and low-confidence
+# extrapolations are flagged, never pruned.
+
+OBJECTIVE_DEFAULTS = {
+    "prompt_tokens": 32768,     # L0: reference prompt length
+    "output_tokens": None,      # N0: reference generation length; None -> ntg
+    "gen_fit_tail_steps": 64,   # OLS window (last N decode steps)
+    "gen_fit_min_steps": 16,    # below this the stream fit is low-confidence
+    "min_gen_tokens": 512,      # observed output below this is low-confidence
+    "max_pp_extrapolation_ratio": 1.25,  # L0 / measured prompt length flag
+}
+
+
+def objective_config(config: dict, ntg: int) -> dict:
+    '''Objective settings merged over OBJECTIVE_DEFAULTS (output_tokens->ntg).'''
+
+    obj = dict(OBJECTIVE_DEFAULTS)
+    obj.update(config.get("objective") or {})
+    if obj.get("output_tokens") in (None, "", 0):
+        obj["output_tokens"] = int(ntg)
+    for key in ("prompt_tokens", "output_tokens", "gen_fit_tail_steps",
+                "gen_fit_min_steps", "min_gen_tokens"):
+        obj[key] = int(obj[key])
+    obj["max_pp_extrapolation_ratio"] = float(obj["max_pp_extrapolation_ratio"])
+    if obj["prompt_tokens"] < 1 or obj["output_tokens"] < 0:
+        raise ValueError("objective.prompt_tokens must be >= 1 and "
+                         "output_tokens >= 0 (0 = pure PP)")
+    if obj["gen_fit_tail_steps"] < 2 or obj["gen_fit_min_steps"] < 2:
+        raise ValueError("objective gen_fit_tail_steps / gen_fit_min_steps "
+                         "must be >= 2")
+    return obj
+
+
+def pp_time_at(points: list, target_n: int):
+    '''Seconds to process `target_n` prompt tokens from the measured curve.
+
+    Returns (seconds_or_None, extrapolated_bool). Inside the observed range
+    this is piecewise-linear interpolation through (0,0) and the progress
+    points; beyond the last point it extends the final segment's marginal rate.
+    '''
+
+    pts = [(p["n_tokens_cum"], p["t_cum_s"]) for p in (points or [])
+           if p.get("n_tokens_cum") is not None and p.get("t_cum_s") is not None]
+    if not pts:
+        return None, True
+    by_n = {0: 0.0}
+    for n, t in pts:
+        by_n[n] = t
+    ordered = sorted(by_n.items())
+
+    if target_n <= ordered[-1][0]:
+        for (n0, t0), (n1, t1) in zip(ordered, ordered[1:]):
+            if n0 <= target_n <= n1:
+                if n1 == n0:
+                    return t0, False
+                frac = (target_n - n0) / (n1 - n0)
+                return t0 + frac * (t1 - t0), False
+        return ordered[-1][1], False
+
+    (n0, t0), (n1, t1) = ordered[-2], ordered[-1]
+    if t1 <= t0 or n1 <= n0:
+        return None, True
+    rate = (n1 - n0) / (t1 - t0)          # tokens per second, final segment
+    return t1 + (target_n - n1) / rate, True
+
+
+def normalize_gen_curve(curve) -> list:
+    '''Dedup + sort the driver's [[predicted_n, predicted_ms], ...] snapshots.
+
+    Returns a list of (n_tokens, t_ms) with n ascending; a repeated n keeps the
+    last snapshot.
+    '''
+
+    by_n = {}
+    for pt in curve or []:
+        try:
+            n = int(pt[0])
+            t = float(pt[1])
+        except (TypeError, ValueError, IndexError, KeyError):
+            continue
+        if n >= 1 and t >= 0:
+            by_n[n] = t
+    return sorted(by_n.items())
+
+
+def _ols(xs: list, ys: list):
+    '''Ordinary least squares -> (intercept, slope), or None if degenerate.'''
+    n = len(xs)
+    if n < 2:
+        return None
+    mx = sum(xs) / n
+    my = sum(ys) / n
+    sxx = sum((x - mx) ** 2 for x in xs)
+    if sxx <= 0:
+        return None
+    slope = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / sxx
+    return my - slope * mx, slope
+
+
+def standardized_objective(parsed: dict, response: dict, config: dict,
+                           ntg: int) -> dict:
+    '''Score one launch as T* for the reference workload + audit diagnostics.
+
+    `parsed` is `parse_server_log()` output, `response` the driver's `response`
+    dict (HTTP counts, finish_reason, timings, gen_curve). Returns a flat dict
+    that is safe to stamp on rows: `objective_s` (T*, seconds, lower better),
+    `objective_mode` ("stream-fit" | "linear-midpoint"), a low-confidence flag
+    with reasons, and the intermediate P/G numbers so a reviewer can re-derive
+    the score offline.
+    '''
+
+    obj = objective_config(config, ntg)
+    L0 = obj["prompt_tokens"]
+    N0 = obj["output_tokens"]
+    resp = response or {}
+    parsed = parsed or {}
+    points = parsed.get("points") or []
+    ge = parsed.get("gen_eval") or {}
+    timings = resp.get("timings") or {}
+    curve = normalize_gen_curve(resp.get("gen_curve"))
+
+    diag = {
+        "objective_mode": None,
+        "objective_s": None,
+        "objective_low_confidence": False,
+        "objective_low_confidence_reasons": [],
+        "objective_ref_prompt_tokens": L0,
+        "objective_ref_gen_tokens": N0,
+        "objective_pp_s": None,
+        "objective_gen_s": None,
+        "objective_pp_extrapolated": False,
+        "objective_gen_observed_tokens": None,
+        "objective_gen_fit_steps": 0,
+        "objective_gen_fit_a_ms": None,
+        "objective_gen_fit_b_ms_per_ctx": None,
+        "objective_gen_scale": None,
+        "finish_reason": resp.get("finish_reason"),
+    }
+    reasons = diag["objective_low_confidence_reasons"]
+
+    # --- P(L0): prompt processing on the measured decay curve ---------------
+    pp_s, pp_extrapolated = pp_time_at(points, L0)
+    diag["objective_pp_extrapolated"] = bool(pp_extrapolated)
+    if pp_s is None:
+        reasons.append("no PP curve parsed")
+    else:
+        diag["objective_pp_s"] = round(pp_s, 4)
+        if pp_extrapolated and points:
+            observed_n = points[-1]["n_tokens_cum"]
+            if observed_n > 0 \
+                    and L0 / observed_n > obj["max_pp_extrapolation_ratio"]:
+                reasons.append(
+                    f"P({L0}) extrapolates well beyond the measured "
+                    f"{observed_n} prompt tokens")
+
+    # observed prompt length: HTTP count first, then the server summary line
+    L_obs = (resp.get("prompt_tokens")
+             or (parsed.get("prompt_eval") or {}).get("n_tokens") or L0)
+    n_seen = max(
+        curve[-1][0] if curve else 0,
+        int(timings.get("predicted_n") or 0),
+        int(ge.get("n_tokens") or 0),
+    )
+    diag["objective_gen_observed_tokens"] = n_seen
+
+    # --- G(L0, N0): generation, fitted if a per-token curve exists ----------
+    gen_s = None
+    if N0 <= 1:                          # pure-PP reference (0 or 1 token:
+        gen_s = 0.0                      # the first token is free)
+        diag["objective_mode"] = "pp-only"
+    elif len(curve) >= 2:
+        # per-token decode cost (ms) at context position L_obs + n
+        deltas = []
+        for (n_prev, t_prev), (n, t) in zip(curve, curve[1:]):
+            dn = n - n_prev
+            if dn < 1:
+                continue
+            dt = (t - t_prev) / dn
+            if dt < 0:
+                continue
+            deltas.append((n, dt))
+        if len(deltas) >= 2:
+            tail = deltas[-obj["gen_fit_tail_steps"]:]
+            fit = _ols([L_obs + n for n, _ in tail], [dt for _, dt in tail])
+            if fit is None:
+                reasons.append("generation fit needs >= 2 distinct context points")
+            else:
+                a, b = fit
+                if b < 0:                       # decode cannot get faster
+                    b, a = 0.0, sum(dt for _, dt in tail) / len(tail)
+                if a + b * (L_obs + 1) <= 0:    # keep per-step cost positive
+                    a = max(1e-6, sum(dt for _, dt in tail) / len(tail)
+                            - b * (L_obs + 1))
+                # step 1 is the "free" token (logits come from prompt eval)
+                gen_ms = sum(max(0.0, a + b * (L0 + k))
+                             for k in range(2, N0 + 1))
+                gen_s = gen_ms / 1000.0
+                diag["objective_mode"] = "stream-fit"
+                diag["objective_gen_fit_steps"] = len(tail)
+                diag["objective_gen_fit_a_ms"] = round(a, 6)
+                diag["objective_gen_fit_b_ms_per_ctx"] = round(b, 9)
+                if len(tail) < obj["gen_fit_min_steps"]:
+                    reasons.append(
+                        f"only {len(tail)} generation-fit steps "
+                        f"(< {obj['gen_fit_min_steps']})")
+
+    if gen_s is None:
+        # fallback: scale the observed mean decode step by the context-midpoint
+        # ratio (decode cost ~ KV length), from L_obs+n_obs/2 to L0+N0/2
+        n_obs = n_seen
+        t_ms = ge.get("t_ms") or timings.get("predicted_ms") or 0.0
+        if not t_ms and len(curve) >= 2:
+            t_ms = curve[-1][1] - curve[0][1]
+            n_obs = curve[-1][0] - curve[0][0]
+        if n_obs > 1 and t_ms > 0:
+            dt = t_ms / (n_obs - 1)
+            denom = L_obs + n_obs / 2.0
+            scale = (L0 + N0 / 2.0) / denom if denom > 0 else 1.0
+            gen_s = dt * max(N0 - 1, 0) * scale / 1000.0
+            diag["objective_mode"] = "linear-midpoint"
+            diag["objective_gen_scale"] = round(scale, 6)
+            reasons.append("no usable per-token generation curve; used the "
+                           "context-midpoint extrapolation")
+        else:
+            reasons.append("no generation timing available")
+
+    if gen_s is not None:
+        diag["objective_gen_s"] = round(gen_s, 4)
+
+    # --- confidence flags ---------------------------------------------------
+    if N0 > 1 and n_seen and n_seen < obj["min_gen_tokens"]:
+        reasons.append(f"only {n_seen} generated tokens "
+                       f"(< {obj['min_gen_tokens']}); extrapolating to {N0}")
+    if N0 > 1 and str(diag["finish_reason"]).lower() == "stop":
+        reasons.append("generation ended early (finish_reason=stop)")
+
+    if pp_s is not None and gen_s is not None:
+        diag["objective_s"] = round(pp_s + gen_s, 4)
+    diag["objective_low_confidence"] = bool(reasons)
+    return diag
 
 
 def split_lists(parameters: dict) -> dict:
@@ -389,8 +694,10 @@ def model_specs_from_config(config: dict) -> list:
     '''Resolve the model axis to a list of {quant, model_file} to sweep.
 
     From `model_base` + `quants` (one or more, comma list or JSON list):
-    the model file is constructed as `<model_base>-<quant>.gguf`. Otherwise a
-    single entry from a plain `model_file` (quant = the file stem).
+    the model file is constructed as `<model_base>-<quant>.gguf`. An optional
+    `model_files` dict maps quant -> explicit filename, needed for sharded
+    GGUFs (pass the 00001-of-NNNNN shard; llama.cpp loads the siblings).
+    Otherwise a single entry from a plain `model_file` (quant = the file stem).
     '''
 
     base = config.get("model_base")
@@ -400,7 +707,13 @@ def model_specs_from_config(config: dict) -> list:
         quants = [q.strip() for q in quants.split(",") if q.strip()]
 
     if base and quants:
-        return [{"quant": q, "model_file": f"{base}-{q}.gguf"} for q in quants]
+        files = config.get("model_files") or {}
+        missing = [q for q in quants if q not in files] if files else []
+        if missing:
+            raise ValueError(f"model_files missing quant(s): {', '.join(missing)}")
+        return [{"quant": q,
+                 "model_file": str(files[q]) if files else f"{base}-{q}.gguf"}
+                for q in quants]
 
     mf = config.get("model_file")
     if mf:
@@ -426,6 +739,7 @@ def _build_server_command(config: dict, cell: dict, spec_flags: dict,
         "--model", f"/models/{model_file}",
         "--port", "8080",
         "--no-webui",
+        "--warmup",               # explicit pin; upstream default is already on
         "--parallel", "1",        # one slot; controlled KV memory
         "--alias", SERVER_ALIAS,
     ]
@@ -437,11 +751,8 @@ def _build_server_command(config: dict, cell: dict, spec_flags: dict,
     if "--log-verbosity" not in cell and "--log-verbosity" not in spec_flags:
         cmd.extend(["--log-verbosity", "5"])
 
-    for key, value in cell.items():
-        cmd.extend([key, str(value)])
-
-    for key, value in spec_flags.items():
-        cmd.extend([key, str(value)])
+    extend_cli_flags(cmd, cell)
+    extend_cli_flags(cmd, spec_flags)
 
     return cmd
 
@@ -533,6 +844,11 @@ def main():
     # send the prompt. HTTPError carries the response body (400 says e.g.
     # the exact prompt token count when it overflows --ctx-size), so
     # capture it: a bare str(e) would drop it.
+    #
+    # STREAMING with timings_per_token: every SSE chunk then carries a
+    # `timings` snapshot (predicted_n / predicted_ms), so the host can fit the
+    # decode-time-vs-context curve instead of trusting one average.
+    # stream_options.include_usage puts the final usage in the closing chunk.
     try:
         with open(cfg["prompt_file"], "r", encoding="utf-8") as f:
             prompt = f.read()
@@ -541,16 +857,38 @@ def main():
             "prompt": prompt,
             "max_tokens": cfg["ntg"],
             "temperature": 0,
-            "stream": False,
+            "stream": True,
+            "timings_per_token": True,
+            "stream_options": {"include_usage": True},
         }
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
             f"http://127.0.0.1:{port}/v1/completions", data=data,
             headers={"Content-Type": "application/json"})
+        chunks = []
+        raw_all = []
         t0 = time.time()
         with urllib.request.urlopen(req, timeout=cfg["request_timeout"]) as r:
-            resp = json.loads(r.read().decode("utf-8"))
+            for raw in r:
+                line = raw.decode("utf-8", "replace")
+                raw_all.append(line)
+                s = line.strip()
+                if not s.startswith("data:"):
+                    continue
+                body = s[5:].strip()
+                if body == "[DONE]":
+                    break
+                try:
+                    chunks.append(json.loads(body))
+                except Exception:
+                    pass
         wall = time.time() - t0
+        if not chunks:
+            # a build that ignores `stream` returns one plain JSON object
+            try:
+                chunks = [json.loads("".join(raw_all))]
+            except Exception:
+                chunks = []
     except urllib.error.HTTPError as e:
         try:
             body = e.read().decode("utf-8", "replace")[:2000]
@@ -566,13 +904,46 @@ def main():
         return
 
     shutdown(proc)
-    usage = (resp.get("usage") or {})
+
+    # fold the SSE chunks into the raw response fields we keep
+    curve = {}
+    finish_reason = None
+    usage = {}
+    final_timings = {}
+    for c in chunks:
+        tm = c.get("timings") or {}
+        if tm:
+            final_timings = tm
+            pn, pm = tm.get("predicted_n"), tm.get("predicted_ms")
+            if pn is not None and pm is not None:
+                try:
+                    curve[int(pn)] = round(float(pm), 3)
+                except (TypeError, ValueError):
+                    pass
+        choices = c.get("choices") or []
+        if choices:
+            fr = choices[0].get("finish_reason")
+            if fr:
+                finish_reason = fr
+        if c.get("usage"):
+            usage = c["usage"]
+    if not usage:
+        # no include_usage support -> derive the counts from the final timings
+        usage = {
+            "prompt_tokens": final_timings.get("prompt_n"),
+            "completion_tokens": final_timings.get("predicted_n"),
+        }
+
     write_result({
         "status": "ok",
         "response": {
             "prompt_tokens": usage.get("prompt_tokens"),
             "completion_tokens": usage.get("completion_tokens"),
+            "finish_reason": finish_reason,
             "wall_request_s": round(wall, 3),
+            "timings": final_timings or None,
+            "gen_curve": [[n, curve[n]] for n in sorted(curve)],
+            "stream_chunks": len(chunks),
         },
         "server_log": read_log(),
     })
@@ -891,7 +1262,11 @@ def run_launch(phase: str, config: dict, cell: dict, spec_label: dict,
              **tags}, separators=(",", ":")) + "\n")
         return launch_counter, None
 
-    resp = result.get("response", {})
+    resp = result.get("response") or {}
+    timings = resp.get("timings") or {}
+    gen_curve = resp.get("gen_curve") or []
+    effective_ntg = int(ntg if ntg is not None else config.get("ntg", 1))
+
     common = dict(tags)
     common["status"] = "ok"
     common["n_points"] = len(parsed["points"])
@@ -905,15 +1280,27 @@ def run_launch(phase: str, config: dict, cell: dict, spec_label: dict,
     common["gen_ms_per_tok"] = parsed["gen_eval"]["ms_per_tok"] if parsed["gen_eval"] else None
     common["prompt_tokens_http"] = resp.get("prompt_tokens")
     common["completion_tokens_http"] = resp.get("completion_tokens")
+    common["finish_reason"] = resp.get("finish_reason")
     common["wall_request_s"] = resp.get("wall_request_s")
+    common["timings_predicted_n"] = timings.get("predicted_n")
+    common["timings_predicted_ms"] = timings.get("predicted_ms")
+    common["gen_curve_points"] = len(gen_curve)
+    # standardized-workload objective T* + its audit fields (see
+    # standardized_objective); `wall_request_s` is kept alongside as raw data
+    common.update(standardized_objective(parsed, resp, config, effective_ntg))
 
-    # The per-launch summary fields (pp_tps, gen_tps, wall_request_s, ...) live
-    # in `common` and are stamped on EVERY point row, so the last point row
-    # carries the whole-prompt summary — no separate summary row is needed.
+    # The per-launch summary fields (pp_tps, gen_tps, wall_request_s, T*, ...)
+    # live in `common` and are stamped on EVERY point row, so the last point row
+    # carries the whole-prompt summary — no separate summary row is needed. The
+    # full per-token generation curve (up to `ntg` entries) is written ONLY on
+    # that last row, to keep the other rows small.
+    last = len(parsed["points"])
     for i, p in enumerate(parsed["points"], start=1):
         row = dict(common)
         row["point"] = i
         row.update(p)
+        if i == last and gen_curve:
+            row["gen_curve"] = gen_curve
         result_file.write(json.dumps(row, separators=(",", ":")) + "\n")
 
     return launch_counter, common

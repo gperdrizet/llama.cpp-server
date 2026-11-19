@@ -36,7 +36,10 @@ token count, seconds, and rate. The script:
 2. In-container, a driver starts `llama-server` (log to a file, so a long
    model-load log can't deadlock), waits for the model to appear in
    `/v1/models` (`/health` answers 200 mid-load on current builds), POSTs the
-   prompt to `/v1/completions`, reads the response, shuts the server down.
+   prompt to `/v1/completions` with **`stream: true` and
+   `timings_per_token: true`**, consumes the SSE stream, and shuts the server
+   down. Every chunk carries a `timings` snapshot, so the driver returns the
+   per-token decode curve plus `finish_reason` and the exact HTTP token counts.
 3. Host side, the server log is parsed into per-occupancy rows.
 
 Because it drives the *real* server (not `llama-bench`/`llama-batched-bench`),
@@ -138,7 +141,14 @@ phase 3 = 12, phase 4 = 15 → 45/run, × 3 runs = 135 launches.
   `<model_base>-<quant>.gguf` under `models/` (e.g. base `Qwen3.8-27B` +
   quant `UD-Q4_K_M` → `Qwen3.8-27B-UD-Q4_K_M.gguf`). One launch per quant,
   each row tagged `quant`. (A plain `model_file` also works: single model,
-  no sweep.)
+  no sweep.) For sharded GGUFs add `model_files`: a `quant -> filename` map;
+  give the `00001-of-NNNNN` shard and llama.cpp finds the siblings (used by
+  the Flash-Next config).
+  Bare CLI switches (`--cpu-moe`, `--repack`, `--kv-offload`, `--no-host`,
+  `--spec-draft-cpu-moe`) take `"on"`/`"off"` in the config; the driver emits
+  the flag alone for `on`, and its negated form where one exists (`--no-repack`,
+  `--no-kv-offload`) for `off`. All other flags keep the normal `"key value"`
+  form.
 - `server_parameters` — the **fixed** server settings, used in **every**
   phase (ctx-size, threads, device, cache dtypes, …). A `llama-server` flag →
   single value (a comma list here is still crossed — but prefer to keep these
@@ -238,8 +248,12 @@ row):
 - The per-launch summary fields — `pp_tps`/`gen_tps` (the server's final
   `prompt eval time` / `eval time` rates), `pp_auc` (sum of the `tps_seg`s —
   the winner metric), `n_tokens_prompt`, `wall_request_s`, the HTTP `*_http`
-  token counts — are stamped on **every** point row for that launch, so the
-  last point row carries the whole-prompt summary. To pivot per launch, take
+  token counts, `finish_reason`, the `timings_predicted_*` snapshot, and the
+  standardized-workload objective `objective_s` (T\*, see below) with its
+  audit fields — are stamped on **every** point row for that launch, so the
+  last point row carries the whole-prompt summary. The full per-token
+  `gen_curve` (`[[predicted_n, predicted_ms], …]`) is written only on that
+  last point row, to keep the other rows small. To pivot per launch, take
   the max-`point` row per `(phase, quant, prompt, run, spec)` plus the swept
   flags of that phase (`flash_attn`/`split_mode`/… for `phase: "server"`,
   `batch_size`/`ubatch_size` for `phase: "batch"`).
@@ -250,6 +264,35 @@ row):
   driver errors also carry `server_log_tail` — the last 2000 chars of the
   server log, which is where load-timeout / early-crash causes show up) or
   `status: "no_output"`. Filter `status` when analyzing.
+
+### Standardized-workload objective (T\*)
+
+Raw wall time is a poor objective: a model that emits EOS early finishes fast
+without doing the requested work, and the PP rate decays with context while
+decode slows as the KV cache grows, so runs at different output lengths /
+prompt lengths are not comparable. Every launch is therefore scored on the
+**same reference workload**:
+
+```
+T* = P(L0) + G(L0, N0)
+```
+
+`P(L0)` is the PP time interpolated off the measured decay curve at `L0`
+reference prompt tokens (`objective.prompt_tokens`, default 32768; the final
+segment's marginal rate extends it when the observed prompt is shorter).
+`G(L0, N0)` is the generation time at reference context `L0` for `N0` output
+tokens (`objective.output_tokens`, default `ntg`). The driver streams with
+`timings_per_token`, so `G` is normally a least-squares fit of per-step decode
+time vs context over a tail window (`objective.gen_fit_tail_steps`, default 64)
+— mode `stream-fit`; with no usable per-token curve it scales the observed mean
+decode step by the context-midpoint ratio (`linear-midpoint`). A short output
+is **scaled UP** to `N0`, never rewarded, and an extrapolation too short to
+trust sets `objective_low_confidence` + `objective_low_confidence_reasons`
+(e.g. fewer than `objective.min_gen_tokens`, too few fit steps, an early
+`finish_reason=stop`). Flagged trials stay in the study. `objective_pp_s`,
+`objective_gen_s`, the fit coefficients and the observed token count are all
+kept so any score can be re-derived offline; the raw `wall_request_s`,
+`finish_reason` and per-token `gen_curve` are retained too.
 
 A `.summary.json` next to the file records the config and the launch list.
 
@@ -287,26 +330,79 @@ sampler, which learns the interactions from the trials it has already spent and
 focuses its budget on the promising regions.
 
 * **Objective (minimize):** the mean over every prompt in the config of the
-  total host-side wall time of one `/v1/completions` request — the full
-  (~32k) prompt's PP **plus** generation of a fixed number of output tokens
-  (`ntg`, default 128). "Time to read the prompt and generate a fixed amount
-  of output."
+  **standardized-workload time** T\* (see the section above) — the time to
+  process a FIXED reference prompt length `objective.prompt_tokens`
+  (default 32768) and generate a FIXED reference output length
+  `objective.output_tokens` (default `ntg`) at that context. A trial that
+  emits EOS early is **not** rewarded: its short output is scaled up to the
+  reference length, and an unreliable extrapolation is flagged
+  (`objective_low_confidence`) but kept. The raw host-side `wall_request_s`
+  is recorded per launch as `wall_objective_s` so the old metric stays
+  comparable offline. ⚠️ The objective is **versioned**
+  (`objective_version`, currently `standardized-v1`); resuming a study whose
+  stored version differs fails fast **before** production is stopped, so give
+  a changed objective a new `study_name`/`storage` (the shipped configs use a
+  `-std` suffix) or set `objective.allow_objective_migration: true`.
 * **Search space (all from the config file):** `quants` (categorical),
-  `space` (flag → list of choices, each a TPE categorical: `--n-gpu-layers`,
-  `--flash-attn`, `--split-mode`, `--cache-type-k`, `--cache-type-v`,
-  `--batch-size`, `--ubatch-size`), and a **flexible spec axis** — `spec.modes`
-  is a list of modes, the sampler picks a mode, then that mode's sub-params
-  (categorical/int/float). MTP is just one mode; a dflash-style
-  `--model-draft` + `--spec-type` setup is another. `ubatch > batch` combos are
-  pruned before any launch is spent.
+  `space` (flag → list of choices, each a TPE categorical: `--flash-attn`,
+  `--split-mode` (`layer,row,tensor`), `--cache-type-k`, `--cache-type-v`,
+  `--batch-size`, `--ubatch-size`, `--threads`, `--threads-batch`), and a
+  **flexible spec axis** — `spec.modes` is a list of modes, the sampler picks
+  a mode, then that mode's sub-params (categorical/int/float). The default
+  config has `off`, `mtp`, `ngram-simple`, `ngram-map-k`, `ngram-mod`
+  and `ngram-map-k4v`. **Important:** ngram modes use
+  `--spec-ngram-<mode>-size-m` (default 48), *not* `--spec-draft-n-max`, as
+  their max draft length — sweeping `--spec-draft-n-max` on an ngram arm is
+  a no-op. Draft-model modes (`draft-mtp`, dflash-style, …) do use
+  `--spec-draft-n-max`.
 * **Data:** one JSON **file per launch** (trial × prompt) in
   `<output_dir>/runs/` with the full PP decay curve + params + timings +
-  server-log tail — for per-run plotting; the Optuna study itself in a
-  **SQLite** DB (`storage`), so a run is **resumable** (re-run with the same
-  config to add trials; `n_trials` counts trials added THIS invocation).
-  `summary.json` records the best trial on finish. Failed trials are **pruned**
+  the per-token `gen_curve` + the standardized-objective block + the raw
+  `wall_objective_s` + server-log tail — for per-run plotting; the Optuna
+  study itself in a **SQLite** DB (`storage`), so a run is **resumable**
+  (re-run with the same config to add trials; `n_trials` counts trials added
+  THIS invocation). `summary.json` records the best trial on finish and the
+  study's `objective_version`/`objective_config`. Failed trials are **pruned**
   (not fake values) with the error in the trial's `user_attrs` AND its per-run
   files.
+* **Pruned before launch:** `ubatch > batch`; a quantized K/V cache with
+  `--flash-attn off`; `--split-mode tensor` with `--flash-attn off` (tensor
+  split requires flash attention upstream); `--split-mode tensor` at partial
+  GPU offload (NCCL crash on the two-P100 box); and a spec mode whose `n_min`
+  exceeds its `n_max`. After launch, a `--split-mode row` trial is pruned if
+  the server log shows the split was a no-op (no GPU-offload support, no
+  split-buffer support, or fewer than two CUDA devices). `row` is deliberately
+  **not** pre-pruned for `--flash-attn off` — upstream only requires flash
+  attention for `tensor`, not `row`.
+* **Deliberately out of scope for the 27B config** (despite being in the
+  upstream server README): prompt-cache flags (`--cache-reuse`, `--cache-ram`,
+  `--cache-idle-slots`, `--prompt-cache`) — the three prompt files share no
+  prefix and each trial is a single request per fresh server; `kv-offload` /
+  `repack` / `kv-unified` / `swa-full` / context-shift — this is a hybrid
+  `qwen35` model, fully GPU-offloaded, and 32k ≪ 131k context (`kv-offload`
+  and `repack` ARE swept for the CPU-offloaded Flash-Next config below);
+  `--fit` (on by default, and a pinned `--ctx-size` disables its context
+  reduction); CPU affinity / `--prio` / `--poll` / `--numa` (GPU-bound); and
+  draft sampling knobs (`--spec-draft-p-split`, `-p-min`,
+  `-backend-sampling`) because the request uses `temperature: 0`.
+
+### Flash-Next (MoE, CPU-offloaded) config
+
+`tests/config/llama-server-optuna-bench/Qwen3.8-Flash-Next.json` uses the same
+three prompts and `ntg: 4096`, but the three quants are sharded GGUFs
+(~71–104 GiB) that cannot fit in 2×16 GB of VRAM:
+
+* `--cpu-moe on` is **pinned** (all 512 experts, 10 active per token, stay on
+  CPU — the production arrangement); `--n-gpu-layers` sweeps 12/24/36/48/-1
+  over the model's **48 layers** (48 and -1 are treated as full offload for the
+  tensor-split prune via `full_offload_ngl`). `--load-mode mlock` also matches
+  production, keeping the resident expert weights out of swap.
+* MoE-specific axes: `--moe-cache-mib` (GPU cache of hot CPU experts),
+  `--moe-cache-cpu-share` (CPU vs GPU handling of cache misses), `--repack`
+  (weight repacking for quantized CPU experts) and `--kv-offload`.
+* Spec arms: spec-off, the two MTP drafts (`mtp` and `mtp-shared`), and the
+  four ngram families. Timeouts are raised to 1200 s load / 5400 s request for
+  cold shard loading and 4096-token generation.
 * Reuses the sibling's launch driver, log parser, VRAM gate, stale cleanup,
   and the production stop/restart guard (same ⚠️: on pyrite this takes the live
   models offline for the WHOLE optimization — hours at a realistic `n_trials`).
@@ -354,9 +450,10 @@ real sweep:
 ```
 
 `test_llama_server_optuna_bench.py` does the same for the Optuna tool:
-the config→space logic, the objective math, and a real (tiny)
-`study.optimize` against a temp SQLite DB with `run_bench_launch` mocked —
-per-run files, pruning, and resume included:
+the config→space logic, the standardized-objective math, the
+objective-version guard, and a real (tiny) `study.optimize` against a temp
+SQLite DB with `run_bench_launch` mocked — per-run files, pruning, and
+resume included:
 
 ```bash
 .venv/bin/python tests/test_llama_server_optuna_bench.py

@@ -1,0 +1,114 @@
+{
+ "tool": "llama-server-optuna-bench",
+ "study": "Qwen3.8-27B-optuna",
+ "trial": 0,
+ "run": 2,
+ "prompt": "qwen3_8_27b_v2.txt",
+ "params": {
+  "quant": "UD-IQ2_S",
+  "--flash-attn": "on",
+  "--split-mode": "tensor",
+  "--cache-type-k": "q4_0",
+  "--cache-type-v": "q8_0",
+  "--batch-size": "4096",
+  "--ubatch-size": "4096"
+ },
+ "spec_mode": "ngram-simple",
+ "spec_flags": {
+  "--spec-type": "ngram-simple",
+  "--spec-draft-n-max": 9
+ },
+ "model_file": "Qwen3.8-27B-UD-IQ2_S.gguf",
+ "cell": {
+  "--ctx-size": "131072",
+  "--threads": "12",
+  "--threads-batch": "12",
+  "--device": "CUDA0,CUDA1",
+  "--n-gpu-layers": "-1",
+  "--flash-attn": "on",
+  "--split-mode": "tensor",
+  "--cache-type-k": "q4_0",
+  "--cache-type-v": "q8_0",
+  "--batch-size": "4096",
+  "--ubatch-size": "4096"
+ },
+ "ntg": 4096,
+ "status": "ok",
+ "timestamp": "2026-11-18T06:25:20.061942+00:00",
+ "points": [
+  {
+   "n_tokens_cum": 4096,
+   "n_tokens_seg": 4096,
+   "t_cum_s": 17.44,
+   "t_seg_s": 17.44,
+   "tps_cum": 234.862,
+   "tps_seg": 234.862
+  },
+  {
+   "n_tokens_cum": 8192,
+   "n_tokens_seg": 4096,
+   "t_cum_s": 26.9,
+   "t_seg_s": 9.46,
+   "tps_cum": 304.535,
+   "tps_seg": 432.981
+  },
+  {
+   "n_tokens_cum": 12288,
+   "n_tokens_seg": 4096,
+   "t_cum_s": 37.15,
+   "t_seg_s": 10.25,
+   "tps_cum": 330.767,
+   "tps_seg": 399.61
+  },
+  {
+   "n_tokens_cum": 16384,
+   "n_tokens_seg": 4096,
+   "t_cum_s": 48.07,
+   "t_seg_s": 10.92,
+   "tps_cum": 340.836,
+   "tps_seg": 375.092
+  },
+  {
+   "n_tokens_cum": 20480,
+   "n_tokens_seg": 4096,
+   "t_cum_s": 59.69,
+   "t_seg_s": 11.62,
+   "tps_cum": 343.106,
+   "tps_seg": 352.496
+  },
+  {
+   "n_tokens_cum": 24056,
+   "n_tokens_seg": 3576,
+   "t_cum_s": 71.22,
+   "t_seg_s": 11.53,
+   "tps_cum": 337.77,
+   "tps_seg": 310.147
+  },
+  {
+   "n_tokens_cum": 28148,
+   "n_tokens_seg": 4092,
+   "t_cum_s": 84.06,
+   "t_seg_s": 12.84,
+   "tps_cum": 334.856,
+   "tps_seg": 318.692
+  }
+ ],
+ "prompt_eval": {
+  "n_tokens": 28152,
+  "t_ms": 88105.0,
+  "ms_per_tok": 3.13,
+  "tps": 319.53
+ },
+ "gen_eval": {
+  "n_tokens": 3258,
+  "t_ms": 365550.99,
+  "ms_per_tok": 112.24,
+  "tps": 8.91
+ },
+ "response": {
+  "prompt_tokens": 28152,
+  "completion_tokens": 3258,
+  "wall_request_s": 453.775
+ },
+ "objective_s": 453.775
+}

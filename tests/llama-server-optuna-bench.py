@@ -9,10 +9,31 @@ interactions from the trials it has already spent and spends its budget on
 the promising regions.
 
 Objective (minimize): the mean, across every prompt in the config, of the
-total host-side wall time of one `/v1/completions` request — prompt
-preprocessing of the full (~32k) prompt PLUS generation of a fixed number
-of output tokens (`ntg`, default 128). That is "time to read the prompt and
-then generate a fixed, reasonable amount of output" for a single request.
+**standardized-workload time** T* of one `/v1/completions` request — the time
+to process a FIXED reference prompt length L0 (`objective.prompt_tokens`,
+default 32768) and generate a FIXED reference output length N0
+(`objective.output_tokens`, default `ntg`) at that context:
+
+    T* = P(L0) + G(L0, N0)
+
+P(L0) is interpolated off the measured PP decay curve; G(L0, N0) is the
+generation time extrapolated to N0 tokens at reference context L0. The driver
+streams with `timings_per_token`, so G is normally a least-squares fit of
+per-step decode time vs context (mode `stream-fit`); if no per-token curve is
+available it falls back to scaling the observed mean decode step by the
+context-midpoint ratio (mode `linear-midpoint`). This is why a trial that emits
+EOS early is NOT rewarded: its short output is scaled UP to N0, not measured as
+a short (fast) request. Extrapolations that are too short to trust are flagged
+(`objective_low_confidence` + reasons) and kept in the study, never pruned.
+
+The raw host-side `wall_request_s`, the HTTP `finish_reason` /
+`completion_tokens`, and the full per-token generation curve are all retained in
+the per-run files so any objective can be recomputed offline.
+
+⚠️ The objective is versioned (`OBJECTIVE_VERSION`). A study created with an
+older objective cannot be mixed with the new values, so resuming a study whose
+`objective_version` differs fails fast; give it a new `study_name`/`storage`
+(the configs use a `-std` suffix) or set `objective.allow_objective_migration`.
 
 The launch machinery is NOT duplicated: this script imports
 `llama-server-bench.py` (same directory, hyphenated filename → importlib)
@@ -37,11 +58,11 @@ Search space (all from the config file)
 * `quants`          — the model quant axis (`<model_base>-<quant>.gguf`)
 * `space`           — a dict of server flag -> list of choices; EVERY key is
                       a TPE categorical. Keys used by the default config:
-                      --n-gpu-layers, --flash-attn, --split-mode,
-                      --cache-type-k, --cache-type-v, --batch-size,
-                      --ubatch-size.
-* `fixed`           — server flags that are NEVER swept (ctx-size, threads,
-                      device, ...) — always in the command.
+                      --flash-attn, --split-mode, --cache-type-k,
+                      --cache-type-v, --batch-size, --ubatch-size,
+                      --threads, --threads-batch.
+* `fixed`           — server flags that are NEVER swept (ctx-size, device,
+                      n-gpu-layers, main-gpu, ...) — always in the command.
 * `spec.modes`      — the speculative-decoding axis as a list of MODES.
                       The sampler picks a mode, then that mode's optional
                       sub-parameters (categorical / int / float). Any mode
@@ -57,12 +78,39 @@ Search space (all from the config file)
                         "base_flags": { "--model-draft": "/models/xxx.gguf", "--spec-type": "draft-eagle" },
                         "params": { ... } }
 
+Combos pruned BEFORE any launch is spent (the server would reject or crash
+them):
+  * `ubatch > batch` (meaningless);
+  * a quantized (non-f16/bf16) `--cache-type-k`/`--cache-type-v` together
+    with `--flash-attn off` — llama.cpp refuses to create that context
+    ("quantized V cache requires flash_attn to be enabled");
+  * `--split-mode tensor` together with `--flash-attn off` — tensor split
+    mode itself requires flash attention ("SPLIT_MODE_TENSOR requires
+    flash_attn to be enabled");
+  (the last two apply only when `--flash-attn` is explicitly swept to off;
+  if the flag is not in the space the server's default is in force and
+  neither is pruned); and
+  * `--split-mode tensor` at PARTIAL `--n-gpu-layers` offload — a RUNTIME
+    (not startup) constraint: the tensor-split allreduce has repeatedly
+    crashed the server in NCCL on this two-P100 box at partial offload.
+    Full offload (the `-1` sentinel, or any value in the config's
+    `full_offload_ngl`, e.g. `["999"]`) is NOT pruned — that is production's
+    working tensor regime and stays testable; and
+  * a spec mode's `n_min` > `n_max` (draft token counts, or ngram-mod's
+    min/max) — rejected pre-launch.
+
+AFTER a launch, `--split-mode row` trials are checked for a runtime no-op
+(split mode ignored, no split-buffer support, or fewer than two CUDA devices
+in the log) and pruned — unlike `tensor`, `row` has no flash-attn constraint
+upstream, so it must NOT be pre-pruned on `--flash-attn off`.
+
 Trial failure policy: if EVERY prompt of a trial fails (bad args, OOM,
-load timeout, ...) the trial is PRUNED (not a fake high value) and the
-error is kept in the trial's user_attrs AND in that trial's per-launch
-files. A trial where some prompts succeeded reports the mean over the
-succeeding ones. The `ubatch > batch` combo is pruned before any launch
-(the server would reject it / it is meaningless).
+load timeout, a runtime CUDA/NCCL crash, ...) the trial is PRUNED (not a
+fake high value) and the error is kept in the trial's user_attrs AND in
+that trial's per-launch files (which also carry the server log's ` E `
+error lines — the real reason, since the driver's own message is a generic
+"load timeout / exited early"). A trial where some prompts succeeded
+reports the mean over the succeeding ones.
 
 NOTE on resources
 -----------------
@@ -87,6 +135,7 @@ import argparse
 import importlib.util
 import itertools
 import json
+import re
 import sys
 import tempfile
 from datetime import datetime, timezone
@@ -105,6 +154,11 @@ else:  # pragma: no cover - older Optuna
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
+
+# Bumped whenever the objective's definition changes, so a study built with an
+# older objective is never silently mixed with new trial values (the raw
+# `wall_request_s` objective and the standardized T* are NOT comparable).
+OBJECTIVE_VERSION = "standardized-v1"
 
 # Import the sibling bench (hyphenated filename → not importable by name).
 # Everything heavy (container driver, log parser, VRAM gate, production
@@ -161,13 +215,34 @@ def spec_modes(config: dict) -> list:
     return modes
 
 
+def is_full_offload(value, config: dict) -> bool:
+    '''True if a sampled `--n-gpu-layers` value offloads the WHOLE model.
+
+    `-1` is llama.cpp's "offload everything" sentinel, always full. Any other
+    value counts as full only if it is listed in the config's
+    `full_offload_ngl` (e.g. `["999"]` — a number above the layer count).
+    This is what separates the working full-offload regime (production's
+    tensor+MTP) from the partial-offload regime that crashes in NCCL.
+    '''
+    v = str(value).strip()
+    if v == "-1":
+        return True
+    full = config.get("full_offload_ngl") or []
+    if isinstance(full, str):
+        full = [c.strip() for c in full.split(",") if c.strip()]
+    return v in {str(x).strip() for x in full}
+
+
 def sample_params(trial, config: dict) -> tuple:
     '''Sample one point of the search space. Returns (params, spec_flags).
 
     `params` = {flag: value} for every swept flag (ints/strings as-is) plus
     "quant". `spec_flags` = the full spec flag dict for the chosen mode
-    (empty for "off"). Raises TrialPrunedError on the ubatch>batch combo —
-    before any launch is spent.
+    (empty for "off"). Raises TrialPrunedError, before any launch is spent,
+    on the known-bad combos: ubatch>batch, a quantized cache with flash-attn
+    off, tensor split-mode with flash-attn off (both server-rejected at
+    startup), and tensor split-mode at partial GPU offload (a known NCCL
+    runtime crash — full offload stays testable).
     '''
     params = {"quant": trial.suggest_categorical("quant", list(quant_map(config)))}
 
@@ -178,6 +253,55 @@ def sample_params(trial, config: dict) -> tuple:
     ubatch = params.get("--ubatch-size")
     if batch is not None and ubatch is not None and int(ubatch) > int(batch):
         trial.set_user_attr("prune_reason", f"ubatch {ubatch} > batch {batch}")
+        raise TrialPrunedError()
+
+    # llama.cpp hard constraints, pruned pre-launch so we never spend a full
+    # load on a combo the server rejects deterministically at context
+    # creation. Both only apply when `--flash-attn` was EXPLICITLY sampled to
+    # off; if the flag isn't in the space the server uses its default
+    # (auto → on when supported), so neither constraint is in force and we
+    # must not prune.
+    fa = params.get("--flash-attn")
+    fa_off = fa is not None and str(fa).strip().lower() != "on"
+    if fa_off:
+        # (1) A quantized (non-f16/bf16) K or V cache can only be created with
+        #     flash attention enabled ("quantized V cache requires flash_attn
+        #     to be enabled").
+        for cache_flag in ("--cache-type-k", "--cache-type-v"):
+            ct = params.get(cache_flag)
+            if ct is not None and str(ct) not in ("", "f16", "bf16", "auto"):
+                trial.set_user_attr(
+                    "prune_reason",
+                    f"quantized {cache_flag} ({ct}) requires --flash-attn on "
+                    f"(got {fa})")
+                raise TrialPrunedError()
+        # (2) SPLIT_MODE_TENSOR itself requires flash attention, regardless of
+        #     cache dtype ("SPLIT_MODE_TENSOR requires flash_attn to be
+        #     enabled").
+        sm = params.get("--split-mode")
+        if sm is not None and str(sm).strip().lower() == "tensor":
+            trial.set_user_attr(
+                "prune_reason",
+                f"--split-mode tensor requires --flash-attn on (got {fa})")
+            raise TrialPrunedError()
+
+    # Runtime (not startup) constraint: `--split-mode tensor` at PARTIAL GPU
+    # offload has repeatedly crashed the server in NCCL
+    # (ggml_backend_cuda_comm_allreduce_nccl) on this two-P100 box — the
+    # tensor-split allreduce dies mid-load. Full offload is NOT pruned: that
+    # is production's working tensor regime (ngl -1 / 999) and stays
+    # testable. The full-offload values are config-driven (`full_offload_ngl`,
+    # plus the built-in `-1` sentinel); everything else at partial offload is
+    # pruned pre-launch rather than spending a ~1-minute crashed launch.
+    sm = params.get("--split-mode")
+    ngl = params.get("--n-gpu-layers")
+    if (sm is not None and str(sm).strip().lower() == "tensor"
+            and ngl is not None
+            and not is_full_offload(ngl, config)):
+        trial.set_user_attr(
+            "prune_reason",
+            f"--split-mode tensor at partial offload (n-gpu-layers {ngl}) "
+            f"crashes in NCCL on this box; full offload is testable")
         raise TrialPrunedError()
 
     modes = spec_modes(config)
@@ -202,6 +326,15 @@ def sample_params(trial, config: dict) -> tuple:
         else:
             spec_flags[pname] = trial.suggest_categorical(pname_key, list(pdef["choices"]))
 
+    # A spec mode's minimum draft length can never exceed its maximum.
+    for min_flag, max_flag in (("--spec-draft-n-min", "--spec-draft-n-max"),
+                               ("--spec-ngram-mod-n-min", "--spec-ngram-mod-n-max")):
+        lo, hi = spec_flags.get(min_flag), spec_flags.get(max_flag)
+        if lo is not None and hi is not None and int(lo) > int(hi):
+            trial.set_user_attr(
+                "prune_reason", f"{min_flag} {lo} > {max_flag} {hi}")
+            raise TrialPrunedError()
+
     return params, spec_flags
 
 
@@ -215,16 +348,55 @@ def build_cell(params: dict, config: dict) -> dict:
     return cell
 
 
+def first_error_lines(text: str, limit: int = 3):
+    '''The server log's ` E ` lines — the real reason a launch failed,
+    which the generic driver error ("load timeout / exited early") hides.
+
+    llama.cpp log lines are `<clock> <sev> <tag> message`, e.g.
+    `0.04.290.140 E llama_init_from_model: ...`; the clock never contains
+    " E ", so the first occurrence is the severity marker.
+    '''
+    out = []
+    for ln in (text or "").splitlines():
+        i = ln.find(" E ")
+        if i == -1:
+            continue
+        msg = ln[i + 3:].strip()
+        if msg:
+            out.append(msg)
+    return out[:limit]
+
+
+def row_is_noop(cell: dict, log: str) -> bool:
+    '''True if a `--split-mode row` launch did not actually split across GPUs.
+
+    Row split is only a no-op at RUNTIME (unlike tensor + flash-attn off,
+    which is rejected deterministically at startup): upstream warns when the
+    binary lacks GPU-offload support, throws when the device has no split
+    buffer type, and needs >= 2 devices to split. Check the captured server
+    log rather than pre-pruning a valid config combination.
+    '''
+    if str(cell.get("--split-mode", "")).strip().lower() != "row":
+        return False
+    log = log or ""
+    if ("Setting the split mode has no effect" in log
+            or "does not support split buffers" in log):
+        return True
+    return len(set(re.findall(r"using device (CUDA\d+)", log))) < 2
+
+
 # --------------------------------------------------------------------------
 # objective
 # --------------------------------------------------------------------------
 
 def launch_objective(result: dict, parsed: dict):
-    '''Total request time for one launch, or None if it can't be measured.
+    '''RAW host-side wall time for one launch, or None if unmeasurable.
 
-    Prefers the host-side wall clock around the HTTP request (prompt PP +
-    generation, exactly "time to read the prompt and generate the output");
-    falls back to the server's own summary lines.
+    This is NOT the study objective any more (that is
+    `LLM.standardized_objective`): it is recorded per launch as
+    `wall_objective_s` so the old metric stays comparable offline. Prefers the
+    host-side wall clock around the HTTP request; falls back to the server's own
+    summary lines.
     '''
     resp = result.get("response") or {}
     wall = resp.get("wall_request_s")
@@ -257,6 +429,35 @@ def write_run_file(output_dir: Path, record: dict) -> Path:
     return path
 
 
+def check_study_objective(config: dict, db_path: Path, study_name: str) -> None:
+    '''Fail fast if an existing study was built with a different objective.
+
+    The raw wall-time objective and the standardized T* are not comparable, so
+    resuming a study across the change would corrupt it. Called BEFORE the
+    production containers are stopped, so a mismatch costs nothing. A config
+    can opt out explicitly with `objective.allow_objective_migration: true`.
+    '''
+
+    if (config.get("objective") or {}).get("allow_objective_migration"):
+        return
+    if not Path(db_path).is_file():
+        return
+    storage = optuna.storages.RDBStorage(f"sqlite:///{db_path}")
+    if study_name not in optuna.study.get_all_study_names(storage):
+        return
+    study = optuna.load_study(study_name=study_name, storage=storage)
+    found = study.user_attrs.get("objective_version")
+    if found == OBJECTIVE_VERSION:
+        return
+    raise RuntimeError(
+        f"study {study_name!r} in {db_path} has objective_version={found!r}, "
+        f"but this tool writes {OBJECTIVE_VERSION!r}. Trial values are not "
+        f"comparable across objectives. Point the config at a new "
+        f"study_name/storage (e.g. '{study_name}-std'), or set "
+        f"objective.allow_objective_migration=true to accept the mismatch "
+        f"explicitly.")
+
+
 def run_study(config: dict, n_trials: int, seed=None) -> optuna.study.Study:
     '''Create/resume the study in the SQLite DB and run n_trials more trials.'''
 
@@ -285,6 +486,14 @@ def run_study(config: dict, n_trials: int, seed=None) -> optuna.study.Study:
             sampler=optuna.samplers.TPESampler(seed=seed))
         print(f"created new study {study_name!r} -> {db_path}")
 
+    # stamp (or refresh, when a migration was explicitly allowed) the objective
+    # identity so a later run can tell whether its values are comparable
+    if study.user_attrs.get("objective_version") != OBJECTIVE_VERSION:
+        study.set_user_attr("objective_version", OBJECTIVE_VERSION)
+        study.set_user_attr(
+            "objective_config",
+            LLM.objective_config(config, int(config.get("ntg", 128))))
+
     prompts = prompt_list(config)
     qmap = quant_map(config)
     ntg = int(config.get("ntg", 128))
@@ -298,6 +507,7 @@ def run_study(config: dict, n_trials: int, seed=None) -> optuna.study.Study:
 
         per_prompt = []
         values = []
+        low_conf_prompts = []
         for i, pfile in enumerate(prompts, 1):
             launch_id = next(launch_counter)
             print(f"  [trial {trial.number}] launch {launch_id}: "
@@ -324,36 +534,73 @@ def run_study(config: dict, n_trials: int, seed=None) -> optuna.study.Study:
             }
 
             if status == "ok":
-                parsed = LLM.parse_server_log(result.get("server_log") or "")
-                record["points"] = parsed["points"]
-                record["prompt_eval"] = parsed["prompt_eval"]
-                record["gen_eval"] = parsed["gen_eval"]
-                record["response"] = result.get("response")
-                value = launch_objective(result, parsed)
-                record["objective_s"] = value
-                if value is not None:
-                    values.append(value)
-                if not parsed["points"]:
-                    print(f"    !! no PP progress lines parsed (wall clock only)",
+                log = result.get("server_log") or ""
+                if row_is_noop(cell, log):
+                    record["status"] = "pruned-noop"
+                    record["objective_s"] = None
+                    record["server_log_tail"] = log[-8000:]
+                    print(f"    !! --split-mode row was a no-op; pruning trial",
                           flush=True)
+                else:
+                    parsed = LLM.parse_server_log(log)
+                    resp = result.get("response") or {}
+                    record["points"] = parsed["points"]
+                    record["prompt_eval"] = parsed["prompt_eval"]
+                    record["gen_eval"] = parsed["gen_eval"]
+                    record["response"] = resp
+                    record["gen_curve"] = resp.get("gen_curve") or []
+                    # raw host-side wall clock, kept for comparison/diagnostics
+                    record["wall_objective_s"] = launch_objective(result, parsed)
+                    std = LLM.standardized_objective(parsed, resp, config, ntg)
+                    record["objective"] = std
+                    value = std["objective_s"]
+                    record["objective_s"] = value
+                    record["objective_low_confidence"] = std["objective_low_confidence"]
+                    if value is not None:
+                        values.append(value)
+                        if std["objective_low_confidence"]:
+                            low_conf_prompts.append(record["prompt"])
+                            print(f"    ~ low-confidence extrapolation "
+                                  f"({'; '.join(std['objective_low_confidence_reasons'])})",
+                                  flush=True)
+                    if not parsed["points"]:
+                        print(f"    !! no PP progress lines parsed "
+                              f"(objective may be incomplete)", flush=True)
             else:
+                log = result.get("server_log") or ""
                 record["error"] = result.get("error")
                 record["objective_s"] = None
-                record["server_log_tail"] = (result.get("server_log") or "")[-8000:]
-                print(f"    !! launch failed: "
-                      f"{str(result.get('error'))[:200].splitlines()[0] if result.get('error') else 'unknown'}",
-                      flush=True)
+                record["server_log_tail"] = log[-8000:]
+                err_lines = first_error_lines(log)
+                record["error_lines"] = err_lines
+                shown = "; ".join(err_lines) or \
+                    (str(result.get("error"))[:200].splitlines()[0]
+                     if result.get("error") else "unknown")
+                print(f"    !! launch failed: {str(result.get('error'))[:120]}\n"
+                      f"       server said: {shown}", flush=True)
 
             path = write_run_file(output_dir, record)
             per_prompt.append({"prompt": record["prompt"],
                                "status": record["status"],
                                "objective_s": record.get("objective_s"),
+                               "objective_mode": (record.get("objective") or {}).get("objective_mode"),
+                               "objective_low_confidence": record.get("objective_low_confidence"),
+                               "wall_objective_s": record.get("wall_objective_s"),
                                "error": record.get("error"),
                                "file": str(path)})
 
         trial.set_user_attr("params", params)
         trial.set_user_attr("spec_mode", spec_mode)
         trial.set_user_attr("per_prompt", per_prompt)
+        trial.set_user_attr("low_confidence_prompts", low_conf_prompts)
+        trial.set_user_attr("n_low_confidence", len(low_conf_prompts))
+
+        if any(r["status"] == "pruned-noop" for r in per_prompt):
+            trial.set_user_attr(
+                "prune_reason",
+                "--split-mode row was a no-op (single device / split buffers "
+                "unsupported)")
+            raise TrialPrunedError()
 
         if not values:
             trial.set_user_attr("prune_reason", "all prompts failed")
@@ -379,6 +626,10 @@ def write_summary(study: optuna.study.Study, db_path: Path,
                           if t.state.name == "COMPLETE"),
         "n_pruned": sum(1 for t in study.trials if t.state.name == "PRUNED"),
         "n_failed": sum(1 for t in study.trials if t.state.name == "FAIL"),
+        "n_low_confidence": sum(1 for t in study.trials
+                                if t.user_attrs.get("n_low_confidence")),
+        "objective_version": study.user_attrs.get("objective_version"),
+        "objective_config": study.user_attrs.get("objective_config"),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     try:
@@ -389,6 +640,7 @@ def write_summary(study: optuna.study.Study, db_path: Path,
             "params": best.params,
             "spec_mode": best.user_attrs.get("spec_mode"),
             "per_prompt": best.user_attrs.get("per_prompt"),
+            "low_confidence_prompts": best.user_attrs.get("low_confidence_prompts"),
         }
     except ValueError:
         summary["best"] = None
@@ -467,6 +719,7 @@ def main() -> int:
                 if not p.is_file():
                     parser.error(f"spec draft model not found: {p}")
     space = space_choices(config)
+    obj_cfg = LLM.objective_config(config, int(config.get("ntg", 128)))
 
     if args.dry_run:
         print(f"study        : {study_name}")
@@ -475,14 +728,22 @@ def main() -> int:
         print(f"prompts      : {[p.name for p in prompts]}")
         print(f"quants       : {list(qmap)}")
         print(f"ntg          : {config.get('ntg', 128)}")
+        print(f"objective    : {OBJECTIVE_VERSION}  T* = P({obj_cfg['prompt_tokens']}) "
+              f"+ G(..., {obj_cfg['output_tokens']})  "
+              f"(stream-fit tail={obj_cfg['gen_fit_tail_steps']}, "
+              f"low-confidence below {obj_cfg['min_gen_tokens']} gen tokens)")
         print(f"n_trials     : {n_trials} (this invocation)")
         total = 1
         for flag, choices in space.items():
             print(f"  space {flag:18s} {choices}")
             total *= len(choices)
         print(f"spec modes   : {[m['name'] for m in spec_modes(config)]}")
-        print(f"space size   : {total} (before spec sub-params; ubatch>batch "
-              f"pruned)")
+        print(f"space size   : {total} (before spec sub-params; pruned at sample "
+              f"time: ubatch>batch, quantized-cache+flash-attn-off, "
+              f"tensor-split+flash-attn-off, "
+              f"tensor-split+partial-offload[full_offload_ngl="
+              f"{config.get('full_offload_ngl', [])}], spec-n-min>n-max; "
+              f"row no-ops pruned post-launch)")
         print(f"production   : stop/restart {config.get('production_containers', ['llama-cuda'])}"
               + ("" if config.get("stop_production", True) else " (DISABLED via --no-stop-production)"))
         return 0
@@ -490,14 +751,20 @@ def main() -> int:
     print(f"llama-server-optuna-bench: {config['model_name']} "
           f"({config['models_path']})")
     print(f"  db={db_path}  runs={output_dir / 'runs'}  n_trials={n_trials}")
-    print(f"  objective = mean over {[p.name for p in prompts]} of "
-          f"wall_request_s (full prompt PP + {config.get('ntg', 128)} gen tokens)")
+    print(f"  objective = mean over {[p.name for p in prompts]} of T* "
+          f"({OBJECTIVE_VERSION}): {obj_cfg['prompt_tokens']}-token PP + "
+          f"{obj_cfg['output_tokens']}-token generation at that context; "
+          f"raw wall_request_s + finish_reason + per-token gen curve retained "
+          f"in the run files")
     if config.get("stop_production", True):
         names = LLM.production_container_names(config)
         print(f"  ⚠️ stopping production container(s) {names} for the WHOLE "
               f"optimization — live pyrite-local models (and any "
               f"pyrite-hosted Claude Code session's model) will 502 through "
               f"the router until the restart")
+
+    # refuse to mix objectives in one study — BEFORE production is stopped
+    check_study_objective(config, db_path, study_name)
 
     LLM.cleanup_stale_bench()
 

@@ -1,27 +1,28 @@
 {
     "model_name": "Qwen3.8-27B",
-    "study_name": "Qwen3.8-27B-optuna",
+    "study_name": "Qwen3.8-27B-optuna-std",
 
     "model_base": "Qwen3.8-27B",
-    "quants": "UD-Q4_K_M,UD-IQ3_S",
+    "quants": "UD-Q5_K_M,UD-Q4_K_M,UD-IQ3_S,UD-IQ2_S",
 
     "image": "ghcr.io/ggml-org/llama.cpp:full-cuda",
 
     "fixed": {
         "--ctx-size":      "131072",
-        "--threads":       "12",
-        "--threads-batch": "12",
-        "--device":        "CUDA0,CUDA1"
+        "--device":        "CUDA0,CUDA1",
+        "--n-gpu-layers":  "-1",
+        "--main-gpu":      "0"
     },
 
     "space": {
-        "--n-gpu-layers": "12,20,28,36,999",
-        "--flash-attn":   "on,off",
-        "--split-mode":   "layer,tensor",
-        "--cache-type-k": "q8_0,q4_0,bf16",
-        "--cache-type-v": "q8_0,q4_0,bf16",
-        "--batch-size":   "2048,4096,8192",
-        "--ubatch-size":  "512,1024,2048,4096"
+        "--flash-attn":    "on,off",
+        "--split-mode":    "layer,row,tensor",
+        "--cache-type-k":  "q8_0,q4_0,f16",
+        "--cache-type-v":  "q8_0,q4_0,f16",
+        "--batch-size":    "2048,4096,8192",
+        "--ubatch-size":   "512,1024,2048,4096",
+        "--threads":       "12,18,24",
+        "--threads-batch": "12,18,24"
     },
 
     "spec": {
@@ -30,20 +31,67 @@
             {
                 "name": "mtp",
                 "base_flags": {
-                    "--model-draft": "/models/Qwen3.8-27B-mtp-Q4_0.gguf",
-                    "--spec-type":   "draft-mtp"
+                    "--spec-type":        "draft-mtp",
+                    "--model-draft":      "/models/Qwen3.8-27B-mtp-Q4_0.gguf",
+                    "--gpu-layers-draft": "-1"
                 },
                 "params": {
-                    "--spec-draft-n-max": { "type": "int", "low": 1, "high": 5 }
+                    "--spec-draft-n-max": { "type": "int", "low": 1, "high": 6 },
+                    "--spec-draft-n-min": { "type": "int", "low": 0, "high": 3 }
+                }
+            },
+            {
+                "name": "ngram-simple",
+                "base_flags": {"--spec-type": "ngram-simple"},
+                "params": {
+                    "--spec-ngram-simple-size-m":   { "type": "int", "low": 8, "high": 64 },
+                    "--spec-ngram-simple-size-n":   { "type": "int", "low": 4, "high": 16 },
+                    "--spec-ngram-simple-min-hits": { "type": "int", "low": 1, "high": 4 }
+                }
+            },
+            {
+                "name": "ngram-map-k",
+                "base_flags": {"--spec-type": "ngram-map-k"},
+                "params": {
+                    "--spec-ngram-map-k-size-m":   { "type": "int", "low": 8, "high": 64 },
+                    "--spec-ngram-map-k-size-n":   { "type": "int", "low": 4, "high": 16 },
+                    "--spec-ngram-map-k-min-hits": { "type": "int", "low": 1, "high": 4 }
+                }
+            },
+            {
+                "name": "ngram-mod",
+                "base_flags": {"--spec-type": "ngram-mod"},
+                "params": {
+                    "--spec-ngram-mod-n-max":   { "type": "int", "low": 16, "high": 96 },
+                    "--spec-ngram-mod-n-min":   { "type": "int", "low": 8,  "high": 64 },
+                    "--spec-ngram-mod-n-match": { "type": "int", "low": 4,  "high": 48 }
+                }
+            },
+            {
+                "name": "ngram-map-k4v",
+                "base_flags": {"--spec-type": "ngram-map-k4v"},
+                "params": {
+                    "--spec-ngram-map-k4v-size-m":   { "type": "int", "low": 8, "high": 64 },
+                    "--spec-ngram-map-k4v-size-n":   { "type": "int", "low": 4, "high": 16 },
+                    "--spec-ngram-map-k4v-min-hits": { "type": "int", "low": 1, "high": 4 }
                 }
             }
         ]
     },
 
     "prompt_file": "tests/prompts/qwen3_8_27b_v1.txt,tests/prompts/qwen3_8_27b_v2.txt,tests/prompts/qwen3_8_27b_v3.txt",
-    "ntg": 128,
+    "ntg": 4096,
 
-    "n_trials": 20,
+    "objective": {
+        "prompt_tokens": 32768,
+        "output_tokens": 4096,
+        "gen_fit_tail_steps": 64,
+        "gen_fit_min_steps": 16,
+        "min_gen_tokens": 512,
+        "max_pp_extrapolation_ratio": 1.25
+    },
+
+    "n_trials": 200,
     "seed": null,
 
     "load_timeout": 600,

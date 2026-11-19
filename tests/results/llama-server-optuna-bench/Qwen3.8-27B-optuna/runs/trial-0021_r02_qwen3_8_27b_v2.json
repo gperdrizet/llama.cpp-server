@@ -1,0 +1,98 @@
+{
+ "tool": "llama-server-optuna-bench",
+ "study": "Qwen3.8-27B-optuna",
+ "trial": 21,
+ "run": 2,
+ "prompt": "qwen3_8_27b_v2.txt",
+ "params": {
+  "quant": "UD-IQ2_S",
+  "--flash-attn": "on",
+  "--split-mode": "tensor",
+  "--cache-type-k": "q4_0",
+  "--cache-type-v": "q8_0",
+  "--batch-size": "8192",
+  "--ubatch-size": "2048"
+ },
+ "spec_mode": "ngram-simple",
+ "spec_flags": {
+  "--spec-type": "ngram-simple",
+  "--spec-draft-n-max": 64
+ },
+ "model_file": "Qwen3.8-27B-UD-IQ2_S.gguf",
+ "cell": {
+  "--ctx-size": "131072",
+  "--threads": "12",
+  "--threads-batch": "12",
+  "--device": "CUDA0,CUDA1",
+  "--n-gpu-layers": "-1",
+  "--flash-attn": "on",
+  "--split-mode": "tensor",
+  "--cache-type-k": "q4_0",
+  "--cache-type-v": "q8_0",
+  "--batch-size": "8192",
+  "--ubatch-size": "2048"
+ },
+ "ntg": 4096,
+ "status": "ok",
+ "timestamp": "2026-11-18T09:29:36.132093+00:00",
+ "points": [
+  {
+   "n_tokens_cum": 8192,
+   "n_tokens_seg": 8192,
+   "t_cum_s": 29.11,
+   "t_seg_s": 29.11,
+   "tps_cum": 281.415,
+   "tps_seg": 281.415
+  },
+  {
+   "n_tokens_cum": 16384,
+   "n_tokens_seg": 8192,
+   "t_cum_s": 51.23,
+   "t_seg_s": 22.12,
+   "tps_cum": 319.813,
+   "tps_seg": 370.344
+  },
+  {
+   "n_tokens_cum": 24576,
+   "n_tokens_seg": 8192,
+   "t_cum_s": 76.09,
+   "t_seg_s": 24.86,
+   "tps_cum": 322.986,
+   "tps_seg": 329.525
+  },
+  {
+   "n_tokens_cum": 26100,
+   "n_tokens_seg": 1524,
+   "t_cum_s": 81.75,
+   "t_seg_s": 5.66,
+   "tps_cum": 319.266,
+   "tps_seg": 269.258
+  },
+  {
+   "n_tokens_cum": 28148,
+   "n_tokens_seg": 2048,
+   "t_cum_s": 88.24,
+   "t_seg_s": 6.49,
+   "tps_cum": 318.994,
+   "tps_seg": 315.562
+  }
+ ],
+ "prompt_eval": {
+  "n_tokens": 28152,
+  "t_ms": 90435.15,
+  "ms_per_tok": 3.21,
+  "tps": 311.29
+ },
+ "gen_eval": {
+  "n_tokens": 4096,
+  "t_ms": 455996.35,
+  "ms_per_tok": 111.35,
+  "tps": 8.98
+ },
+ "response": {
+  "prompt_tokens": 28152,
+  "completion_tokens": 4096,
+  "wall_request_s": 546.532
+ },
+ "objective_s": 546.532
+}

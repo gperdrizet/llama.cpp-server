@@ -1,84 +1,85 @@
 # llama.cpp-server
 
 Distributed `llama.cpp` inference deployment, managed by **Ansible + Docker** with
-**LiteLLM** as the unified router. Serves a mixed fleet of local and remote models
-through one OpenAI-compatible API.
+**LiteLLM** as the unified router. Serves a mixed fleet of local models through one
+OpenAI-compatible API.
 
 ## Topology
 
-Two machines on a Tailscale LAN:
+Three machines on a Tailscale LAN:
 
-| Node | Tailscale IP | Hardware | Role |
-|---|---|---|---|
-| **pyrite** | 100.64.0.2 | 2× Tesla P100 16 GB | Reasoning models + LiteLLM router (public port) |
-| **ethics-gradient** | 100.64.0.5 | 1× Tesla GTX1070 | Small utility & embedding models |
+| Node                | Tailscale IP | Hardware            | Role                                            |
+|---------------------|--------------|---------------------|-------------------------------------------------|
+| **gatekeeper**      | 100.64.0.1   | CPU only VPS        | External gateway                                |
+| **pyrite**          | 100.64.0.2   | 2× Tesla P100 16 GB | Reasoning models + LiteLLM router (public port) |
+| **ethics-gradient** | 100.64.0.5   | 1× Tesla GTX1070    | Small utility & embedding models                |
 
-```
-                    ┌──────────────────────────────────────┐
-                    │ VPS gateway  (promptlyapi.com)       │
-                    │ public OpenAI-compatible API (HTTPS) │
-                    └──────────────────────────────────────┘
-                                        │
-                                        │
-                                        │
-                                        │
-                    ┌───────────────────┘
-                    │
-                    ▼
-    ┌───────────────────────────────┐        ┌───────────────────────────────┐
-    │ pyrite                        │        │ ethics-gradient               │
-    │                               │        │                               │
-    │ litellm-router :8502          │──LAN──►│ llama-cuda :8080              │
-    │    │  (Docker network, local) │        │    • Qwen2.5-Coder-7B         │
-    │    ▼                          │        │    • BGE-M3  (embeddings)     │
-    │ llama-cuda :8080              │        │                               │
-    │    • Qwen3.8-27B              │        │                               │
-    │    • Qwen3.8-Flash-Next       │        │                               │
-    └───────────────────────────────┘        └───────────────────────────────┘
+```mermaid
+flowchart TB
+    gateway["Host: <b>gatekeeper</b> (VPS)<br/>promptlyapi.com · public OpenAI API over HTTPS"]
+
+    subgraph pyrite["Host: <b>pyrite</b> (2× Tesla P100)"]
+        router["Container: litellm-router"]
+        local["Container: llama-cuda<br/>Qwen3.8-27B · Qwen3.8-Flash-Next"]
+        router -->|"Docker network"| local
+    end
+
+    subgraph gradient["Host: <b>ethics-gradient</b> (GTX 1070)"]
+        remote["Container: llama-cuda<br/>Qwen2.5-Coder-7B · BGE-M3 (embeddings)"]
+    end
+
+    gateway -->|"Tailnet"| router
+    router -->|"Tailnet"| remote
 ```
 
-- **LiteLLM (`:8502`)**: the router *and* the public entry point — the `litellm-router`
-  container maps host `:8502` to its `:8506`. Owns the model list (see
-  `inventory/host_vars/pyrite.yml`, `managed_models`) and model selection. Health checks go
-  to `/health/liveliness` or `/health/readiness` on `:8502`; the deep `/health` endpoint
-  probes all models and is intentionally *not* the public probe. (The old nginx gateway
-  that fronted LiteLLM was removed — see `legacy/nginx/`.)
-- **llama.cpp (`llama-cuda` container)**: one per node, `ghcr.io/ggml-org/llama.cpp:server-cuda`,
-  started with `--models-preset`. Holds `models_max` models resident; a new request evicts and
-  reloads.
+- **LiteLLM**: the `litellm-router` container owns the model list and routes requests
+  from the VPS to the correct inference container based on caller's model string.
+- **llama.cpp**: one `llama-cuda` container per node running `ghcr.io/ggml-org/llama.cpp:server-cuda`,
+  each node gets a specific model loadout.
 
 ### Models
 
-| Model | Node | Preset | Notes |
-|---|---|---|---|
-| `Qwen3.8-27B` | pyrite | `[Qwen3.8-27B]` in `llama_router_presets/pyrite.ini` | Dual-GPU tensor split, MTP speculative decode, 128K ctx, low reasoning effort |
-| `Qwen3.8-Flash-Next` | pyrite | `[Qwen3.8-Flash-Next]` | 125B MoE, 40 layers on GPU + `cpu-moe` offload with mlock, slow cold load (~400 s) |
-| `Qwen2.5-Coder-7B` | ethics-gradient | `[Qwen2.5-Coder-7B]` in `llama_router_presets/ethics_gradient.ini` | Instruct model; used for fast utility/classifier workloads |
-| `BGE-M3` | ethics-gradient | `[BGE-M3]` | Embeddings (`/v1/embeddings`) |
+| Model                | Node            | Notes                                                                              |
+|----------------------|-----------------|------------------------------------------------------------------------------------|
+| `Qwen3.8-27B`        | pyrite          | Dual-GPU tensor split, MTP speculative decode, 128K ctx, low reasoning effort      |
+| `Qwen3.8-Flash-Next` | pyrite          | 125B MoE, 40 layers on GPU + `cpu-moe` offload with mlock, slow cold load (~400 s) |
+| `Qwen2.5-Coder-7B`   | ethics-gradient | Instruct model; used for fast utility/classifier workloads                         |
+| `BGE-M3`             | ethics-gradient | Embeddings (`/v1/embeddings`)                                                      |
 
-Both presets use q8_0 KV caches. Model files live in `/mnt/fast_scratch/llama-models` on each
+Model files live in `/mnt/fast_scratch/llama-models` on each
 node (pyrite: bcache, check free space before big downloads), mounted into the container at `/models`.
 
 ## Repository layout
 
-| Path | What |
-|---|---|
-| `playbooks/deploy_llm_stack.yml` | Deploys the `llama-cuda` container (and LiteLLM where enabled) per node: presets, chat template, network, GPU passthrough, volumes |
-| `ansible.cfg` | Points at `inventory/hosts.ini` |
-| `inventory/hosts.ini` | Node list (pyrite local, ethics-gradient over SSH/Tailscale) |
-| `inventory/host_vars/*.yml` | Per-node config: preset source, `models_max`, LAN exposure, image, LiteLLM `managed_models` |
-| `llama_router_presets/*.ini` | llama.cpp `--models-preset` files per node |
-| `chat_templates/qwen_chat.jinja` | Patched Qwen chat template (accepts `developer` role) |
-| `templates/litellm_config.json.j2` | LiteLLM `config.json` template |
-| `tests/` | Benchmark runners + configs (see `tests/README.md`; update pending) |
-| `legacy/` | Old systemd/nginx deployment, **reference only** — do not deploy from it |
-| `models/` | **Symlink** → `/mnt/fast_scratch/llama-models` (gitignored) |
+```
+.
+├── chat_templates/
+│   └── qwen_chat.jinja             # Patched Qwen chat template (accepts developer role)
+│
+├── inventory/
+│   ├── hosts.ini                   # Node list (pyrite local, ethics-gradient over Tailscale)
+│   └── host_vars/*.yml             # Per-node config: preset, models_max, LAN
+│                                   # exposure, image, LiteLLM managed_models
+├── llama_router_presets/
+│   └── *.ini                       # llama.cpp --models-preset files per node
+│
+├── models -> /mnt/fast_scratch/llama-models   # Model files (symlink, gitignored)
+│
+├── playbooks/
+│   └── deploy_llm_stack.yml        # Deploys llama-cuda + LiteLLM per node:
+│                                   # presets, template, network, GPUs, volumes
+├── templates/
+│   └── litellm_config.json.j2      # LiteLLM config.json template
+│
+├── tests/                          # Benchmark runners + configs (see tests/README.md)
+└── ansible.cfg                     # Ansible config (points at inventory/hosts.ini)
+```
 
 ## Deployment
 
-Prereqs on each node: Docker, NVIDIA container runtime (GPU passthrough), Ansible with
+Prerequisites on each node: Docker, NVIDIA container runtime (GPU passthrough), Ansible with
 `community.docker` (pyrite only, for the `docker_*` modules). `inventory/hosts.ini` targets
-pyrite locally and ethics-gradient over SSH on the Tailscale IP.
+pyrite locally and ethics-gradient over SSH on a Tailscale IP.
 
 Deploy a node (idempotent; recreates the `llama-cuda` container only when its preset or
 chat template changed, or when `ansible_docker_recreate: true` is passed):
@@ -113,18 +114,19 @@ The llama.cpp router reads its preset **only at container start** — editing th
 ## Operations
 
 ```bash
-docker ps -a                                   # containers on this node
-docker logs -f llama-cuda                      # llama.cpp server logs
-docker logs -f litellm-router                  # router logs (pyrite)
+docker ps -a                                      # containers on this node
+docker logs -f llama-cuda                         # llama.cpp server logs
+docker logs -f litellm-router                     # router logs (pyrite)
 
-curl -s http://127.0.0.1:8502/v1/models        # router: full model list
+curl -s http://127.0.0.1:8502/v1/models           # router: full model list
 curl -s http://127.0.0.1:8502/health/liveliness   # fast liveness  (~ms)
 curl -s http://127.0.0.1:8502/health/readiness    # fast readiness (~ms)
+
 # /health is the DEEP check (probes every model, 10-30s+); don't use it for health-checking
 
-curl -s https://promptlyapi.com/v1/models -H "Authorization: Bearer $KEY"   # full public chain
+curl -s https://promptlyapi.com/v1/models -H "Authorization: Bearer $KEY" # full public chain
 
-nvidia-smi                                     # VRAM on this node
+nvidia-smi                                        # VRAM on this node
 ```
 
 ### Quick API calls
@@ -157,17 +159,3 @@ curl -s http://127.0.0.1:8502/v1/embeddings \
 - **Qwen3.5+ chat templates**: the stock template rejects the `developer` role (breaks Claude
   Code-style clients). The patched `chat_templates/qwen_chat.jinja` is deployed to
   `/config/template.jinja` and referenced by the presets.
-
-## Claude Code backend
-
-This stack is the backend for local Claude Code sessions (via `~/.claude/settings.json`):
-
-| Slot | Env var | Model | Why |
-|---|---|---|---|
-| main | `ANTHROPIC_DEFAULT_SONNET_MODEL` | Qwen3.8-27B | Light conversation, reasoning, code |
-| fast | `ANTHROPIC_DEFAULT_OPUS_MODEL` | Qwen3.8-Flash-Next | Deep reasoning, extended work |
-| utility | `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Qwen2.5-Coder-7B | fast, non-reasoning: auto-mode tool classification, compaction |
-
-`ANTHROPIC_BASE_URL` points at the public gateway (`https://promptlyapi.com/v1`) with a
-promptly key, so sessions exercise the full production chain. Note: model slots are resolved
-at **session start** — changing them requires a new session.

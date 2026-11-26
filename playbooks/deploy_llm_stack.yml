@@ -128,8 +128,11 @@
 
         # LiteLLM router: public port 8502 on the host maps to 8506 in the
         # container. (nginx gateway removed — LiteLLM now fronts :8502 directly.)
+        # 8505 is the dedicated Prometheus metrics port: tailnet-only bind, no
+        # auth, so it must never be published on 0.0.0.0.
         ports:
           - "8502:8506"
+          - "100.64.0.2:8505:8505"
 
         # Mount configuration file for LiteLLM router
         volumes:
@@ -138,6 +141,8 @@
         # Allow weak or unset master key for LiteLLM router
         env:
           LITELLM_DANGEROUSLY_PERMIT_WEAK_OR_UNSET_MASTER_KEY: "true"
+          # Serves per-model request/token/latency/TTFT metrics on :8505
+          PROMETHEUS_METRICS_PORT: "8505"
 
         # Start command for LiteLLM router
         command: "--config /app/config.json --port 8506 --host 0.0.0.0"

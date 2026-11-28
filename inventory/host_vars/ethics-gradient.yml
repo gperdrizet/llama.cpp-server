@@ -5,4 +5,4 @@ expose_llama_port_to_lan: true                    # Exposes port 8080 so pyrite'
 preset_file_src: "ethics_gradient.ini"            # Llama.cpp presets per model
 host_models_dir: "/mnt/fast_scratch/llama-models" # Location of model files
 has_custom_template: false                        # No custom chat templates for ethics-gradient
-llama_docker_image: "ghcr.io/ggml-org/llama.cpp:server-cuda"
+llama_docker_image: "ghcr.io/ggml-org/llama.cpp:server-cuda-v1.1.0"  # pinned: cluster-wide uniform version (pyrite + ethics-gradient)

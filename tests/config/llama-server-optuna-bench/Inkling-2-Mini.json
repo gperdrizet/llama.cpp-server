@@ -1,0 +1,77 @@
+{
+    "model_name": "Inkling-2-Mini",
+    "study_name": "Inkling-2-Mini-optuna-std",
+
+    "model_base": "Inkling-2-Mini",
+    "quants": "UD-Q4_K_XL",
+
+    "image": "ghcr.io/ggml-org/llama.cpp:server-cuda-v1.1.0",
+
+    "fixed": {
+        "--ctx-size":      "131072",
+        "--device":        "CUDA0,CUDA1",
+        "--n-gpu-layers":  "-1",
+        "--main-gpu":      "0",
+        "--mmproj":        "/models/Inkling-2-Mini-mmproj-F16.gguf"
+    },
+
+    "space": {
+        "--flash-attn":    "on,off",
+        "--split-mode":    "layer,tensor",
+        "--cache-type-k":  "q8_0,q4_0,f16",
+        "--cache-type-v":  "q8_0,q4_0,f16",
+        "--batch-size":    "256,512,1024,2048",
+        "--ubatch-size":   "128,256,512,1024",
+        "--threads":       "12,18,24",
+        "--threads-batch": "12,18,24"
+    },
+
+    "spec": {
+        "modes": [
+            { "name": "off" },
+            {
+                "name": "dspark",
+                "base_flags": {
+                    "--spec-type":        "draft-dspark",
+                    "--model-draft":      "/models/Inkling-2-Mini-dspark-Q8_0.gguf",
+                    "--gpu-layers-draft": "-1"
+                },
+                "params": {
+                    "--spec-draft-n-max": { "type": "int", "low": 3, "high": 6 },
+                    "--spec-draft-n-min": { "type": "int", "low": 0, "high": 3 }
+                }
+            },
+            {
+                "name": "ngram-simple",
+                "base_flags": {"--spec-type": "ngram-simple"},
+                "params": {
+                    "--spec-ngram-simple-size-m":   { "type": "int", "low": 8, "high": 64 },
+                    "--spec-ngram-simple-size-n":   { "type": "int", "low": 4, "high": 16 },
+                    "--spec-ngram-simple-min-hits": { "type": "int", "low": 1, "high": 4 }
+                }
+            }
+        ]
+    },
+
+    "prompt_file": "tests/prompts/qwen3_8_27b_v1.txt,tests/prompts/qwen3_8_27b_v2.txt",
+    "ntg": 4096,
+
+    "objective": {
+        "prompt_tokens": 32768,
+        "output_tokens": 4096,
+        "gen_fit_tail_steps": 64,
+        "gen_fit_min_steps": 16,
+        "min_gen_tokens": 512,
+        "max_pp_extrapolation_ratio": 1.25
+    },
+
+    "n_trials": 120,
+    "seed": null,
+
+    "load_timeout": 900,
+    "request_timeout": 3600,
+
+    "min_free_vram_gib": 28,
+    "stop_production": true,
+    "production_containers": ["llama-cuda"]
+}

@@ -103,12 +103,12 @@ The playbook:
 1. Add a section to the node's preset in `llama_router_presets/` (model path, ctx, device split,
    speculative decode, …).
 2. If it must be routable, add it to `managed_models` in that node's `host_vars` (the entry is
-   what LiteLLM's `model_list` is built from — exact name casing matters, both for the LiteLLM
+   what LiteLLM's `model_list` is built from; exact name casing matters, both for the LiteLLM
    alias and for the GGUF filename it references in the preset).
-3. Re-run the playbook for that node — a changed preset redeploys the container; a changed
+3. Re-run the playbook for that node: a changed preset redeploys the container; a changed
    `host_vars` re-renders the LiteLLM config, which recreates the router.
 
-The llama.cpp router reads its preset **only at container start** — editing the file on
+The llama.cpp router reads its preset **only at container start**; editing the file on
 `/opt/llama/config` without recreating the container silently keeps the old model list.
 
 ## Operations
@@ -152,10 +152,10 @@ curl -s http://127.0.0.1:8502/v1/embeddings \
 - **`models_max = 1` on pyrite** means model *swap*, not stack: requesting Flash-Next evicts
   the 27B and its ~400 s cold load is the price. Warm loads are ~40 s.
 - **LiteLLM `/health` is deep and slow.** Point health checkers at
-  `/health/liveliness`/`/health/readiness` on `:8502` — not raw `/health`.
+  `/health/liveliness`/`/health/readiness` on `:8502`, not raw `/health`.
 - **Auth lives in promptly** (gatekeeper → promptlyapi.com), not in this repo. The router
   runs keyless on `:8502`; its only clients are the VPS gateway and this machine, so keep
-  `:8502` on the Tailscale LAN — never publish it to the public internet.
+  `:8502` on the Tailscale LAN; never publish it to the public internet.
 - **Qwen3.5+ chat templates**: the stock template rejects the `developer` role (breaks Claude
   Code-style clients). The patched `chat_templates/qwen_chat.jinja` is deployed to
   `/config/template.jinja` and referenced by the presets.

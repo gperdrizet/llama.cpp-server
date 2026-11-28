@@ -1,0 +1,138 @@
+{
+  "name": "promptly-prod",
+  "base_url": "https://promptlyapi.com/v1",
+  "config": {
+    "name": "promptly-prod",
+    "base_url": "https://promptlyapi.com/v1",
+    "api_key_env": "PROMPTLY_API_KEY",
+    "prompt_file": "tests/prompts/qwen3_8_27b_v1.txt",
+    "ntg": 512,
+    "runs": 1,
+    "temperature": 0,
+    "warmup": true,
+    "warmup_max_tokens": 8,
+    "timings_per_token": true,
+    "exclude_regex": "(?i)(embed|bge|rerank)",
+    "exclude_models": [],
+    "include_models": [],
+    "request_timeout": 3600
+  },
+  "prompts": [
+    "qwen3_8_27b_v1.txt"
+  ],
+  "catalog": [
+    "Qwen3.8-27B",
+    "Dark-Qwen3.8-27B",
+    "Qwen3.8-Flash-Next",
+    "Qwen3-Coder-Next",
+    "Qwen3.5-4B",
+    "BGE-M3"
+  ],
+  "skipped": {
+    "BGE-M3": "matches exclude regex (embedding/rerank model)"
+  },
+  "models": {
+    "Qwen3.8-27B": {
+      "warmup": {
+        "status": "ok",
+        "wall_s": 4.791,
+        "served_model": "Qwen3.8-27B"
+      },
+      "runs": [
+        {
+          "prompt": "qwen3_8_27b_v1.txt",
+          "run": 1,
+          "status": "ok",
+          "pp_tps": 322.15,
+          "gen_tps": 26.32,
+          "error": null
+        }
+      ],
+      "status": "ok",
+      "mean_pp_tps": 322.15,
+      "mean_gen_tps": 26.32
+    },
+    "Dark-Qwen3.8-27B": {
+      "warmup": {
+        "status": "ok",
+        "wall_s": 44.392,
+        "served_model": "Dark-Qwen3.8-27B"
+      },
+      "runs": [
+        {
+          "prompt": "qwen3_8_27b_v1.txt",
+          "run": 1,
+          "status": "ok",
+          "pp_tps": 322.53,
+          "gen_tps": 30.42,
+          "error": null
+        }
+      ],
+      "status": "ok",
+      "mean_pp_tps": 322.53,
+      "mean_gen_tps": 30.42
+    },
+    "Qwen3.8-Flash-Next": {
+      "warmup": {
+        "status": "ok",
+        "wall_s": 251.035,
+        "served_model": "Qwen3.8-Flash-Next"
+      },
+      "runs": [
+        {
+          "prompt": "qwen3_8_27b_v1.txt",
+          "run": 1,
+          "status": "ok",
+          "pp_tps": 125.19,
+          "gen_tps": 10.09,
+          "error": null
+        }
+      ],
+      "status": "ok",
+      "mean_pp_tps": 125.19,
+      "mean_gen_tps": 10.09
+    },
+    "Qwen3-Coder-Next": {
+      "warmup": {
+        "status": "ok",
+        "wall_s": 51.133,
+        "served_model": "Qwen3-Coder-Next"
+      },
+      "runs": [
+        {
+          "prompt": "qwen3_8_27b_v1.txt",
+          "run": 1,
+          "status": "ok",
+          "pp_tps": 265.19,
+          "gen_tps": 5.62,
+          "error": null
+        }
+      ],
+      "status": "ok",
+      "mean_pp_tps": 265.19,
+      "mean_gen_tps": 5.62
+    },
+    "Qwen3.5-4B": {
+      "warmup": {
+        "status": "ok",
+        "wall_s": 5.827,
+        "served_model": "Qwen3.5-4B"
+      },
+      "runs": [
+        {
+          "prompt": "qwen3_8_27b_v1.txt",
+          "run": 1,
+          "status": "ok",
+          "pp_tps": 364.14,
+          "gen_tps": 15.77,
+          "error": null
+        }
+      ],
+      "status": "ok",
+      "mean_pp_tps": 364.14,
+      "mean_gen_tps": 15.77
+    }
+  },
+  "result_file": "/home/siderealyear/llama.cpp/tests/results/inference-api-bench/promptly-prod_2026-11-24_12-46-50.jsonl",
+  "timestamp": "2026-11-24T17:46:50.439293+00:00"
+}

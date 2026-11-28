@@ -1,0 +1,53 @@
+{
+ "tool": "llama-server-optuna-bench",
+ "study": "Inkling-2-Mini-optuna-std",
+ "trial": 0,
+ "run": 1,
+ "prompt": "qwen3_8_27b_v1.txt",
+ "params": {
+  "quant": "UD-Q4_K_XL",
+  "--flash-attn": "on",
+  "--split-mode": "tensor",
+  "--cache-type-k": "q8_0",
+  "--cache-type-v": "f16",
+  "--batch-size": "1024",
+  "--ubatch-size": "128",
+  "--threads": "24",
+  "--threads-batch": "18"
+ },
+ "spec_mode": "dspark",
+ "spec_flags": {
+  "--spec-type": "draft-dspark",
+  "--model-draft": "/models/Inkling-2-Mini-dspark-Q8_0.gguf",
+  "--gpu-layers-draft": "-1",
+  "--spec-draft-n-max": 6,
+  "--spec-draft-n-min": 0
+ },
+ "model_file": "Inkling-2-Mini-UD-Q4_K_XL.gguf",
+ "cell": {
+  "--ctx-size": "131072",
+  "--device": "CUDA0,CUDA1",
+  "--n-gpu-layers": "-1",
+  "--main-gpu": "0",
+  "--mmproj": "/models/Inkling-2-Mini-mmproj-F16.gguf",
+  "--flash-attn": "on",
+  "--split-mode": "tensor",
+  "--cache-type-k": "q8_0",
+  "--cache-type-v": "f16",
+  "--batch-size": "1024",
+  "--ubatch-size": "128",
+  "--threads": "24",
+  "--threads-batch": "18"
+ },
+ "ntg": 4096,
+ "status": "error",
+ "timestamp": "2026-11-28T16:50:41.615475+00:00",
+ "error": "model did not finish loading within load_timeout (or the server exited early)",
+ "objective_s": null,
+ "server_log_tail": " u32              = 24\n0.00.585.226 I llama_model_loader: - kv   5:               inkling2_loop.context_length u32              = 1048576\n0.00.585.227 I llama_model_loader: - kv   6:             inkling2_loop.embedding_length u32              = 2304\n0.00.585.227 I llama_model_loader: - kv   7:          inkling2_loop.feed_forward_length u32              = 1152\n0.00.585.235 I llama_model_loader: - kv   8:         inkling2_loop.attention.head_count arr[i32,24]      = [24, 24, 24, 24, 24, 24, 24, 24, 24, ...\n0.00.585.238 I llama_model_loader: - kv   9:      inkling2_loop.attention.head_count_kv arr[i32,24]      = [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, ...\n0.00.585.245 I llama_model_loader: - kv  10: inkling2_loop.attention.layer_norm_rms_epsilon f32              = 0.000001\n0.00.585.246 I llama_model_loader: - kv  11:                 inkling2_loop.expert_count u32              = 128\n0.00.585.247 I llama_model_loader: - kv  12:            inkling2_loop.expert_used_count u32              = 8\n0.00.585.247 I llama_model_loader: - kv  13:         inkling2_loop.attention.key_length u32              = 128\n0.00.585.248 I llama_model_loader: - kv  14:       inkling2_loop.attention.value_length u32              = 128\n0.00.585.248 I llama_model_loader: - kv  15:                   inkling2_loop.loop.count u32              = 3\n0.00.585.249 I llama_model_loader: - kv  16:                   inkling2_loop.loop.start u32              = 6\n0.00.585.250 I llama_model_loader: - kv  17:                     inkling2_loop.loop.end u32              = 18\n0.00.585.250 I llama_model_loader: - kv  18:               inkling2_loop.loop.gate_rank u32              = 64\n0.00.585.251 I llama_model_loader: - kv  19:                   inkling2_loop.vocab_size u32              = 201024\n0.00.585.251 I llama_model_loader: - kv  20:          inkling2_loop.vocab_size_unpadded u32              = 200058\n0.00.585.252 I llama_model_loader: - kv  21:   inkling2_loop.expert_feed_forward_length u32              = 1152\n0.00.585.253 I llama_model_loader: - kv  22:     inkling2_loop.attention.key_length_swa u32              = 128\n0.00.585.253 I llama_model_loader: - kv  23:   inkling2_loop.attention.value_length_swa u32              = 128\n0.00.585.254 I llama_model_loader: - kv  24:         inkling2_loop.rope.dimension_count u32              = 0\n0.00.585.254 I llama_model_loader: - kv  25:     inkling2_loop.attention.sliding_window u32              = 1024\n0.00.585.257 I llama_model_loader: - kv  26: inkling2_loop.attention.sliding_window_pattern arr[bool,24]     = [true, true, true, true, true, false,...\n0.00.585.258 I llama_model_loader: - kv  27:            inkling2_loop.shortconv.l_cache u32              = 4\n0.00.585.259 I llama_model_loader: - kv  28:         inkling2_loop.expert_weights_scale f32              = 8.000000\n0.00.585.261 I llama_model_loader: - kv  29:         inkling2_loop.activation.situ_beta f32              = 4.000000\n0.00.585.262 I llama_model_loader: - kv  30:  inkling2_loop.activation.situ_linear_beta f32              = 25.000000\n0.00.585.263 I llama_model_loader: - kv  31:          inkling2_loop.attn_res.block_size u32              = 6\n0.00.585.264 I llama_model_loader: - kv  32:      inkling2_loop.final_logit_softcapping f32              = 30.000000\n0.00.585.265 I llama_model_loader: - kv  33:    inkling2_loop.attention.relative_length u32              = 16\n0.00.585.265 I llama_model_loader: - kv  34:    inkling2_loop.attention.relative_extent u32              = 1024\n0.00.585.267 I llama_model_loader: - kv  35:            inkling2_loop.attention.qk_clip f32              = 22.627417\n0.00.585.268 I llama_model_loader: - kv  36:      inkling2_loop.attention.relative_clip f32              = 8.000000\n0.00.585.268 I llama_model_loader: - kv  37:    inkling2_loop.attention.log_scale_floor u32              = 8192\n0.00.585.269 I llama_model_loader: - kv  38:    inkling2_loop.attention.log_scale_alpha f32              = 0.100000\n0.00.585.270 I llama_model_loader: - kv  39:                       tokenizer.ggml.model str              = gpt2\n0.00.585.271 I llama_model_loader: - kv  40:                         tokenizer.ggml.pre str              = inkling2\n0.00.585.275 I llama_model_loader: - kv  41:                      tokenizer.ggml.tokens arr[str,200058]  = [\"!\", \"\\\"\", \"#\", \"$\", \"%\", \"&\", \"'\", ...\n0.00.585.277 I llama_model_loader: - kv  42:                  tokenizer.ggml.token_type arr[i32,200058]  = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ...\n0.00.585.279 I llama_model_loader: - kv  43:                      tokenizer.ggml.merges arr[str,424413]  = [\"i n\", \"e r\", \"t h\", \"a n\", \"o n\", \"...\n0.00.585.280 I llama_model_loader: - kv  44:                tokenizer.ggml.eos_token_id u32              = 200006\n0.00.585.280 I llama_model_loader: - kv  45:                tokenizer.ggml.eot_token_id u32              = 200006\n0.00.585.281 I llama_model_loader: - kv  46:               tokenizer.ggml.add_bos_token bool             = false\n0.00.585.281 I llama_model_loader: - kv  47:               tokenizer.ggml.add_eos_token bool             = false\n0.00.585.282 I llama_model_loader: - kv  48:                tokenizer.ggml.clean_spaces bool             = false\n0.00.585.283 I llama_model_loader: - kv  49:               general.quantization_version u32              = 2\n0.00.585.283 I llama_model_loader: - kv  50:                          general.file_type u32              = 7\n0.00.585.284 I llama_model_loader: - kv  51:                      quantize.imatrix.file str              = imatrix_unsloth.gguf\n0.00.585.285 I llama_model_loader: - kv  52:                   quantize.imatrix.dataset str              = unsloth_calibration_Inkling-2-Mini.co...\n0.00.585.286 I llama_model_loader: - kv  53:             quantize.imatrix.entries_count u32              = 392\n0.00.585.286 I llama_model_loader: - kv  54:              quantize.imatrix.chunks_count u32              = 892\n0.00.585.289 I llama_model_loader: - kv  55:                    tokenizer.chat_template str              = {%- set effort_map = {\"none\": 0.0, \"m...\n0.00.585.290 I llama_model_loader: - kv  56:                           general.basename str              = Inkling-2-Mini\n0.00.585.290 I llama_model_loader: - kv  57:            tokenizer.ggml.padding_token_id u32              = 199999\n0.00.585.291 I llama_model_loader: - kv  58:                      general.sampling.temp f32              = 1.000000\n0.00.585.292 I llama_model_loader: - kv  59:                     general.sampling.top_k i32              = 0\n0.00.585.293 I llama_model_loader: - kv  60:                     general.sampling.top_p f32              = 1.000000\n0.00.585.294 I llama_model_loader: - kv  61:                     general.sampling.min_p f32              = 0.000000\n0.00.585.295 I llama_model_loader: - kv  62:                 inkling2_loop.loop.varying bool             = false\n0.00.585.297 I llama_model_loader: - type  f32:  518 tensors\n0.00.585.297 I llama_model_loader: - type q8_0:  154 tensors\n0.00.585.298 I llama_model_loader: - type bf16:   32 tensors\n0.00.585.298 I llama_model_loader: - type nvfp4:   40 tensors\n0.00.585.300 I print_info: file format = GGUF V3 (latest)\n0.00.585.302 I print_info: file type   = Q8_0\n0.00.585.303 I print_info: file size   = 16.41 GiB (5.41 BPW) \n0.00.590.049 E llama_model_load: error loading model: LLAMA_SPLIT_MODE_TENSOR not implemented for architecture 'inkling2_loop'\n0.00.590.056 E llama_model_load_from_file_impl: failed to load model\n0.00.590.061 E cmn  common_init_: failed to load model '/models/Inkling-2-Mini-UD-Q4_K_XL.gguf'\n0.00.590.066 E srv    load_model: failed to load model, '/models/Inkling-2-Mini-UD-Q4_K_XL.gguf'\n0.00.590.093 D srv        notify: notifying SSE clients about event 'status_change' for model 'bench': {\"model\":\"bench\",\"event\":\"status_change\",\"data\":{\"exit_code\":1,\"status\":\"unloaded\"}}\n0.00.590.101 I srv    operator(): operator(): cleaning up before exit...\n0.00.590.849 E srv  server_run_i: exiting due to model loading error\n",
+ "error_lines": [
+  "llama_model_load: error loading model: LLAMA_SPLIT_MODE_TENSOR not implemented for architecture 'inkling2_loop'",
+  "llama_model_load_from_file_impl: failed to load model",
+  "cmn  common_init_: failed to load model '/models/Inkling-2-Mini-UD-Q4_K_XL.gguf'"
+ ]
+}
